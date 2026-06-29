@@ -1,6 +1,6 @@
-using Backend.Domain.Exceptions;
+using Backend.Exceptions;
 
-namespace Backend.Domain.ValueObjects;
+namespace Backend.ValueObjects;
 
 public readonly record struct Money(decimal Amount, string Currency)
 {

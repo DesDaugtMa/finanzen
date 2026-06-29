@@ -1,15 +1,9 @@
-using Backend.Api.ExceptionHandlers;
+using Backend.Config;
 using Backend.Infrastructure.Persistence;
+using Backend.Middleware;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Konfigurationshierarchie (automatisch durch ASP.NET Core):
-//   1. appsettings.json
-//   2. appsettings.{Environment}.json
-//   3. Umgebungsvariablen  (z. B. ConnectionStrings__DefaultConnection)
-//   4. Kommandozeilenargumente
-// Jede Stufe überschreibt die vorherige — kein zusätzlicher Code nötig.
 
 // --- Logging ---
 if (builder.Environment.IsProduction())
@@ -18,33 +12,29 @@ if (builder.Environment.IsProduction())
     builder.Logging.AddJsonConsole();
 }
 
-// --- Fehlerbehandlung ---
-builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+// --- Konfiguration ---
+var appSettings = builder.Configuration.GetSection("AppSettings").Get<AppSettings>() ?? new();
+builder.Services.AddSingleton(appSettings);
 
 // --- Datenbank ---
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException(
-        "Connection string 'DefaultConnection' ist nicht konfiguriert. " +
+if (string.IsNullOrEmpty(appSettings.ConnectionStrings.Default))
+    throw new InvalidOperationException(
+        "Connection string ist nicht konfiguriert. " +
         "Entwicklung: appsettings.Development.json oder 'dotnet user-secrets set ...' " +
-        "Produktion: Umgebungsvariable ConnectionStrings__DefaultConnection");
+        "Produktion: Umgebungsvariable AppSettings__ConnectionStrings__Default");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(appSettings.ConnectionStrings.Default);
 
     if (builder.Environment.IsDevelopment())
         options.EnableDetailedErrors().EnableSensitiveDataLogging();
 });
 
 // --- CORS ---
-var allowedOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>() ?? [];
-
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins)
+        policy.WithOrigins(appSettings.AllowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
@@ -59,7 +49,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
-app.UseExceptionHandler();
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors();
 app.UseHttpsRedirection();
 app.UseAuthorization();

@@ -1,3 +1,3 @@
-namespace Backend.Domain.Exceptions;
+namespace Backend.Exceptions;
 
 public abstract class DomainException(string message) : Exception(message);

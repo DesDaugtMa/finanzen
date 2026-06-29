@@ -11,7 +11,7 @@ internal sealed class AppDbContextDesignTimeFactory : IDesignTimeDbContextFactor
     public AppDbContext CreateDbContext(string[] args)
     {
         var connectionString =
-            Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+            Environment.GetEnvironmentVariable("AppSettings__ConnectionStrings__Default")
             ?? "Host=localhost;Port=5432;Database=finanzen_dev;Username=postgres;Password=postgres";
 
         return new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
