@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Namespace-Wurzel bleibt "Backend" – projektübergreifend konsistente Namespaces -->
+    <RootNamespace>Backend</RootNamespace>
+    <UserSecretsId>c8b4a2d1-3e5f-4a7b-9c8d-1e2f3a4b5c6d</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+    <!--
+      Explizites Version-Override: Microsoft.AspNetCore.OpenApi zieht transitiv EF Core 10.0.4
+      (aus dem ASP.NET-App-Framework) herein, während Backend.DataAccess EF Core 10.0.9
+      (via Npgsql) verwendet. Dieser direkte Verweis pinnt Backend.API auf dieselbe Version
+      und verhindert den CS1705-Versionskonflikt beim Linken.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Backend.DataAccess\Backend.DataAccess.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Pinnt EF Core solution-weit auf eine konsistente Version.
+    Hintergrund: Microsoft.AspNetCore.OpenApi zieht transitiv eine ältere EF-Core-Patch-Version
+    rein, während Npgsql.EntityFrameworkCore.PostgreSQL eine neuere benötigt.
+    PackageReference Update erzwingt die Version ohne eine neue direkte Abhängigkeit hinzuzufügen.
+  -->
+  <ItemGroup>
+    <PackageReference Update="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Abstractions" Version="10.0.9" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Analyzers" Version="10.0.9" />
+  </ItemGroup>
+</Project>
