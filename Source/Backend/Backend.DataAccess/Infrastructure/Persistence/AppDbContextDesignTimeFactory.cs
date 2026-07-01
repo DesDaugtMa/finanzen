@@ -23,8 +23,11 @@ internal sealed class AppDbContextDesignTimeFactory : IDesignTimeDbContextFactor
             .AddUserSecrets(ApiUserSecretsId)
             .Build();
 
+        // Gleiche Quelle wie zur Laufzeit (Program.cs), damit Migration und Runtime
+        // stets dieselbe Datenbank treffen.
         var connectionString =
-            configuration.GetConnectionString("DefaultConnection")
+            configuration["AppSettings:ConnectionStrings:Default"]
+            ?? configuration.GetConnectionString("DefaultConnection")
             ?? "Host=localhost;Port=5432;Database=finanzen_dev;Username=postgres;Password=postgres";
 
         return new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()

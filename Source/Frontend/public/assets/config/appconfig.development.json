@@ -1,0 +1,6 @@
+{
+  "api": {
+    "baseUrl": "https://localhost:7189/",
+    "googleClientId": "155262955763-ndqbfpfo5udku3kas8h1otk6i4a757tt.apps.googleusercontent.com"
+  }
+}

@@ -1,1 +1,39 @@
-/* You can add global styles to this file, and also import other style files */
+/* Bootstrap – Finanzen-Theme (Primärfarbe an Finanz-App angepasst) */
+@use "bootstrap/scss/bootstrap" as * with (
+  $primary: #0f766e
+);
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+:root {
+  /* Semantische Zusatz-Tokens (Geld) */
+  --color-income: #198754;
+  --color-expense: #dc3545;
+  --color-surface: #ffffff;
+  --color-app-bg: #f6f8fa;
+
+  /* Toast-Hintergründe */
+  --color-toast-success-bg: rgba(25, 135, 84, 0.97);
+  --color-toast-danger-bg: rgba(220, 53, 69, 0.97);
+  --color-toast-info-bg: rgba(13, 110, 253, 0.97);
+  --color-toast-warning-bg: rgba(255, 193, 7, 0.97);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--color-app-bg);
+}
+
+/* Dezente Animationen respektieren Nutzereinstellung */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

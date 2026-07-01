@@ -1,0 +1,6 @@
+{
+  "api": {
+    "baseUrl": "/",
+    "googleClientId": "REPLACE_WITH_PROD_GOOGLE_CLIENT_ID"
+  }
+}
