@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Namespace-Wurzel bleibt "Backend" – projektübergreifend konsistente Namespaces -->
     <RootNamespace>Backend</RootNamespace>
+    <!-- Ausgabe-Binary muss "Finanzen.API" heißen: die systemd-Unit auf dem vServer
+         (ExecStart=/opt/finanzen/app/Finanzen.API) erwartet exakt diesen Namen. -->
+    <AssemblyName>Finanzen.API</AssemblyName>
     <UserSecretsId>c8b4a2d1-3e5f-4a7b-9c8d-1e2f3a4b5c6d</UserSecretsId>
   </PropertyGroup>
 

@@ -1,0 +1,103 @@
+name: Deploy Finanzen
+
+# Läuft auf dem Self-Hosted-Runner, der DIREKT auf dem vServer installiert ist
+# (Label "finanzen", angelegt durch Fitness.ServerSetup, User "finanzen").
+# Build + Migration + Deploy passieren also alle lokal auf dem Zielserver.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Niemals zwei Deploys gleichzeitig laufen lassen (Service-Neustart / Dateikopie).
+concurrency:
+  group: deploy-finanzen
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, finanzen]
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      APP_DIR: /opt/finanzen/app
+      PUBLISH_DIR: ${{ github.workspace }}/publish/backend
+      FRONTEND_DIST: Source/Frontend/dist/Frontend/browser
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Backend bauen ---
+      - name: Restore .NET local tools (dotnet-ef)
+        run: dotnet tool restore
+
+      - name: Publish Backend.API
+        run: >
+          dotnet publish Source/Backend/Backend.API/Backend.API.csproj
+          -c Release
+          -o "$PUBLISH_DIR"
+
+      # --- Datenbank migrieren (gegen die lokale finanzen_db) ---
+      # --connection überschreibt die DesignTime-Factory, damit garantiert die
+      # Produktions-DB (nicht der Dev-Fallback) getroffen wird.
+      - name: Apply EF Core migrations
+        run: >
+          dotnet ef database update
+          --project Source/Backend/Backend.DataAccess/Backend.DataAccess.csproj
+          --startup-project Source/Backend/Backend.API/Backend.API.csproj
+          --connection "${{ secrets.DB_CONNECTION_STRING }}"
+
+      # --- Frontend bauen (Prod-Config: baseUrl "/" → nginx /api/-Proxy) ---
+      - name: Build Frontend
+        working-directory: Source/Frontend
+        run: |
+          npm ci
+          npm run build -- --configuration production
+
+      # Öffentliche Google-Client-ID zur Laufzeit-Config hinzufügen (kein Secret,
+      # steckt ohnehin im Browser). Nur wenn Repo-Variable GOOGLE_CLIENT_ID gesetzt ist.
+      - name: Inject Google Client ID into runtime config
+        if: ${{ vars.GOOGLE_CLIENT_ID != '' }}
+        run: |
+          cfg="$FRONTEND_DIST/assets/config/appconfig.json"
+          tmp="$(mktemp)"
+          sed "s#REPLACE_WITH_PROD_GOOGLE_CLIENT_ID#${{ vars.GOOGLE_CLIENT_ID }}#" "$cfg" > "$tmp"
+          mv "$tmp" "$cfg"
+
+      # --- Deploy ---
+      - name: Stop finanzen.service
+        run: sudo systemctl stop finanzen.service
+
+      - name: Deploy backend binaries
+        run: |
+          # Altes Backend entfernen, wwwroot (Frontend) unangetastet lassen
+          find "$APP_DIR" -mindepth 1 -maxdepth 1 ! -name wwwroot -exec rm -rf {} +
+          cp -a "$PUBLISH_DIR/." "$APP_DIR/"
+
+      - name: Deploy frontend
+        run: |
+          mkdir -p "$APP_DIR/wwwroot"
+          rm -rf "$APP_DIR/wwwroot"/*
+          cp -a "$FRONTEND_DIST/." "$APP_DIR/wwwroot/"
+
+      - name: Start finanzen.service
+        run: sudo systemctl start finanzen.service
+
+      # --- Smoke-Test: antwortet das Backend hinter dem nginx-Proxy-Port? ---
+      - name: Health check
+        run: |
+          for i in $(seq 1 15); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              http://localhost:5002/api/auth/validate-token/healthcheck || true)
+            if [ "$code" != "000" ]; then
+              echo "Backend läuft (HTTP $code auf Port 5002)."
+              exit 0
+            fi
+            echo "Warte auf Backend-Start... Versuch $i/15"
+            sleep 2
+          done
+          echo "::error::Backend antwortet nicht auf Port 5002."
+          journalctl -u finanzen.service -n 50 --no-pager || true
+          exit 1
