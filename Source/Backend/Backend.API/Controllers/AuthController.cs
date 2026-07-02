@@ -120,6 +120,23 @@ public sealed class AuthController(
         return Ok(new { message = "E-Mail-Adresse wurde bestätigt." });
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    {
+        var userId = currentUser.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        var result = await accountService.ChangePasswordAsync(userId.Value, request.CurrentPassword, request.NewPassword, ct);
+        return result switch
+        {
+            ChangePasswordResult.Success => Ok(new { message = "Passwort wurde erfolgreich geändert." }),
+            ChangePasswordResult.NoPasswordSet => BadRequest(new { message = "Für diesen Account ist kein Passwort hinterlegt." }),
+            _ => BadRequest(new { message = "Das aktuelle Passwort ist nicht korrekt." }),
+        };
+    }
+
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me(CancellationToken ct)

@@ -35,20 +35,6 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
         @case ('valid') {
           <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
             <div class="mb-3">
-              <label for="displayName" class="form-label">Anzeigename</label>
-              <input
-                type="text"
-                id="displayName"
-                formControlName="displayName"
-                class="form-control form-control-lg"
-                autocomplete="nickname"
-                [class.is-invalid]="isInvalid('displayName')"
-                aria-describedby="displayNameError"
-              />
-              <div id="displayNameError" class="invalid-feedback">Mindestens 3 Zeichen.</div>
-            </div>
-
-            <div class="mb-3">
               <label for="email" class="form-label">E-Mail-Adresse</label>
               <input
                 type="email"
@@ -136,7 +122,6 @@ export class RegisterComponent implements OnInit {
 
   protected registerForm = this.fb.nonNullable.group(
     {
-      displayName: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]],
@@ -189,9 +174,9 @@ export class RegisterComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const { displayName, email, password } = this.registerForm.getRawValue();
+    const { email, password } = this.registerForm.getRawValue();
 
-    this.authService.register({ displayName, email, password, registrationToken: this.token }).subscribe({
+    this.authService.register({ email, password, registrationToken: this.token }).subscribe({
       next: () => {
         this.loading.set(false);
         this.toastService.success('Willkommen! Bitte bestätige deine E-Mail-Adresse.');

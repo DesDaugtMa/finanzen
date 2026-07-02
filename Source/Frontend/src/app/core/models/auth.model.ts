@@ -5,7 +5,6 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   email: string;
-  displayName: string;
   password: string;
   registrationToken: string;
 }
@@ -18,14 +17,12 @@ export interface GoogleLoginRequest {
 export interface AuthResponse {
   token: string;
   refreshToken: string;
-  displayName: string;
   email: string;
   role: string;
   emailVerified: boolean;
 }
 
 export interface UserInfo {
-  displayName: string;
   email: string;
   role: string;
   emailVerified: boolean;
@@ -37,6 +34,11 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
   newPassword: string;
 }
 

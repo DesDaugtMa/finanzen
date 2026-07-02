@@ -60,7 +60,6 @@ public sealed class AuthService(
         var user = new User
         {
             Email = request.Email,
-            DisplayName = request.DisplayName,
             RoleId = role.Id,
             Role = role,
             EmailVerified = false,
@@ -134,7 +133,6 @@ public sealed class AuthService(
         var newUser = new User
         {
             Email = payload.Email,
-            DisplayName = payload.Name ?? payload.Email,
             AuthProvider = "Google",
             ProviderId = payload.Subject,
             EmailVerified = true,
@@ -198,7 +196,6 @@ public sealed class AuthService(
 
         return new UserInfoResponse
         {
-            DisplayName = user.DisplayName,
             Email = user.Email,
             Role = user.Role.Name,
             EmailVerified = user.EmailVerified
@@ -238,7 +235,7 @@ public sealed class AuthService(
 
         var link = $"{appSettings.FrontendBaseUrl.TrimEnd('/')}/verify-email/{Uri.EscapeDataString(token.Token)}";
         var body = $"""
-            <p>Hallo {System.Net.WebUtility.HtmlEncode(user.DisplayName)},</p>
+            <p>Hallo,</p>
             <p>bitte bestätige deine E-Mail-Adresse für die Finanzen-App:</p>
             <p><a href="{link}">E-Mail-Adresse bestätigen</a></p>
             <p>Der Link ist 48 Stunden gültig.</p>
@@ -257,7 +254,6 @@ public sealed class AuthService(
     {
         Token = GenerateJwtToken(user),
         RefreshToken = refreshToken,
-        DisplayName = user.DisplayName,
         Email = user.Email,
         Role = user.Role.Name,
         EmailVerified = user.EmailVerified
@@ -304,7 +300,6 @@ public sealed class AuthService(
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(ClaimTypes.Name, user.DisplayName),
             new Claim(ClaimTypes.Role, user.Role.Name)
         };
 

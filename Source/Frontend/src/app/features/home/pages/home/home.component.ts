@@ -27,7 +27,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h1 class="h4 fw-bold mb-1">Willkommen, {{ user?.displayName }}!</h1>
+          <h1 class="h4 fw-bold mb-1">Willkommen!</h1>
           <p class="text-muted mb-4">Schön, dass du da bist. Hier entsteht dein Finanz-Dashboard.</p>
 
           <div class="d-flex flex-wrap gap-2">

@@ -13,4 +13,14 @@ public interface IAccountService
 
     /// <summary>Setzt das Passwort anhand eines gültigen Reset-Tokens neu.</summary>
     Task<bool> ResetPasswordAsync(string token, string newPassword, CancellationToken ct = default);
+
+    /// <summary>Ändert das Passwort eines angemeldeten Benutzers nach Prüfung des aktuellen Passworts.</summary>
+    Task<ChangePasswordResult> ChangePasswordAsync(int userId, string currentPassword, string newPassword, CancellationToken ct = default);
+}
+
+public enum ChangePasswordResult
+{
+    Success,
+    InvalidCurrentPassword,
+    NoPasswordSet,
 }

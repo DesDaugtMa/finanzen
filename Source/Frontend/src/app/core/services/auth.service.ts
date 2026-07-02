@@ -133,7 +133,6 @@ export class AuthService {
     localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
 
     const userInfo: UserInfo = {
-      displayName: response.displayName,
       email: response.email,
       role: response.role,
       emailVerified: response.emailVerified,
