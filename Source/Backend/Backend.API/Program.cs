@@ -3,6 +3,7 @@ using Backend.Config;
 using Backend.Domain.Entities.Auth;
 using Backend.Infrastructure.Persistence;
 using Backend.Middleware;
+using Backend.OpenApi;
 using Backend.Services;
 using Backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -88,14 +89,30 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 
 // --- API ---
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    // Fügt das JWT-Bearer-Scheme ins Dokument ein → „Authorize“-Button in der Swagger-UI.
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
 
 // ============================================================
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
+{
+    // OpenAPI-Dokument unter /openapi/v1.json …
     app.MapOpenApi();
+
+    // … und darauf aufsetzend die Swagger-UI unter /swagger.
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Finanzen API v1");
+        options.DocumentTitle = "Finanzen API – Swagger";
+        // Token bleibt über Seiten-Reloads hinweg im Browser gespeichert.
+        options.EnablePersistAuthorization();
+    });
+}
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors();

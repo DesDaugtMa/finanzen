@@ -28,6 +28,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!--
+      Explizites Version-Override: Microsoft.AspNetCore.OpenApi 10.0.8 und Swashbuckle.AspNetCore.SwaggerUI
+      ziehen transitiv Microsoft.OpenApi 2.0.0 herein, das eine bekannte Sicherheitslücke
+      hat (NU1903 / GHSA-v5pm-xwqc-g5wc). Dieser direkte Verweis pinnt auf eine gepatchte Version.
+    -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.9.0" />
+    <!-- Nur die Swagger-UI (Dev). Das OpenAPI-Dokument selbst liefert Microsoft.AspNetCore.OpenApi. -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
   </ItemGroup>
 
   <ItemGroup>
