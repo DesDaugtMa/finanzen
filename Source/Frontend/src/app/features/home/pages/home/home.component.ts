@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AccountApiService } from '../../../../core/services/account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { BankAccountsSectionComponent } from '../../../bank-accounts/components/bank-accounts-section/bank-accounts-section.component';
 
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, BankAccountsSectionComponent],
   template: `
     <div class="container py-4">
       @let user = authService.currentUser();
@@ -16,19 +17,30 @@ import { ToastService } from '../../../../core/services/toast.service';
         <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert">
           <i class="bi bi-envelope-exclamation"></i>
           <span class="me-auto">Bitte bestätige deine E-Mail-Adresse ({{ user.email }}).</span>
-          <button type="button" class="btn btn-sm btn-warning" [disabled]="resending()" (click)="resend()">
+          <button
+            type="button"
+            class="btn btn-sm btn-warning"
+            [disabled]="resending()"
+            (click)="resend()"
+          >
             @if (resending()) {
-              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              <span
+                class="spinner-border spinner-border-sm me-1"
+                role="status"
+                aria-hidden="true"
+              ></span>
             }
             Erneut senden
           </button>
         </div>
       }
 
-      <div class="card border-0 shadow-sm">
+      <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-4">
           <h1 class="h4 fw-bold mb-1">Willkommen!</h1>
-          <p class="text-muted mb-4">Schön, dass du da bist. Hier entsteht dein Finanz-Dashboard.</p>
+          <p class="text-muted mb-4">
+            Schön, dass du da bist. Hier entsteht dein Finanz-Dashboard.
+          </p>
 
           <div class="d-flex flex-wrap gap-2">
             <a routerLink="/konto/sitzungen" class="btn btn-outline-primary">
@@ -42,6 +54,8 @@ import { ToastService } from '../../../../core/services/toast.service';
           </div>
         </div>
       </div>
+
+      <app-bank-accounts-section />
     </div>
   `,
 })

@@ -27,5 +27,4 @@ public class User
 
     public ICollection<UserSession> Sessions { get; set; } = [];
     public ICollection<Account> Accounts { get; set; } = [];
-    public ICollection<Category> Categories { get; set; } = [];
 }

@@ -5,7 +5,12 @@ import { ToastService } from '../../../core/services/toast.service';
   selector: 'app-toast-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;" aria-live="polite" aria-atomic="true">
+    <div
+      class="toast-container position-fixed top-0 end-0 p-3"
+      style="z-index: 1080;"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       @for (toast of toastService.toasts(); track toast.id) {
         <div
           class="toast show align-items-center text-white border-0 mb-2"

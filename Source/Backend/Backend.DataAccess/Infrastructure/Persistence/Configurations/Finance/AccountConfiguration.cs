@@ -32,6 +32,13 @@ internal sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(a => a.Color)
             .HasMaxLength(7);
 
+        builder.Property(a => a.InitialBalance)
+            .IsRequired()
+            .HasPrecision(18, 4);
+
+        builder.HasIndex(a => new { a.UserId, a.Type })
+            .HasDatabaseName("IX_Accounts_UserId_Type");
+
         builder.HasOne(a => a.User)
             .WithMany(u => u.Accounts)
             .HasForeignKey(a => a.UserId)

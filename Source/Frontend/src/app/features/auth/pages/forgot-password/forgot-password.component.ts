@@ -12,7 +12,8 @@ import { AccountApiService } from '../../../../core/services/account-api.service
     <app-auth-card title="Passwort vergessen" subtitle="Wir senden dir einen Link zum Zurücksetzen">
       @if (submitted()) {
         <div class="alert alert-success" role="alert">
-          Falls ein Konto zu dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen gesendet.
+          Falls ein Konto zu dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen
+          gesendet.
         </div>
         <a routerLink="/login" class="btn btn-outline-secondary w-100">Zurück zur Anmeldung</a>
       } @else {
@@ -29,12 +30,22 @@ import { AccountApiService } from '../../../../core/services/account-api.service
               [class.is-invalid]="isInvalid()"
               aria-describedby="emailError"
             />
-            <div id="emailError" class="invalid-feedback">Bitte gib eine gültige E-Mail-Adresse ein.</div>
+            <div id="emailError" class="invalid-feedback">
+              Bitte gib eine gültige E-Mail-Adresse ein.
+            </div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="form.invalid || loading()">
+          <button
+            type="submit"
+            class="btn btn-primary btn-lg w-100"
+            [disabled]="form.invalid || loading()"
+          >
             @if (loading()) {
-              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <span
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
               Wird gesendet…
             } @else {
               Link anfordern

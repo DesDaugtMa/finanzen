@@ -24,6 +24,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
 
         var (statusCode, message) = ex switch
         {
+            UnauthorizedException => (StatusCodes.Status401Unauthorized, ex.Message),
             NotFoundException => (StatusCodes.Status404NotFound, ex.Message),
             BusinessRuleException => (StatusCodes.Status422UnprocessableEntity, ex.Message),
             CurrencyMismatchException => (StatusCodes.Status422UnprocessableEntity, ex.Message),

@@ -54,7 +54,9 @@ import { ToastService } from '../../../../core/services/toast.service';
                 [class.is-invalid]="isInvalid('currentPassword')"
                 aria-describedby="currentPasswordError"
               />
-              <div id="currentPasswordError" class="invalid-feedback">Bitte gib dein aktuelles Passwort ein.</div>
+              <div id="currentPasswordError" class="invalid-feedback">
+                Bitte gib dein aktuelles Passwort ein.
+              </div>
             </div>
 
             <div class="mb-3">
@@ -82,12 +84,22 @@ import { ToastService } from '../../../../core/services/toast.service';
                 [class.is-invalid]="confirmMismatch()"
                 aria-describedby="confirmError"
               />
-              <div id="confirmError" class="invalid-feedback">Die Passwörter stimmen nicht überein.</div>
+              <div id="confirmError" class="invalid-feedback">
+                Die Passwörter stimmen nicht überein.
+              </div>
             </div>
 
-            <button type="submit" class="btn btn-primary" [disabled]="passwordForm.invalid || loading()">
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="passwordForm.invalid || loading()"
+            >
               @if (loading()) {
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Wird gespeichert…
               } @else {
                 Passwort ändern

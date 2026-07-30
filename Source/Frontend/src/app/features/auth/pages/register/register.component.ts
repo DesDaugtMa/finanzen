@@ -46,7 +46,9 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
                 [class.is-invalid]="isInvalid('email')"
                 aria-describedby="emailError"
               />
-              <div id="emailError" class="invalid-feedback">Bitte gib eine gültige E-Mail-Adresse ein.</div>
+              <div id="emailError" class="invalid-feedback">
+                Bitte gib eine gültige E-Mail-Adresse ein.
+              </div>
             </div>
 
             <div class="mb-3">
@@ -76,12 +78,22 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
                 [class.is-invalid]="confirmMismatch()"
                 aria-describedby="confirmError"
               />
-              <div id="confirmError" class="invalid-feedback">Die Passwörter stimmen nicht überein.</div>
+              <div id="confirmError" class="invalid-feedback">
+                Die Passwörter stimmen nicht überein.
+              </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="registerForm.invalid || loading()">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg w-100"
+              [disabled]="registerForm.invalid || loading()"
+            >
               @if (loading()) {
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Konto wird erstellt…
               } @else {
                 Konto erstellen
@@ -152,7 +164,9 @@ export class RegisterComponent implements OnInit {
       next: () => this.tokenState.set('valid'),
       error: (err: Error) => {
         this.tokenState.set('invalid');
-        this.tokenError.set(err.message || 'Der Einladungslink ist ungültig oder wurde bereits verwendet.');
+        this.tokenError.set(
+          err.message || 'Der Einladungslink ist ungültig oder wurde bereits verwendet.',
+        );
       },
     });
   }

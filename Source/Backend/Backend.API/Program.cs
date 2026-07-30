@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Backend.Config;
 using Backend.Domain.Entities.Auth;
 using Backend.Infrastructure.Persistence;
@@ -87,8 +88,20 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IRegistrationTokenService, RegistrationTokenService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 
+// --- DI: Finanz-Dienste ---
+builder.Services.AddScoped<IAccountAccess, AccountAccess>();
+builder.Services.AddScoped<IBankAccountService, BankAccountService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IBudgetService, BudgetService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IMonthSummaryService, MonthSummaryService>();
+
 // --- API ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    // Enums als Klartext ("Income" statt 1) — die API bleibt lesbar und das Frontend
+    // arbeitet mit sprechenden String-Union-Typen statt magischer Zahlen.
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 builder.Services.AddOpenApi(options =>
 {
     // Fügt das JWT-Bearer-Scheme ins Dokument ein → „Authorize“-Button in der Swagger-UI.
