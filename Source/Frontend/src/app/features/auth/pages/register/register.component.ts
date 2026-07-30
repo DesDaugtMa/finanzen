@@ -11,6 +11,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SocialAuthService } from '@abacritt/angularx-social-login';
 import { AuthCardComponent } from '../../../../shared/components/auth-card/auth-card.component';
 import { GoogleLoginButtonComponent } from '../../../../shared/components/google-login-button/google-login-button.component';
+import { PasswordFieldComponent } from '../../../../shared/components/password-field/password-field.component';
+import { TextFieldComponent } from '../../../../shared/components/text-field/text-field.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { GoogleAuthStateService } from '../../../../core/services/google-auth-state.service';
@@ -18,105 +20,109 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
 @Component({
   selector: 'app-register',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AuthCardComponent, GoogleLoginButtonComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthCardComponent,
+    GoogleLoginButtonComponent,
+    TextFieldComponent,
+    PasswordFieldComponent,
+  ],
   template: `
     <app-auth-card title="Registrieren" subtitle="Erstelle dein Finanzen-Konto">
       @switch (tokenState()) {
         @case ('loading') {
-          <div class="text-center py-4">
-            <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
-            <p class="text-muted small mt-3 mb-0">Einladungslink wird geprüft…</p>
+          <div class="token-check" role="status">
+            <span class="spinner-border" aria-hidden="true"></span>
+            <p class="token-check__text">Einladungslink wird geprüft…</p>
           </div>
         }
         @case ('invalid') {
           <div class="alert alert-danger" role="alert">{{ tokenError() }}</div>
-          <a routerLink="/login" class="btn btn-outline-secondary w-100">Zur Anmeldung</a>
+          <a routerLink="/login" class="btn btn-outline-secondary w-100 mt-3">Zur Anmeldung</a>
         }
         @case ('valid') {
-          <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
-            <div class="mb-3">
-              <label for="email" class="form-label">E-Mail-Adresse</label>
-              <input
-                type="email"
-                id="email"
-                formControlName="email"
-                class="form-control form-control-lg"
-                autocomplete="email"
-                placeholder="name@beispiel.de"
-                [class.is-invalid]="isInvalid('email')"
-                aria-describedby="emailError"
-              />
-              <div id="emailError" class="invalid-feedback">
-                Bitte gib eine gültige E-Mail-Adresse ein.
-              </div>
-            </div>
+          <form class="fin-form" [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+            <app-text-field
+              [control]="registerForm.controls.email"
+              label="E-Mail-Adresse"
+              type="email"
+              size="lg"
+              autocomplete="email"
+              inputMode="email"
+              placeholder="name@beispiel.de"
+              error="Bitte gib eine gültige E-Mail-Adresse ein."
+              [invalid]="isInvalid('email')"
+            />
 
-            <div class="mb-3">
-              <label for="password" class="form-label">Passwort</label>
-              <input
-                type="password"
-                id="password"
-                formControlName="password"
-                class="form-control form-control-lg"
-                autocomplete="new-password"
-                placeholder="••••••••"
-                [class.is-invalid]="isInvalid('password')"
-                aria-describedby="passwordError"
-              />
-              <div id="passwordError" class="invalid-feedback">Mindestens 6 Zeichen.</div>
-            </div>
+            <app-password-field
+              [control]="registerForm.controls.password"
+              label="Passwort"
+              autocomplete="new-password"
+              hint="Mindestens 6 Zeichen."
+              error="Das Passwort muss mindestens 6 Zeichen lang sein."
+              [invalid]="isInvalid('password')"
+            />
 
-            <div class="mb-4">
-              <label for="confirmPassword" class="form-label">Passwort bestätigen</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                formControlName="confirmPassword"
-                class="form-control form-control-lg"
-                autocomplete="new-password"
-                placeholder="••••••••"
-                [class.is-invalid]="confirmMismatch()"
-                aria-describedby="confirmError"
-              />
-              <div id="confirmError" class="invalid-feedback">
-                Die Passwörter stimmen nicht überein.
-              </div>
-            </div>
+            <app-password-field
+              [control]="registerForm.controls.confirmPassword"
+              label="Passwort bestätigen"
+              autocomplete="new-password"
+              error="Die Passwörter stimmen nicht überein."
+              [invalid]="confirmMismatch()"
+            />
 
-            <button
-              type="submit"
-              class="btn btn-primary btn-lg w-100"
-              [disabled]="registerForm.invalid || loading()"
-            >
-              @if (loading()) {
-                <span
-                  class="spinner-border spinner-border-sm me-2"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                Konto wird erstellt…
-              } @else {
-                Konto erstellen
-              }
-            </button>
+            <div class="fin-form-actions">
+              <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading()">
+                @if (loading()) {
+                  <span
+                    class="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Konto wird erstellt…
+                } @else {
+                  Konto erstellen
+                }
+              </button>
+            </div>
 
             @if (isGoogleAvailable()) {
-              <div class="my-4 d-flex align-items-center">
-                <hr class="flex-grow-1" />
-                <span class="px-3 text-muted small fw-semibold">ODER</span>
-                <hr class="flex-grow-1" />
+              <div>
+                <p class="fin-divider-labelled">oder</p>
+                <app-google-login-button />
               </div>
-              <app-google-login-button />
             }
 
-            <p class="text-center text-muted small mt-4 mb-0">
-              Bereits registriert? <a routerLink="/login" class="text-decoration-none">Anmelden</a>
-            </p>
+            <p class="register-switch">Bereits registriert? <a routerLink="/login">Anmelden</a></p>
           </form>
         }
       }
     </app-auth-card>
   `,
+  styles: [
+    `
+      .token-check {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--fin-space-4);
+        padding: var(--fin-space-6) 0;
+        color: var(--fin-accent);
+      }
+      .token-check__text {
+        margin: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+      }
+      .register-switch {
+        margin: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        text-align: center;
+      }
+    `,
+  ],
 })
 export class RegisterComponent implements OnInit {
   private fb = inject(FormBuilder);

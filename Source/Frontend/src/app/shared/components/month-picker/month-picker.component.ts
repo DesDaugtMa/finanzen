@@ -27,6 +27,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'd-inline-block position-relative',
+    '[class.month-picker--on-brand]': "tone() === 'on-brand'",
     '(document:click)': 'onDocumentClick($event)',
     '(document:keydown.escape)': 'close()',
   },
@@ -66,20 +67,20 @@ import {
     </div>
 
     @if (open()) {
-      <div class="month-panel card shadow" role="dialog" aria-label="Monat und Jahr auswählen">
-        <div class="d-flex align-items-center justify-content-between mb-2">
+      <div class="month-panel" role="dialog" aria-label="Monat und Jahr auswählen">
+        <div class="month-panel__head">
           <button
             type="button"
-            class="btn btn-sm btn-light"
+            class="btn fin-btn-icon"
             aria-label="Vorheriges Jahr"
             (click)="stepYear(-1)"
           >
             <i class="bi bi-chevron-left" aria-hidden="true"></i>
           </button>
-          <strong aria-live="polite">{{ panelYear() }}</strong>
+          <strong class="month-panel__year" aria-live="polite">{{ panelYear() }}</strong>
           <button
             type="button"
-            class="btn btn-sm btn-light"
+            class="btn fin-btn-icon"
             aria-label="Nächstes Jahr"
             (click)="stepYear(1)"
           >
@@ -91,9 +92,8 @@ import {
           @for (name of names; track $index; let i = $index) {
             <button
               type="button"
-              class="btn btn-sm month-cell"
-              [class.btn-primary]="isSelected(i + 1)"
-              [class.btn-light]="!isSelected(i + 1)"
+              class="month-cell"
+              [class.month-cell--selected]="isSelected(i + 1)"
               [attr.aria-current]="isSelected(i + 1) ? 'true' : null"
               (click)="select(i + 1)"
             >
@@ -104,7 +104,7 @@ import {
 
         <button
           type="button"
-          class="btn btn-sm btn-link w-100 mt-2 text-decoration-none"
+          class="btn btn-link btn-sm month-panel__today"
           (click)="selectCurrentMonth()"
         >
           Aktueller Monat
@@ -114,34 +114,103 @@ import {
   `,
   styles: [
     `
+      .month-nav {
+        /* Die drei Schaltflächen wirken als ein Element: nur die Außenkanten
+           sind gerundet, innen stoßen sie mit geteilter Linie aneinander. */
+        display: inline-flex;
+        border-radius: var(--fin-radius-sm);
+      }
       .month-step {
-        --bs-btn-padding-x: 0.75rem;
+        --bs-btn-padding-x: var(--fin-space-3);
       }
       .month-trigger {
         min-width: 10.5rem;
+        font-variant-numeric: tabular-nums;
       }
       .month-label {
         font-variant-numeric: tabular-nums;
       }
       .month-panel {
         position: absolute;
-        z-index: 1030;
-        top: calc(100% + 0.35rem);
+        z-index: var(--fin-z-dropdown);
+        top: calc(100% + var(--fin-space-2));
         left: 0;
+        /* Nie breiter als der Bildschirm minus Rand — sonst läuft das Panel auf
+           dem Smartphone aus dem sichtbaren Bereich heraus. */
         width: min(20rem, calc(100vw - 2rem));
-        padding: 0.75rem;
-        border-radius: 0.9rem;
-        border: 1px solid var(--bs-border-color-translucent);
-        background-color: var(--color-surface);
+        padding: var(--fin-space-3);
+        background-color: var(--fin-bg-elevated);
+        border: 1px solid var(--fin-border);
+        border-radius: var(--fin-radius-md);
+        box-shadow: var(--fin-shadow-lg);
+        animation: fin-pop-in var(--fin-duration-fast) var(--fin-ease-out) both;
+        transform-origin: top left;
+      }
+      .month-panel__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--fin-space-2);
+      }
+      .month-panel__year {
+        font-size: var(--fin-text-md);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: var(--fin-tracking-tight);
       }
       .month-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 0.35rem;
+        gap: var(--fin-space-1);
       }
       .month-cell {
         /* Angenehmes Touch-Ziel auch auf schmalen Displays. */
         min-height: 2.5rem;
+        border: 0;
+        border-radius: var(--fin-radius-xs);
+        background-color: transparent;
+        color: var(--fin-text);
+        font-size: var(--fin-text-sm);
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background-color var(--fin-duration-fast) var(--fin-ease-out),
+          color var(--fin-duration-fast) var(--fin-ease-out);
+      }
+      .month-cell:hover:not(.month-cell--selected) {
+        background-color: var(--fin-surface-hover);
+      }
+      .month-cell--selected {
+        background-color: var(--fin-accent);
+        color: var(--fin-text-on-accent);
+      }
+      .month-cell:focus-visible {
+        outline: 2px solid var(--fin-accent);
+        outline-offset: -2px;
+      }
+      .month-panel__today {
+        width: 100%;
+        margin-top: var(--fin-space-2);
+      }
+
+      /* Variante für dunkle Markenflächen. Nur die Auslöser-Leiste wird
+         umgefärbt — das aufklappende Panel bleibt eine helle Fläche, weil es
+         über dem Hintergrund schwebt und nicht Teil davon ist. */
+      .month-picker--on-brand .month-nav .btn {
+        --bs-btn-bg: rgba(255, 255, 255, 0.1);
+        --bs-btn-border-color: rgba(255, 255, 255, 0.24);
+        --bs-btn-color: #fff;
+        --bs-btn-hover-bg: rgba(255, 255, 255, 0.18);
+        --bs-btn-hover-border-color: rgba(255, 255, 255, 0.38);
+        --bs-btn-hover-color: #fff;
+        --bs-btn-active-bg: rgba(255, 255, 255, 0.22);
+        --bs-btn-active-border-color: rgba(255, 255, 255, 0.38);
+        --bs-btn-active-color: #fff;
+        --bs-btn-disabled-bg: rgba(255, 255, 255, 0.06);
+        --bs-btn-disabled-border-color: rgba(255, 255, 255, 0.14);
+        --bs-btn-disabled-color: rgba(255, 255, 255, 0.5);
+      }
+      .month-picker--on-brand .month-nav .btn:focus-visible {
+        outline-color: #fff;
       }
     `,
   ],
@@ -150,6 +219,15 @@ export class MonthPickerComponent {
   /** Aktuell gewählter Monat als `yyyy-MM`. */
   readonly month = input.required<string>();
   readonly disabled = input(false);
+
+  /**
+   * `on-brand` färbt die Auslöser-Leiste für dunkle Markenflächen um.
+   *
+   * Als Variante der Komponente umgesetzt und nicht als Style von außen: die
+   * emulierte View-Encapsulation lässt Elternselektoren nicht in dieses Template
+   * hinein, ein Override im Aufrufer würde also wirkungslos bleiben.
+   */
+  readonly tone = input<'default' | 'on-brand'>('default');
 
   readonly monthChange = output<string>();
 

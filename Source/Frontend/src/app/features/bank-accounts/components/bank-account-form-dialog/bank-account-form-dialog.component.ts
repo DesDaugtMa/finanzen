@@ -46,12 +46,7 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
       [title]="isEditMode() ? 'Girokonto bearbeiten' : 'Girokonto hinzufügen'"
       (closed)="cancel()"
     >
-      <form
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-        id="bankAccountForm"
-        class="d-flex flex-column gap-3"
-      >
+      <form [formGroup]="form" (ngSubmit)="submit()" id="bankAccountForm" class="fin-form">
         <div>
           <label for="accountName" class="form-label">Kontoname</label>
           <input
@@ -66,15 +61,13 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
             [attr.aria-describedby]="isInvalid('name') ? 'accountNameError' : null"
           />
           @if (isInvalid('name')) {
-            <div id="accountNameError" class="invalid-feedback d-block">
-              Bitte gib einen Kontonamen an.
-            </div>
+            <div id="accountNameError" class="invalid-feedback">Bitte gib einen Kontonamen an.</div>
           }
         </div>
 
         <div>
           <label for="accountBank" class="form-label">
-            Bank <span class="text-muted fw-normal">(optional)</span>
+            Bank <span class="form-label__optional">(optional)</span>
           </label>
           <input
             type="text"
@@ -89,13 +82,13 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
 
         <div>
           <label for="accountIban" class="form-label">
-            IBAN <span class="text-muted fw-normal">(optional)</span>
+            IBAN <span class="form-label__optional">(optional)</span>
           </label>
           <input
             type="text"
             id="accountIban"
             formControlName="iban"
-            class="form-control font-monospace"
+            class="form-control fin-mono"
             placeholder="AT61 1904 3002 3457 3201"
             autocomplete="off"
             spellcheck="false"
@@ -105,7 +98,7 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
             (blur)="normalizeIbanField()"
           />
           @if (isInvalid('iban')) {
-            <div id="accountIbanError" class="invalid-feedback d-block">
+            <div id="accountIbanError" class="invalid-feedback">
               Diese IBAN hat kein gültiges Format.
             </div>
           }
@@ -118,7 +111,7 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
               type="text"
               id="accountBalance"
               formControlName="initialBalance"
-              class="form-control text-end"
+              class="form-control fin-input-amount"
               inputmode="decimal"
               autocomplete="off"
               placeholder="0,00"
@@ -146,17 +139,13 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
         <app-color-picker [value]="form.controls.color.value" (valueChange)="selectColor($event)" />
       </form>
 
-      <div dialogFooter class="d-flex flex-wrap gap-2 justify-content-end w-100">
+      <div dialogFooter class="fin-dialog-actions">
         <button type="button" class="btn btn-light" [disabled]="saving()" (click)="cancel()">
           Abbrechen
         </button>
         <button type="submit" form="bankAccountForm" class="btn btn-primary" [disabled]="saving()">
           @if (saving()) {
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           {{ isEditMode() ? 'Speichern' : 'Konto anlegen' }}
         </button>

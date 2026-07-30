@@ -10,7 +10,7 @@ import { ModalDialogComponent } from '../modal-dialog/modal-dialog.component';
     <app-modal-dialog [title]="title()" (closed)="cancelled.emit()">
       <p class="mb-0">{{ message() }}</p>
 
-      <div dialogFooter class="d-flex flex-wrap gap-2 justify-content-end w-100">
+      <div dialogFooter class="fin-dialog-actions">
         <button type="button" class="btn btn-light" [disabled]="busy()" (click)="cancelled.emit()">
           {{ cancelLabel() }}
         </button>
@@ -23,11 +23,7 @@ import { ModalDialogComponent } from '../modal-dialog/modal-dialog.component';
           (click)="confirmed.emit()"
         >
           @if (busy()) {
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           {{ confirmLabel() }}
         </button>

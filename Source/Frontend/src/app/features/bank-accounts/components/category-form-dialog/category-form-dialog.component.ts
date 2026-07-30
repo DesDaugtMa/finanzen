@@ -34,12 +34,7 @@ import { CATEGORY_ICON_PRESETS } from '../../../../shared/utils/category-icons';
       [title]="isEditMode() ? 'Kategorie bearbeiten' : 'Kategorie hinzufügen'"
       (closed)="cancel()"
     >
-      <form
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-        id="categoryForm"
-        class="d-flex flex-column gap-3"
-      >
+      <form [formGroup]="form" (ngSubmit)="submit()" id="categoryForm" class="fin-form">
         <div>
           <label for="categoryName" class="form-label">Name</label>
           <input
@@ -54,9 +49,7 @@ import { CATEGORY_ICON_PRESETS } from '../../../../shared/utils/category-icons';
             [attr.aria-describedby]="isInvalid() ? 'categoryNameError' : null"
           />
           @if (isInvalid()) {
-            <div id="categoryNameError" class="invalid-feedback d-block">
-              Bitte gib einen Namen an.
-            </div>
+            <div id="categoryNameError" class="invalid-feedback">Bitte gib einen Namen an.</div>
           }
         </div>
 
@@ -81,17 +74,13 @@ import { CATEGORY_ICON_PRESETS } from '../../../../shared/utils/category-icons';
         />
       </form>
 
-      <div dialogFooter class="d-flex flex-wrap gap-2 justify-content-end w-100">
+      <div dialogFooter class="fin-dialog-actions">
         <button type="button" class="btn btn-light" [disabled]="saving()" (click)="cancel()">
           Abbrechen
         </button>
         <button type="submit" form="categoryForm" class="btn btn-primary" [disabled]="saving()">
           @if (saving()) {
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           {{ isEditMode() ? 'Speichern' : 'Kategorie anlegen' }}
         </button>
@@ -103,7 +92,7 @@ import { CATEGORY_ICON_PRESETS } from '../../../../shared/utils/category-icons';
       .preview {
         padding: 0.5rem 0.75rem;
         border-radius: 0.75rem;
-        background-color: var(--bs-tertiary-bg);
+        background-color: var(--fin-surface-hover);
       }
     `,
   ],

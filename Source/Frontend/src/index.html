@@ -1,13 +1,131 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Frontend</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Finanzen</title>
+    <base href="/" />
+
+    <!--
+      `viewport-fit=cover` ist Voraussetzung dafür, dass `env(safe-area-inset-*)`
+      überhaupt Werte liefert. Ohne diesen Wert liegt die untere Tab-Bar auf
+      iPhones unter dem Home-Indicator.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Persönliche Finanzen im Blick: Konten, Buchungen, Kategorien und Budgets."
+    />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Progressive Web App -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="application-name" content="Finanzen" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Finanzen" />
+    <!--
+      `black-translucent` lässt die Seite hinter der iOS-Statusleiste
+      durchlaufen; die Kopfzeile polstert das über die Safe-Area wieder auf.
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!--
+      Die Theme-Farbe der Browser-/System-Leiste folgt dem gewählten Theme. Die
+      Werte entsprechen `--fin-bg` aus `_tokens.scss`; das Skript unten
+      korrigiert sie zur Laufzeit auf die tatsächliche Wahl des Nutzers.
+    -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f5f2" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1220" />
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+
+    <script>
+      /*
+       * Theme vor dem ersten Zeichnen setzen.
+       *
+       * Läuft bewusst blockierend im <head> und nicht erst in Angular: die App
+       * bootet erst nach dem Laden der Konfiguration, und bis dahin würde bei
+       * dunklem Theme eine helle Fläche aufblitzen. Muss mit ThemeService
+       * (Speicherschlüssel und Werte) übereinstimmen.
+       */
+      (function () {
+        var STORAGE_KEY = 'fin-theme';
+        var BACKGROUNDS = { light: '#f7f5f2', dark: '#0b1220' };
+
+        var preference;
+        try {
+          preference = localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          /* Privater Modus kann den Zugriff verweigern — dann gilt „System“. */
+        }
+
+        if (preference !== 'light' && preference !== 'dark') {
+          preference = 'system';
+        }
+
+        var resolved =
+          preference === 'system'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : preference;
+
+        document.documentElement.setAttribute('data-bs-theme', resolved);
+        document.documentElement.style.backgroundColor = BACKGROUNDS[resolved];
+      })();
+    </script>
+
+    <style>
+      /*
+       * Start-Anzeige. Angular bootet erst, nachdem `main.ts` die Konfiguration
+       * geladen hat — ohne diesen Platzhalter wäre bis dahin eine leere Fläche
+       * zu sehen. Die Regeln stehen inline, weil das Stylesheet zu diesem
+       * Zeitpunkt noch nicht zwingend geladen ist.
+       */
+      .app-boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .app-boot__mark {
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(150deg, #16233f 0%, #1e3050 58%, #1c3b52 100%);
+        animation: app-boot-pulse 1.4s ease-in-out infinite;
+      }
+
+      @keyframes app-boot-pulse {
+        0%,
+        100% {
+          opacity: 0.55;
+          transform: scale(0.94);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot__mark {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <app-root>
+      <!-- Wird durch die gerenderte App ersetzt. -->
+      <div class="app-boot" role="status" aria-label="Anwendung wird geladen">
+        <div class="app-boot__mark"></div>
+      </div>
+    </app-root>
+  </body>
 </html>

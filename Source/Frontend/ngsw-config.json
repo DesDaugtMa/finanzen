@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/manifest.webmanifest", "/*.css", "/*.js"]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/media/**",
+          "/icons/**",
+          "/favicon.ico",
+          "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "comment": "Laufzeit-Konfiguration (API-Adresse, Google-Client-ID). Wird auf dem Server je Umgebung geschrieben und kann sich ohne neuen App-Build ändern, darf also nicht mit der App-Version einfrieren. `freshness` fragt zuerst das Netz; nur wenn es nicht antwortet, springt der Cache ein — damit startet die App auch offline.",
+      "name": "app-config",
+      "urls": ["/assets/config/*.json"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 4,
+        "maxAge": "30d",
+        "timeout": "3s"
+      }
+    }
+  ],
+  "navigationRequestStrategy": "performance",
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/api/**"
+  ]
+}

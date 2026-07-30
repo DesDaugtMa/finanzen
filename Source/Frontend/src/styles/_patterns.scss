@@ -1,0 +1,444 @@
+// =============================================================================
+// Muster — wiederkehrende Flächen und Zeilenformen
+// =============================================================================
+// Diese Klassen sind das Vokabular, aus dem die Screens zusammengesetzt sind.
+// Sie liegen global (nicht in Komponenten-Styles), weil sie über Feature-Grenzen
+// hinweg identisch aussehen müssen — genau das erzeugt die einheitliche
+// Designsprache.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Flächen
+// -----------------------------------------------------------------------------
+
+.fin-panel {
+  background-color: var(--fin-surface);
+  border: 1px solid var(--fin-border-subtle);
+  border-radius: var(--fin-radius-lg);
+  box-shadow: var(--fin-shadow-sm);
+}
+
+.fin-panel--flush {
+  // Für Listen, die bis an die Kante laufen sollen.
+  overflow: hidden;
+}
+
+.fin-panel--sunken {
+  background-color: var(--fin-surface-sunken);
+  box-shadow: none;
+}
+
+.fin-panel--dashed {
+  border-style: dashed;
+  border-color: var(--fin-border-strong);
+  box-shadow: none;
+}
+
+.fin-panel__body {
+  padding: var(--fin-space-5);
+}
+
+.fin-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fin-space-2) var(--fin-space-4);
+  padding: var(--fin-space-4) var(--fin-space-5);
+  border-bottom: 1px solid var(--fin-border-subtle);
+}
+
+.fin-panel__footer {
+  padding: var(--fin-space-4) var(--fin-space-5);
+  border-top: 1px solid var(--fin-border-subtle);
+}
+
+// Anklickbare Fläche: hebt sich beim Überfahren minimal an. Der Effekt läuft
+// über `transform`, nicht über `margin`, damit nichts umgelayoutet wird.
+.fin-panel--interactive {
+  cursor: pointer;
+  transition:
+    transform var(--fin-duration-base) var(--fin-ease-out),
+    box-shadow var(--fin-duration-base) var(--fin-ease-out),
+    border-color var(--fin-duration-base) var(--fin-ease-out);
+}
+
+@media (hover: hover) {
+  .fin-panel--interactive:hover {
+    transform: translateY(-2px);
+    border-color: var(--fin-border-strong);
+    box-shadow: var(--fin-shadow-md);
+  }
+}
+
+.fin-panel--interactive:active {
+  transform: translateY(0);
+}
+
+// -----------------------------------------------------------------------------
+// Markenfläche
+// -----------------------------------------------------------------------------
+// Dunkle Marine-Fläche für Salden und Kopfbereiche. Trägt die Markenfarbe an
+// genau einer Stelle pro Screen — mehr würde die Ruhe zerstören.
+
+.fin-brand-surface {
+  position: relative;
+  overflow: hidden;
+  background: var(--fin-gradient-brand);
+  border-radius: var(--fin-radius-xl);
+  color: #fff;
+  box-shadow: var(--fin-shadow-md);
+}
+
+// Sehr feines Lichtspiel über der Fläche. Statt eines auffälligen Verlaufs nur
+// ein weicher Radialschein — das gibt Tiefe, ohne nach Vorlage auszusehen.
+.fin-brand-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 88% -10%, rgba(47, 167, 159, 0.3) 0%, transparent 62%),
+    radial-gradient(80% 60% at 8% 108%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.fin-brand-surface > * {
+  position: relative;
+}
+
+// Auf der dunklen Fläche muss der Fokusring hell sein, um zu greifen.
+.fin-brand-surface :focus-visible {
+  outline-color: #fff;
+}
+
+// -----------------------------------------------------------------------------
+// Symbolplakette
+// -----------------------------------------------------------------------------
+
+.fin-emblem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--fin-radius-md);
+  background-color: var(--fin-accent-tint);
+  color: var(--fin-accent-on-tint);
+  font-size: var(--fin-text-md);
+  line-height: 1;
+}
+
+.fin-emblem--sm {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--fin-radius-sm);
+  font-size: var(--fin-text-base);
+}
+
+.fin-emblem--lg {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--fin-radius-lg);
+  font-size: var(--fin-text-xl);
+}
+
+.fin-emblem--brand {
+  background-color: var(--fin-brand-tint);
+  color: var(--fin-brand-on-tint);
+}
+
+.fin-emblem--on-brand {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.fin-emblem--muted {
+  background-color: var(--fin-surface-sunken);
+  color: var(--fin-text-muted);
+}
+
+// -----------------------------------------------------------------------------
+// Chip
+// -----------------------------------------------------------------------------
+
+.fin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fin-space-1);
+  padding: 0.2rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: var(--fin-radius-xs);
+  background-color: var(--fin-surface-sunken);
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-xs);
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.fin-chip--accent {
+  background-color: var(--fin-accent-tint);
+  color: var(--fin-accent-on-tint);
+}
+
+.fin-chip--income {
+  background-color: var(--fin-income-tint);
+  color: var(--fin-income);
+}
+
+.fin-chip--expense {
+  background-color: var(--fin-expense-tint);
+  color: var(--fin-expense);
+}
+
+.fin-chip--warn {
+  background-color: var(--fin-warn-tint);
+  color: var(--fin-warn);
+}
+
+.fin-chip--outline {
+  background-color: transparent;
+  border-color: var(--fin-border-strong);
+}
+
+// -----------------------------------------------------------------------------
+// Zeilenlisten
+// -----------------------------------------------------------------------------
+// Getrennt durch Haarlinien statt Karten pro Eintrag: bei Buchungslisten zählt
+// Dichte und Scanbarkeit, nicht Dekoration.
+
+.fin-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fin-row {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-3);
+  min-height: var(--fin-touch-comfortable);
+  padding: var(--fin-space-3) var(--fin-space-4);
+  border-top: 1px solid var(--fin-border-subtle);
+  transition: background-color var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+.fin-row:first-child {
+  border-top: 0;
+}
+
+@media (min-width: 48rem) {
+  .fin-row {
+    padding-inline: var(--fin-space-5);
+  }
+}
+
+@media (hover: hover) {
+  .fin-row--interactive:hover {
+    background-color: var(--fin-surface-hover);
+  }
+}
+
+.fin-row__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fin-row__title {
+  margin: 0;
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-base);
+  font-weight: 600;
+  line-height: var(--fin-leading-snug);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fin-space-1) var(--fin-space-2);
+  margin: 0.15rem 0 0;
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-sm);
+}
+
+.fin-row__aside {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-2);
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+// Trennpunkt zwischen Meta-Angaben.
+.fin-dot::before {
+  content: '·';
+  margin-inline: 0.15rem;
+  color: var(--fin-text-subtle);
+}
+
+// -----------------------------------------------------------------------------
+// Beschriftung / Wert
+// -----------------------------------------------------------------------------
+
+.fin-kv {
+  display: grid;
+  gap: var(--fin-space-4);
+}
+
+@media (min-width: 34rem) {
+  .fin-kv--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.fin-kv__label {
+  display: block;
+  margin-bottom: 0.1rem;
+  color: var(--fin-text-subtle);
+  font-size: var(--fin-text-2xs);
+  font-weight: 650;
+  letter-spacing: var(--fin-tracking-wider);
+  text-transform: uppercase;
+}
+
+.fin-kv__value {
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-base);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+// -----------------------------------------------------------------------------
+// Geldbetrag
+// -----------------------------------------------------------------------------
+
+.fin-money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  letter-spacing: var(--fin-tracking-tight);
+  white-space: nowrap;
+}
+
+.fin-money--income {
+  color: var(--fin-income);
+}
+
+.fin-money--expense {
+  color: var(--fin-expense);
+}
+
+// -----------------------------------------------------------------------------
+// Ausklappbarer Bereich
+// -----------------------------------------------------------------------------
+// Für optionale Formularfelder, die den Blick auf das Wesentliche nicht
+// verstellen sollen. Liegt global, weil Buchungs- und Überweisungsdialog
+// denselben Baustein brauchen.
+
+.fin-details {
+  padding-top: var(--fin-space-3);
+  border-top: 1px solid var(--fin-border-subtle);
+}
+
+.fin-details__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-2);
+  min-height: var(--fin-touch-min);
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-base);
+  font-weight: 600;
+  cursor: pointer;
+  // Eigener Pfeil statt des Browser-Dreiecks: dessen Darstellung unterscheidet
+  // sich je Browser und würde die Formularsprache brechen.
+  list-style: none;
+}
+
+.fin-details__summary::-webkit-details-marker {
+  display: none;
+}
+
+.fin-details__summary::before {
+  content: '';
+  width: 0.7rem;
+  height: 0.7rem;
+  background-color: var(--fin-text-muted);
+  mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e")
+    center / contain no-repeat;
+  transition: transform var(--fin-duration-base) var(--fin-ease-out);
+}
+
+.fin-details[open] > .fin-details__summary::before {
+  transform: rotate(90deg);
+}
+
+.fin-details__summary:focus-visible {
+  outline: 2px solid var(--fin-accent);
+  outline-offset: 2px;
+  border-radius: var(--fin-radius-xs);
+}
+
+.fin-details__body {
+  padding-top: var(--fin-space-4);
+}
+
+// -----------------------------------------------------------------------------
+// Trennelemente
+// -----------------------------------------------------------------------------
+
+.fin-divider {
+  height: 1px;
+  border: 0;
+  margin: var(--fin-space-5) 0;
+  background-color: var(--fin-border-subtle);
+}
+
+// Beschrifteter Trenner, z. B. „oder“ zwischen Anmeldeverfahren.
+.fin-divider-labelled {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-3);
+  margin: var(--fin-space-5) 0;
+  color: var(--fin-text-subtle);
+  font-size: var(--fin-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--fin-tracking-wide);
+  text-transform: uppercase;
+}
+
+.fin-divider-labelled::before,
+.fin-divider-labelled::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background-color: var(--fin-border);
+}
+
+// -----------------------------------------------------------------------------
+// Textbehandlung
+// -----------------------------------------------------------------------------
+
+.fin-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Für IBANs, Token und E-Mail-Adressen: darf an jeder Stelle brechen, damit
+// nichts aus schmalen Karten herausläuft.
+.fin-break-all {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.fin-mono {
+  font-family: var(--fin-font-numeric);
+  font-size: 0.9em;
+  letter-spacing: var(--fin-tracking-normal);
+}

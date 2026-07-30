@@ -5,6 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SocialAuthService } from '@abacritt/angularx-social-login';
 import { AuthCardComponent } from '../../../../shared/components/auth-card/auth-card.component';
 import { GoogleLoginButtonComponent } from '../../../../shared/components/google-login-button/google-login-button.component';
+import { PasswordFieldComponent } from '../../../../shared/components/password-field/password-field.component';
+import { TextFieldComponent } from '../../../../shared/components/text-field/text-field.component';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { GoogleAuthStateService } from '../../../../core/services/google-auth-state.service';
@@ -12,76 +14,84 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
 @Component({
   selector: 'app-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AuthCardComponent, GoogleLoginButtonComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AuthCardComponent,
+    GoogleLoginButtonComponent,
+    TextFieldComponent,
+    PasswordFieldComponent,
+  ],
   template: `
     <app-auth-card title="Anmelden" subtitle="Willkommen zurück bei deiner Finanzen-App">
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
-        <div class="mb-3">
-          <label for="email" class="form-label">E-Mail-Adresse</label>
-          <input
-            type="email"
-            id="email"
-            formControlName="email"
-            class="form-control form-control-lg"
-            autocomplete="email"
-            placeholder="name@beispiel.de"
-            [class.is-invalid]="isInvalid('email')"
-            aria-describedby="emailError"
-          />
-          <div id="emailError" class="invalid-feedback">
-            Bitte gib eine gültige E-Mail-Adresse ein.
-          </div>
-        </div>
+      <form class="fin-form" [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+        <app-text-field
+          [control]="loginForm.controls.email"
+          label="E-Mail-Adresse"
+          type="email"
+          size="lg"
+          autocomplete="email"
+          inputMode="email"
+          placeholder="name@beispiel.de"
+          error="Bitte gib eine gültige E-Mail-Adresse ein."
+          [invalid]="isInvalid('email')"
+        />
 
-        <div class="mb-2">
-          <label for="password" class="form-label">Passwort</label>
-          <input
-            type="password"
-            id="password"
-            formControlName="password"
-            class="form-control form-control-lg"
+        <div>
+          <app-password-field
+            [control]="loginForm.controls.password"
+            label="Passwort"
             autocomplete="current-password"
-            placeholder="••••••••"
-            [class.is-invalid]="isInvalid('password')"
-            aria-describedby="passwordError"
+            error="Bitte gib dein Passwort ein."
+            [invalid]="isInvalid('password')"
           />
-          <div id="passwordError" class="invalid-feedback">Bitte gib dein Passwort ein.</div>
+          <p class="login-forgot">
+            <a routerLink="/forgot-password">Passwort vergessen?</a>
+          </p>
         </div>
 
-        <div class="mb-4 text-end">
-          <a routerLink="/forgot-password" class="small link-secondary text-decoration-none"
-            >Passwort vergessen?</a
-          >
+        <div class="fin-form-actions">
+          <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading()">
+            @if (loading()) {
+              <span
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              Wird angemeldet…
+            } @else {
+              Anmelden
+            }
+          </button>
         </div>
-
-        <button
-          type="submit"
-          class="btn btn-primary btn-lg w-100"
-          [disabled]="loginForm.invalid || loading()"
-        >
-          @if (loading()) {
-            <span
-              class="spinner-border spinner-border-sm me-2"
-              role="status"
-              aria-hidden="true"
-            ></span>
-            Wird angemeldet…
-          } @else {
-            Anmelden
-          }
-        </button>
 
         @if (isGoogleAvailable()) {
-          <div class="my-4 d-flex align-items-center">
-            <hr class="flex-grow-1" />
-            <span class="px-3 text-muted small fw-semibold">ODER</span>
-            <hr class="flex-grow-1" />
+          <div>
+            <p class="fin-divider-labelled">oder</p>
+            <app-google-login-button />
           </div>
-          <app-google-login-button />
         }
       </form>
     </app-auth-card>
   `,
+  styles: [
+    `
+      .login-forgot {
+        margin: var(--fin-space-2) 0 0;
+        font-size: var(--fin-text-sm);
+        text-align: right;
+      }
+      .login-forgot a {
+        color: var(--fin-text-muted);
+        font-weight: 550;
+        text-decoration: none;
+      }
+      .login-forgot a:hover {
+        color: var(--fin-accent);
+        text-decoration: underline;
+      }
+    `,
+  ],
 })
 export class LoginComponent {
   private fb = inject(FormBuilder);

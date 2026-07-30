@@ -24,8 +24,8 @@ interface SortableColumn {
   imports: [MoneyAmountComponent, CategoryBadgeComponent],
   template: `
     <!-- Tabelle ab Tablet -->
-    <div class="table-responsive d-none d-md-block">
-      <table class="table align-middle mb-0 transaction-table">
+    <div class="transaction-table-wrap">
+      <table class="table align-middle transaction-table">
         <caption class="visually-hidden">
           Buchungen des gewählten Monats
         </caption>
@@ -51,12 +51,12 @@ interface SortableColumn {
             <tr>
               <td class="text-nowrap">{{ formatDate(item.bookingDate) }}</td>
               <td>
-                <span class="d-inline-flex align-items-center gap-2">
-                  <span class="text-break">{{ item.title }}</span>
+                <span class="transaction-title">
+                  <span class="fin-break-all">{{ item.title }}</span>
                   @if (item.isTransfer) {
-                    <span class="badge transfer-badge">
-                      <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i
-                      >{{ item.counterAccountName }}
+                    <span class="fin-chip">
+                      <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                      {{ item.counterAccountName }}
                     </span>
                   }
                   @if (item.note) {
@@ -82,23 +82,25 @@ interface SortableColumn {
                   [tone]="item.type === 'Income' ? 'income' : 'expense'"
                 />
               </td>
-              <td class="text-end text-nowrap">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light icon-button"
-                  [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
-                  (click)="edit.emit(item)"
-                >
-                  <i class="bi bi-pencil" aria-hidden="true"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light icon-button text-danger ms-1"
-                  [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
-                  (click)="remove.emit(item)"
-                >
-                  <i class="bi bi-trash" aria-hidden="true"></i>
-                </button>
+              <td>
+                <div class="transaction-actions">
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon"
+                    [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
+                    (click)="edit.emit(item)"
+                  >
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon row-remove"
+                    [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
+                    (click)="remove.emit(item)"
+                  >
+                    <i class="bi bi-trash" aria-hidden="true"></i>
+                  </button>
+                </div>
               </td>
             </tr>
           }
@@ -106,54 +108,59 @@ interface SortableColumn {
       </table>
     </div>
 
-    <!-- Karten auf schmalen Displays -->
-    <ul class="list-unstyled mb-0 d-md-none">
+    <!-- Zeilenliste auf schmalen Displays -->
+    <ul class="fin-rows transaction-rows">
       @for (item of transactions(); track item.id) {
-        <li class="transaction-card">
-          <div class="d-flex align-items-start gap-2">
-            <div class="flex-grow-1 min-width-0">
-              <p class="fw-semibold mb-1 text-break">{{ item.title }}</p>
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                <app-category-badge
-                  [name]="item.categoryName"
-                  [color]="item.categoryColor"
-                  [icon]="item.categoryIcon"
-                />
-                <span class="text-muted small">{{ formatDate(item.bookingDate) }}</span>
-              </div>
+        <li class="fin-row">
+          <span class="row-icon" aria-hidden="true">
+            <app-category-badge
+              [showLabel]="false"
+              [name]="item.categoryName"
+              [color]="item.categoryColor"
+              [icon]="item.categoryIcon"
+            />
+          </span>
+
+          <div class="fin-row__main">
+            <p class="fin-row__title">{{ item.title }}</p>
+            <p class="fin-row__meta">
+              <span>{{ formatDate(item.bookingDate) }}</span>
+              <span class="fin-dot"></span>
+              <span class="row-category">{{ item.categoryName ?? 'Ohne Kategorie' }}</span>
               @if (item.isTransfer) {
-                <span class="badge transfer-badge mt-2">
-                  <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i
-                  >{{ item.counterAccountName }}
+                <span class="fin-chip">
+                  <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                  {{ item.counterAccountName }}
                 </span>
               }
-            </div>
+              @if (item.note) {
+                <i class="bi bi-chat-left-text" [attr.title]="item.note" aria-hidden="true"></i>
+              }
+            </p>
+          </div>
 
-            <div class="text-end flex-shrink-0">
-              <app-money-amount
-                [amount]="item.amount"
-                [currency]="item.currency"
-                [tone]="item.type === 'Income' ? 'income' : 'expense'"
-              />
-              <div class="mt-2">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light icon-button"
-                  [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
-                  (click)="edit.emit(item)"
-                >
-                  <i class="bi bi-pencil" aria-hidden="true"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light icon-button text-danger ms-1"
-                  [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
-                  (click)="remove.emit(item)"
-                >
-                  <i class="bi bi-trash" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
+          <div class="fin-row__aside">
+            <app-money-amount
+              [amount]="item.amount"
+              [currency]="item.currency"
+              [tone]="item.type === 'Income' ? 'income' : 'expense'"
+            />
+            <button
+              type="button"
+              class="btn fin-btn-icon"
+              [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
+              (click)="edit.emit(item)"
+            >
+              <i class="bi bi-pencil" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="btn fin-btn-icon row-remove"
+              [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
+              (click)="remove.emit(item)"
+            >
+              <i class="bi bi-trash" aria-hidden="true"></i>
+            </button>
           </div>
         </li>
       }
@@ -161,46 +168,83 @@ interface SortableColumn {
   `,
   styles: [
     `
-      .transaction-table th {
-        font-size: 0.75rem;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: var(--bs-secondary-color);
-        font-weight: 600;
+      /* Ab Tablet die Tabelle, darunter die Zeilenliste. Der Umschaltpunkt ist
+         die Breite, ab der vier Spalten plus Aktionen ohne Quetschen passen. */
+      .transaction-table-wrap {
+        display: none;
+        overflow-x: auto;
       }
+      .transaction-rows {
+        display: flex;
+      }
+      @media (min-width: 48rem) {
+        .transaction-table-wrap {
+          display: block;
+        }
+        .transaction-rows {
+          display: none;
+        }
+      }
+
       .sort-button {
-        border: none;
-        background: none;
-        padding: 0;
-        color: inherit;
-        font: inherit;
         display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: var(--fin-space-1);
+        /* Volle Zellhöhe als Klickfläche, damit die Sortierung auch mit dem
+           Finger gut zu treffen ist. */
+        min-height: var(--fin-touch-min);
+        padding: 0;
+        border: none;
+        background: none;
+        color: inherit;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+        cursor: pointer;
+        transition: color var(--fin-duration-fast) var(--fin-ease-out);
+      }
+      .sort-button:hover {
+        color: var(--fin-text-strong);
       }
       .sort-button:focus-visible {
-        outline: 2px solid var(--bs-primary);
+        outline: 2px solid var(--fin-accent);
         outline-offset: 2px;
       }
-      .transaction-card {
-        padding: 0.85rem 0;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
+      /* Das inaktive Sortiersymbol bleibt sichtbar, aber zurückgenommen — es
+         zeigt, dass die Spalte sortierbar ist, ohne die Kopfzeile zu füllen. */
+      .sort-button .bi-arrow-down-up {
+        opacity: 0.35;
       }
-      .transaction-card:last-child {
-        border-bottom: none;
+
+      .transaction-table td {
+        border-color: var(--fin-border-subtle);
       }
-      .transfer-badge {
-        background-color: var(--bs-secondary-bg);
-        color: var(--bs-secondary-color);
-        font-weight: 500;
+      .transaction-title {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--fin-space-2);
+        flex-wrap: wrap;
       }
-      .icon-button {
-        width: 2.25rem;
-        height: 2.25rem;
-        line-height: 1;
+      .transaction-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--fin-space-1);
       }
-      .min-width-0 {
-        min-width: 0;
+      .row-remove:hover {
+        background-color: var(--fin-danger-tint);
+        color: var(--fin-danger);
+      }
+
+      .row-icon {
+        flex-shrink: 0;
+      }
+      /* In der Zeilenliste steht der Kategoriename schon als Text in der
+         Metazeile — das Symbol daneben genügt. */
+      .row-category {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 12rem;
       }
     `,
   ],

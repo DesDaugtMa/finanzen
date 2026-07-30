@@ -1,0 +1,440 @@
+// =============================================================================
+// Navigation
+// =============================================================================
+// Zwei Ausprägungen derselben Zielliste:
+//
+//   < 48rem   Tab-Bar am unteren Rand. Am Smartphone ist der untere Bildschirm-
+//             rand die Daumenzone; eine Leiste oben ist einhändig kaum
+//             erreichbar. Zusätzlich eine schlanke Kopfzeile für Marke und
+//             Kontomenü.
+//   ≥ 48rem   Waagerechte Leiste oben. Auf iPad und Desktop gibt es keine
+//             Daumenzone, dafür Platz in der Breite — und der Inhalt soll die
+//             volle Höhe bekommen.
+//
+// Beide Ausprägungen zeigen dieselben Ziele in derselben Reihenfolge, damit das
+// mentale Modell beim Wechsel zwischen Geräten erhalten bleibt.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Kopfzeile
+// -----------------------------------------------------------------------------
+
+.fin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--fin-z-nav);
+  // Halbtransparent mit Weichzeichnung: der Inhalt scheint durch und die Leiste
+  // wirkt wie eine Glasscheibe darüber statt wie ein aufgesetzter Balken.
+  background-color: color-mix(in srgb, var(--fin-bg) 78%, transparent);
+  backdrop-filter: saturate(150%) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color var(--fin-duration-base) var(--fin-ease-out),
+    background-color var(--fin-duration-base) var(--fin-ease-out);
+  // Oberer Safe-Area-Rand für die installierte PWA im Standalone-Modus, wo die
+  // Statusleiste des Geräts über der Seite liegt.
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+// Browser ohne `backdrop-filter` bekommen eine deckende Fläche, sonst wäre der
+// Text über durchscheinendem Inhalt unlesbar.
+@supports not (backdrop-filter: blur(1px)) {
+  .fin-topbar {
+    background-color: var(--fin-bg);
+  }
+}
+
+// Die Trennlinie erscheint erst, wenn tatsächlich etwas darunter weggescrollt
+// ist — ohne Scroll schwebt die Leiste randlos über der Seite.
+.fin-topbar--scrolled {
+  border-bottom-color: var(--fin-border);
+}
+
+.fin-topbar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-3);
+  height: var(--fin-topnav-height);
+}
+
+// -----------------------------------------------------------------------------
+// Marke
+// -----------------------------------------------------------------------------
+
+.fin-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fin-space-2);
+  margin-right: auto;
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-md);
+  font-weight: 680;
+  letter-spacing: var(--fin-tracking-tight);
+  text-decoration: none;
+  border-radius: var(--fin-radius-sm);
+}
+
+.fin-brand:hover {
+  color: var(--fin-text-strong);
+}
+
+.fin-brand__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--fin-radius-sm);
+  background: var(--fin-gradient-brand);
+  color: #fff;
+  font-size: var(--fin-text-md);
+  box-shadow: var(--fin-shadow-xs);
+}
+
+// -----------------------------------------------------------------------------
+// Ziele in der Kopfzeile (ab Tablet)
+// -----------------------------------------------------------------------------
+
+.fin-topnav {
+  display: none;
+  align-items: center;
+  gap: var(--fin-space-1);
+  margin-right: auto;
+  padding: 0;
+  margin-bottom: 0;
+  list-style: none;
+}
+
+@media (min-width: 48rem) {
+  .fin-topnav {
+    display: flex;
+  }
+}
+
+.fin-topnav__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fin-space-2);
+  min-height: var(--fin-touch-min);
+  padding: 0 var(--fin-space-3);
+  border-radius: var(--fin-radius-sm);
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-base);
+  font-weight: 550;
+  text-decoration: none;
+  transition:
+    color var(--fin-duration-fast) var(--fin-ease-out),
+    background-color var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+.fin-topnav__link:hover {
+  background-color: var(--fin-surface-hover);
+  color: var(--fin-text-strong);
+}
+
+.fin-topnav__link.fin-active {
+  color: var(--fin-text-strong);
+  font-weight: 650;
+}
+
+// Aktivmarkierung als feine Linie unter dem Ziel. Sie wächst aus der Mitte,
+// wenn das Ziel aktiv wird — die einzige Bewegung in der Leiste.
+.fin-topnav__link.fin-active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.05rem;
+  left: var(--fin-space-3);
+  right: var(--fin-space-3);
+  height: 2px;
+  border-radius: var(--fin-radius-pill);
+  background-color: var(--fin-accent);
+  animation: fin-underline-grow var(--fin-duration-base) var(--fin-ease-out) both;
+}
+
+@keyframes fin-underline-grow {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Tab-Bar (Mobil)
+// -----------------------------------------------------------------------------
+
+.fin-tabbar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--fin-z-nav);
+  display: flex;
+  // Der Innenabstand unten hält die Ziele über dem iOS-Home-Indicator, während
+  // die Leistenfläche selbst bis zum Bildschirmrand läuft.
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: color-mix(in srgb, var(--fin-bg-elevated) 86%, transparent);
+  backdrop-filter: saturate(150%) blur(18px);
+  border-top: 1px solid var(--fin-border);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .fin-tabbar {
+    background-color: var(--fin-bg-elevated);
+  }
+}
+
+@media (min-width: 48rem) {
+  .fin-tabbar {
+    display: none;
+  }
+}
+
+.fin-tabbar__list {
+  display: flex;
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fin-tabbar__item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.fin-tabbar__link {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  height: var(--fin-tabbar-height);
+  padding: 0 var(--fin-space-1);
+  color: var(--fin-text-muted);
+  text-decoration: none;
+  transition: color var(--fin-duration-fast) var(--fin-ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fin-tabbar__icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  // Nur das Symbol bewegt sich beim Aktivieren, nicht die ganze Schaltfläche —
+  // sonst wackelt die Leiste bei jedem Wechsel.
+  transition: transform var(--fin-duration-base) var(--fin-ease-spring);
+}
+
+.fin-tabbar__label {
+  font-size: var(--fin-text-2xs);
+  font-weight: 600;
+  letter-spacing: var(--fin-tracking-normal);
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fin-tabbar__link.fin-active {
+  color: var(--fin-accent);
+}
+
+.fin-tabbar__link.fin-active .fin-tabbar__icon {
+  transform: translateY(-1px) scale(1.06);
+}
+
+// Aktivmarkierung oben an der Leistenkante — dort, wo die Linie auf dem Desktop
+// unter dem Ziel sitzt. Gleiche Sprache, gespiegelte Position.
+.fin-tabbar__link.fin-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1.75rem;
+  height: 2px;
+  border-radius: var(--fin-radius-pill);
+  background-color: var(--fin-accent);
+  transform: translateX(-50%);
+  animation: fin-fade-in var(--fin-duration-base) var(--fin-ease-out) both;
+}
+
+.fin-tabbar__link:active .fin-tabbar__icon {
+  transform: scale(0.92);
+}
+
+.fin-tabbar__link:focus-visible {
+  outline: 2px solid var(--fin-accent);
+  outline-offset: -3px;
+  border-radius: var(--fin-radius-sm);
+}
+
+// -----------------------------------------------------------------------------
+// Kontomenü
+// -----------------------------------------------------------------------------
+
+.fin-avatar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--fin-touch-min);
+  height: var(--fin-touch-min);
+  padding: 0;
+  border: 1px solid var(--fin-border);
+  border-radius: 50%;
+  background-color: var(--fin-surface);
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-sm);
+  font-weight: 680;
+  letter-spacing: var(--fin-tracking-normal);
+  cursor: pointer;
+  transition:
+    border-color var(--fin-duration-fast) var(--fin-ease-out),
+    box-shadow var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+.fin-avatar-button:hover {
+  border-color: var(--fin-accent);
+  box-shadow: var(--fin-shadow-sm);
+}
+
+.fin-menu {
+  position: absolute;
+  top: calc(100% + var(--fin-space-2));
+  right: 0;
+  z-index: var(--fin-z-dropdown);
+  min-width: 15rem;
+  padding: var(--fin-space-2);
+  background-color: var(--fin-bg-elevated);
+  border: 1px solid var(--fin-border);
+  border-radius: var(--fin-radius-md);
+  box-shadow: var(--fin-shadow-lg);
+  animation: fin-pop-in var(--fin-duration-fast) var(--fin-ease-out) both;
+  transform-origin: top right;
+}
+
+.fin-menu__header {
+  padding: var(--fin-space-2) var(--fin-space-3) var(--fin-space-3);
+  border-bottom: 1px solid var(--fin-border-subtle);
+  margin-bottom: var(--fin-space-2);
+}
+
+.fin-menu__name {
+  display: block;
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-sm);
+  font-weight: 650;
+}
+
+.fin-menu__mail {
+  display: block;
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-xs);
+  overflow-wrap: anywhere;
+}
+
+.fin-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-3);
+  width: 100%;
+  min-height: var(--fin-touch-min);
+  padding: var(--fin-space-2) var(--fin-space-3);
+  border: 0;
+  border-radius: var(--fin-radius-xs);
+  background: none;
+  color: var(--fin-text);
+  font-size: var(--fin-text-base);
+  font-weight: 550;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--fin-duration-fast) var(--fin-ease-out),
+    color var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+.fin-menu__item:hover {
+  background-color: var(--fin-surface-hover);
+  color: var(--fin-text-strong);
+}
+
+.fin-menu__item--danger {
+  color: var(--fin-danger);
+}
+
+.fin-menu__item--danger:hover {
+  background-color: var(--fin-danger-tint);
+  color: var(--fin-danger);
+}
+
+.fin-menu__icon {
+  width: 1.1rem;
+  color: var(--fin-text-subtle);
+  font-size: var(--fin-text-md);
+  text-align: center;
+}
+
+.fin-menu__item--danger .fin-menu__icon {
+  color: currentcolor;
+}
+
+.fin-menu__separator {
+  height: 1px;
+  margin: var(--fin-space-2) 0;
+  background-color: var(--fin-border-subtle);
+}
+
+// -----------------------------------------------------------------------------
+// Theme-Umschalter
+// -----------------------------------------------------------------------------
+// Drei Zustände als Segment-Steuerung statt als Ein/Aus-Schalter: „System“ muss
+// wählbar bleiben, sonst kann man nie zur Automatik zurück.
+
+.fin-theme-switch {
+  display: inline-flex;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  background-color: var(--fin-surface-sunken);
+  border-radius: var(--fin-radius-sm);
+}
+
+.fin-theme-switch__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fin-space-1);
+  min-width: 2.5rem;
+  min-height: 2.125rem;
+  padding: 0 var(--fin-space-2);
+  border: 0;
+  border-radius: var(--fin-radius-xs);
+  background: none;
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--fin-duration-fast) var(--fin-ease-out),
+    color var(--fin-duration-fast) var(--fin-ease-out),
+    box-shadow var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+.fin-theme-switch__option:hover {
+  color: var(--fin-text-strong);
+}
+
+.fin-theme-switch__option[aria-checked='true'] {
+  background-color: var(--fin-surface);
+  color: var(--fin-text-strong);
+  box-shadow: var(--fin-shadow-xs);
+}
+
+.fin-theme-switch__option i {
+  font-size: var(--fin-text-base);
+}

@@ -8,70 +8,56 @@ import {
 } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthCardComponent } from '../../../../shared/components/auth-card/auth-card.component';
+import { PasswordFieldComponent } from '../../../../shared/components/password-field/password-field.component';
 import { AccountApiService } from '../../../../core/services/account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-reset-password',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AuthCardComponent],
+  imports: [ReactiveFormsModule, RouterLink, AuthCardComponent, PasswordFieldComponent],
   template: `
     <app-auth-card title="Neues Passwort" subtitle="Vergib ein neues Passwort für dein Konto">
       @if (!token()) {
-        <div class="alert alert-danger" role="alert">Kein gültiger Reset-Link.</div>
-        <a routerLink="/forgot-password" class="btn btn-outline-secondary w-100"
-          >Neuen Link anfordern</a
-        >
+        <div class="alert alert-danger" role="alert">
+          Dieser Link ist unvollständig oder abgelaufen.
+        </div>
+        <a routerLink="/forgot-password" class="btn btn-outline-secondary w-100 mt-3">
+          Neuen Link anfordern
+        </a>
       } @else {
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-          <div class="mb-3">
-            <label for="password" class="form-label">Neues Passwort</label>
-            <input
-              type="password"
-              id="password"
-              formControlName="password"
-              class="form-control form-control-lg"
-              autocomplete="new-password"
-              placeholder="••••••••"
-              [class.is-invalid]="isInvalid('password')"
-              aria-describedby="passwordError"
-            />
-            <div id="passwordError" class="invalid-feedback">Mindestens 6 Zeichen.</div>
-          </div>
+        <form class="fin-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <app-password-field
+            [control]="form.controls.password"
+            label="Neues Passwort"
+            autocomplete="new-password"
+            hint="Mindestens 6 Zeichen."
+            error="Das Passwort muss mindestens 6 Zeichen lang sein."
+            [invalid]="isInvalid('password')"
+          />
 
-          <div class="mb-4">
-            <label for="confirmPassword" class="form-label">Passwort bestätigen</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              formControlName="confirmPassword"
-              class="form-control form-control-lg"
-              autocomplete="new-password"
-              placeholder="••••••••"
-              [class.is-invalid]="confirmMismatch()"
-              aria-describedby="confirmError"
-            />
-            <div id="confirmError" class="invalid-feedback">
-              Die Passwörter stimmen nicht überein.
-            </div>
-          </div>
+          <app-password-field
+            [control]="form.controls.confirmPassword"
+            label="Passwort bestätigen"
+            autocomplete="new-password"
+            error="Die Passwörter stimmen nicht überein."
+            [invalid]="confirmMismatch()"
+          />
 
-          <button
-            type="submit"
-            class="btn btn-primary btn-lg w-100"
-            [disabled]="form.invalid || loading()"
-          >
-            @if (loading()) {
-              <span
-                class="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Wird gespeichert…
-            } @else {
-              Passwort zurücksetzen
-            }
-          </button>
+          <div class="fin-form-actions">
+            <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading()">
+              @if (loading()) {
+                <span
+                  class="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                Wird gespeichert…
+              } @else {
+                Passwort zurücksetzen
+              }
+            </button>
+          </div>
         </form>
       }
     </app-auth-card>

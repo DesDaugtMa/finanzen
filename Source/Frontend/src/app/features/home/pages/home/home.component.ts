@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AccountApiService } from '../../../../core/services/account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -8,15 +7,28 @@ import { BankAccountsSectionComponent } from '../../../bank-accounts/components/
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, BankAccountsSectionComponent],
+  imports: [BankAccountsSectionComponent],
   template: `
-    <div class="container py-4">
+    <div class="container">
       @let user = authService.currentUser();
 
+      <header class="fin-page-header home-header">
+        <div class="fin-page-header__text">
+          <span class="fin-eyebrow">{{ greeting() }}</span>
+          <h1 class="fin-page-header__title">Übersicht</h1>
+          <p class="fin-page-header__subtitle">Alle Konten, Salden und Buchungen an einem Ort.</p>
+        </div>
+      </header>
+
       @if (user && !user.emailVerified) {
-        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert">
-          <i class="bi bi-envelope-exclamation"></i>
-          <span class="me-auto">Bitte bestätige deine E-Mail-Adresse ({{ user.email }}).</span>
+        <div class="alert alert-warning verify-banner" role="alert">
+          <i class="bi bi-envelope-exclamation verify-banner__icon" aria-hidden="true"></i>
+          <div class="verify-banner__text">
+            <strong>E-Mail-Adresse noch nicht bestätigt</strong>
+            <span class="fin-break-all"
+              >Wir haben eine Bestätigung an {{ user.email }} gesendet.</span
+            >
+          </div>
           <button
             type="button"
             class="btn btn-sm btn-warning"
@@ -25,7 +37,7 @@ import { BankAccountsSectionComponent } from '../../../bank-accounts/components/
           >
             @if (resending()) {
               <span
-                class="spinner-border spinner-border-sm me-1"
+                class="spinner-border spinner-border-sm"
                 role="status"
                 aria-hidden="true"
               ></span>
@@ -35,29 +47,37 @@ import { BankAccountsSectionComponent } from '../../../bank-accounts/components/
         </div>
       }
 
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-4">
-          <h1 class="h4 fw-bold mb-1">Willkommen!</h1>
-          <p class="text-muted mb-4">
-            Schön, dass du da bist. Hier entsteht dein Finanz-Dashboard.
-          </p>
-
-          <div class="d-flex flex-wrap gap-2">
-            <a routerLink="/konto/sitzungen" class="btn btn-outline-primary">
-              <i class="bi bi-shield-lock me-1"></i> Aktive Sitzungen
-            </a>
-            @if (authService.isAdmin()) {
-              <a routerLink="/admin/einladungen" class="btn btn-outline-primary">
-                <i class="bi bi-person-plus me-1"></i> Einladungen verwalten
-              </a>
-            }
-          </div>
-        </div>
-      </div>
-
       <app-bank-accounts-section />
     </div>
   `,
+  styles: [
+    `
+      .home-header {
+        margin-bottom: var(--fin-space-6);
+      }
+      .verify-banner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--fin-space-3);
+        margin-bottom: var(--fin-space-6);
+      }
+      .verify-banner__icon {
+        flex-shrink: 0;
+        font-size: var(--fin-text-lg);
+      }
+      .verify-banner__text {
+        /* Nimmt den verfügbaren Platz, damit die Schaltfläche rechts außen sitzt
+           und auf schmalen Displays in die nächste Zeile rutscht. */
+        flex: 1 1 14rem;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
+      }
+    `,
+  ],
 })
 export class HomeComponent {
   protected authService = inject(AuthService);
@@ -65,6 +85,12 @@ export class HomeComponent {
   private toastService = inject(ToastService);
 
   protected resending = signal(false);
+
+  /**
+   * Tageszeitabhängige Anrede. Wird einmal beim Erzeugen der Seite bestimmt —
+   * eine über den Tag mitlaufende Begrüßung wäre Aufwand ohne Nutzen.
+   */
+  protected readonly greeting = signal(buildGreeting(new Date())).asReadonly();
 
   protected resend(): void {
     const email = this.authService.currentUser()?.email;
@@ -82,4 +108,12 @@ export class HomeComponent {
       },
     });
   }
+}
+
+function buildGreeting(now: Date): string {
+  const hour = now.getHours();
+  if (hour < 5) return 'Gute Nacht';
+  if (hour < 11) return 'Guten Morgen';
+  if (hour < 18) return 'Guten Tag';
+  return 'Guten Abend';
 }

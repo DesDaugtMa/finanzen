@@ -61,12 +61,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
       size="lg"
       (closed)="cancel()"
     >
-      <form
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-        id="transferForm"
-        class="d-flex flex-column gap-3"
-      >
+      <form [formGroup]="form" (ngSubmit)="submit()" id="transferForm" class="fin-form">
         <fieldset>
           <legend class="form-label mb-2">Richtung</legend>
           <div class="btn-group w-100" role="radiogroup" aria-label="Richtung der Überweisung">
@@ -123,7 +118,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
               }
             </select>
             @if (isInvalid('counterAccountId')) {
-              <div class="invalid-feedback d-block">Bitte wähle ein Gegenkonto aus.</div>
+              <div class="invalid-feedback">Bitte wähle ein Gegenkonto aus.</div>
             }
           }
         </div>
@@ -136,7 +131,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
                 type="text"
                 id="trAmount"
                 formControlName="amount"
-                class="form-control text-end"
+                class="form-control fin-input-amount"
                 inputmode="decimal"
                 autocomplete="off"
                 placeholder="0,00"
@@ -175,7 +170,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
             [class.is-invalid]="isInvalid('title')"
           />
           @if (isInvalid('title')) {
-            <div class="invalid-feedback d-block">Bitte gib eine Bezeichnung an.</div>
+            <div class="invalid-feedback">Bitte gib eine Bezeichnung an.</div>
           }
         </div>
 
@@ -197,7 +192,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
         <div class="row g-3">
           <div class="col-12 col-sm-6">
             <label for="trCategory" class="form-label">
-              Kategorie auf diesem Konto <span class="text-muted fw-normal">(optional)</span>
+              Kategorie auf diesem Konto <span class="form-label__optional">(optional)</span>
             </label>
             <select id="trCategory" formControlName="categoryId" class="form-select">
               <option value="">Ohne Kategorie</option>
@@ -209,7 +204,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
 
           <div class="col-12 col-sm-6">
             <label for="trCounterCategory" class="form-label">
-              Kategorie auf dem Gegenkonto <span class="text-muted fw-normal">(optional)</span>
+              Kategorie auf dem Gegenkonto <span class="form-label__optional">(optional)</span>
             </label>
             <select
               id="trCounterCategory"
@@ -228,13 +223,13 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
           </div>
         </div>
 
-        <details class="details-block" [open]="hasNote()">
-          <summary class="details-summary">Weitere Details</summary>
+        <details class="fin-details" [open]="hasNote()">
+          <summary class="fin-details__summary">Weitere Details</summary>
 
-          <div class="pt-3 d-flex flex-column gap-3">
+          <div class="fin-form fin-details__body">
             <div>
               <label for="trPurchaseDate" class="form-label">
-                Kaufdatum <span class="text-muted fw-normal">(optional)</span>
+                Kaufdatum <span class="form-label__optional">(optional)</span>
               </label>
               <input
                 type="date"
@@ -246,7 +241,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
 
             <div>
               <label for="trNote" class="form-label">
-                Notiz <span class="text-muted fw-normal">(optional)</span>
+                Notiz <span class="form-label__optional">(optional)</span>
               </label>
               <textarea
                 id="trNote"
@@ -260,7 +255,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
         </details>
       </form>
 
-      <div dialogFooter class="d-flex flex-wrap gap-2 justify-content-end w-100">
+      <div dialogFooter class="fin-dialog-actions">
         <button type="button" class="btn btn-light" [disabled]="saving()" (click)="cancel()">
           Abbrechen
         </button>
@@ -271,11 +266,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
           [disabled]="saving() || counterAccounts().length === 0"
         >
           @if (saving()) {
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           {{ isEditMode() ? 'Speichern' : 'Überweisung erfassen' }}
         </button>
@@ -284,21 +275,18 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
   `,
   styles: [
     `
-      .details-block {
-        border-top: 1px solid var(--bs-border-color-translucent);
-        padding-top: 0.75rem;
+      /* Der ausklappbare Bereich kommt aus der globalen Muster-Schicht
+         (.fin-details) — er wird hier und im Buchungsdialog identisch gebraucht. */
+      fieldset {
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
       }
-      .details-summary {
-        cursor: pointer;
-        font-weight: 600;
-        min-height: 2.25rem;
-        display: flex;
-        align-items: center;
-      }
-      .details-summary:focus-visible {
-        outline: 2px solid var(--bs-primary);
-        outline-offset: 2px;
-        border-radius: 0.25rem;
+      legend.form-label {
+        float: none;
+        width: auto;
+        padding: 0;
       }
     `,
   ],

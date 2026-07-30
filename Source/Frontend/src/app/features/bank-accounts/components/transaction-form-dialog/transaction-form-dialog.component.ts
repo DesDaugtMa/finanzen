@@ -53,12 +53,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
       size="lg"
       (closed)="cancel()"
     >
-      <form
-        [formGroup]="form"
-        (ngSubmit)="submit()"
-        id="transactionForm"
-        class="d-flex flex-column gap-3"
-      >
+      <form [formGroup]="form" (ngSubmit)="submit()" id="transactionForm" class="fin-form">
         <fieldset>
           <legend class="form-label mb-2">Art der Buchung</legend>
           <div class="btn-group w-100" role="radiogroup" aria-label="Art der Buchung">
@@ -103,7 +98,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
                 type="text"
                 id="txAmount"
                 formControlName="amount"
-                class="form-control text-end"
+                class="form-control fin-input-amount"
                 inputmode="decimal"
                 autocomplete="off"
                 placeholder="0,00"
@@ -121,7 +116,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
 
           <div class="col-12 col-sm-6">
             <label for="txCategory" class="form-label">
-              Kategorie <span class="text-muted fw-normal">(optional)</span>
+              Kategorie <span class="form-label__optional">(optional)</span>
             </label>
             <select id="txCategory" formControlName="categoryId" class="form-select">
               <option value="">Ohne Kategorie</option>
@@ -146,9 +141,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
             [attr.aria-describedby]="isInvalid('title') ? 'txTitleError' : null"
           />
           @if (isInvalid('title')) {
-            <div id="txTitleError" class="invalid-feedback d-block">
-              Bitte gib eine Bezeichnung an.
-            </div>
+            <div id="txTitleError" class="invalid-feedback">Bitte gib eine Bezeichnung an.</div>
           }
         </div>
 
@@ -163,7 +156,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
             (change)="syncAccountingMonth()"
           />
           @if (isInvalid('bookingDate')) {
-            <div class="invalid-feedback d-block">Bitte gib ein Buchungsdatum an.</div>
+            <div class="invalid-feedback">Bitte gib ein Buchungsdatum an.</div>
           }
         </div>
 
@@ -182,17 +175,17 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
             {{ suggestedMonthLabel() }}.
           </div>
           @if (isInvalid('accountingMonth')) {
-            <div class="invalid-feedback d-block">Bitte gib einen gültigen Monat an.</div>
+            <div class="invalid-feedback">Bitte gib einen gültigen Monat an.</div>
           }
         </div>
 
-        <details class="details-block" [open]="hasDetails()">
-          <summary class="details-summary">Weitere Details</summary>
+        <details class="fin-details" [open]="hasDetails()">
+          <summary class="fin-details__summary">Weitere Details</summary>
 
-          <div class="pt-3 d-flex flex-column gap-3">
+          <div class="fin-form fin-details__body">
             <div>
               <label for="txPurchaseDate" class="form-label">
-                Kaufdatum <span class="text-muted fw-normal">(optional)</span>
+                Kaufdatum <span class="form-label__optional">(optional)</span>
               </label>
               <input
                 type="date"
@@ -207,7 +200,7 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
 
             <div>
               <label for="txNote" class="form-label">
-                Notiz <span class="text-muted fw-normal">(optional)</span>
+                Notiz <span class="form-label__optional">(optional)</span>
               </label>
               <textarea
                 id="txNote"
@@ -221,24 +214,20 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
         </details>
 
         @if (budgetWarning(); as warning) {
-          <div class="alert alert-warning mb-0 d-flex align-items-start gap-2" role="status">
-            <i class="bi bi-exclamation-triangle mt-1" aria-hidden="true"></i>
+          <div class="alert alert-warning budget-warning" role="status">
+            <i class="bi bi-exclamation-triangle budget-warning__icon" aria-hidden="true"></i>
             <span>{{ warning }}</span>
           </div>
         }
       </form>
 
-      <div dialogFooter class="d-flex flex-wrap gap-2 justify-content-end w-100">
+      <div dialogFooter class="fin-dialog-actions">
         <button type="button" class="btn btn-light" [disabled]="saving()" (click)="cancel()">
           Abbrechen
         </button>
         <button type="submit" form="transactionForm" class="btn btn-primary" [disabled]="saving()">
           @if (saving()) {
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           {{ isEditMode() ? 'Speichern' : 'Buchung erfassen' }}
         </button>
@@ -247,21 +236,29 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
   `,
   styles: [
     `
-      .details-block {
-        border-top: 1px solid var(--bs-border-color-translucent);
-        padding-top: 0.75rem;
+      /* Der ausklappbare Bereich kommt aus der globalen Muster-Schicht
+         (.fin-details) — er wird hier und im Überweisungsdialog identisch
+         gebraucht. */
+      fieldset {
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
       }
-      .details-summary {
-        cursor: pointer;
-        font-weight: 600;
-        min-height: 2.25rem;
+      legend.form-label {
+        float: none;
+        width: auto;
+        padding: 0;
+      }
+      .budget-warning {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
+        gap: var(--fin-space-2);
+        margin-bottom: 0;
       }
-      .details-summary:focus-visible {
-        outline: 2px solid var(--bs-primary);
-        outline-offset: 2px;
-        border-radius: 0.25rem;
+      .budget-warning__icon {
+        flex-shrink: 0;
+        margin-top: 0.15rem;
       }
     `,
   ],

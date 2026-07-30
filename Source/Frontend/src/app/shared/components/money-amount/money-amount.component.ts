@@ -43,28 +43,35 @@ export type MoneySize = 'sm' | 'md' | 'lg';
       .money {
         display: inline-flex;
         align-items: center;
-        gap: 0.15rem;
+        gap: 0.1rem;
+        /* Tabellarische Ziffern: Beträge stehen in Listen exakt untereinander
+           und springen beim Aktualisieren nicht in der Breite. */
         font-variant-numeric: tabular-nums;
-        font-weight: 600;
+        font-weight: 650;
+        letter-spacing: var(--fin-tracking-tight);
         white-space: nowrap;
       }
       .money--sm {
-        font-size: 0.875rem;
+        font-size: var(--fin-text-sm);
       }
       .money--lg {
-        font-size: 1.5rem;
-        letter-spacing: -0.02em;
+        font-size: var(--fin-text-2xl);
+        font-weight: 680;
+        letter-spacing: var(--fin-tracking-tighter);
       }
       .money--negative,
       .money--expense {
-        color: var(--color-expense);
+        color: var(--fin-expense);
       }
       .money--income {
-        color: var(--color-income);
+        color: var(--fin-income);
       }
       .bi {
-        font-size: 1.1em;
-        margin-inline-start: -0.15em;
+        font-size: 1.05em;
+        margin-inline-start: -0.12em;
+        /* Der Pfeil trägt keine eigene Information über die Farbe hinaus —
+           er sitzt optisch etwas zurück, damit die Zahl führt. */
+        opacity: 0.85;
       }
     `,
   ],

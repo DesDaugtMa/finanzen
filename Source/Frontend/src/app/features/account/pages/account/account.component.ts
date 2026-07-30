@@ -10,118 +10,171 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AccountApiService } from '../../../../core/services/account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { PasswordFieldComponent } from '../../../../shared/components/password-field/password-field.component';
+import { ThemeSwitchComponent } from '../../../../shared/components/theme-switch/theme-switch.component';
 
 @Component({
   selector: 'app-account',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PasswordFieldComponent, ThemeSwitchComponent],
   template: `
-    <div class="container py-4" style="max-width: 48rem;">
-      <div class="d-flex align-items-center gap-2 mb-4">
-        <i class="bi bi-person-circle fs-3 text-primary"></i>
-        <h1 class="h4 fw-bold mb-0">Profil &amp; Konto</h1>
-      </div>
+    <div class="container account-page">
+      <header class="fin-page-header">
+        <div class="fin-page-header__text">
+          <span class="fin-eyebrow">Einstellungen</span>
+          <h1 class="fin-page-header__title">Profil</h1>
+          <p class="fin-page-header__subtitle">Zugangsdaten, Erscheinungsbild und Geräte.</p>
+        </div>
+      </header>
 
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-4">
-          <h2 class="h6 fw-bold mb-3">Konto-Informationen</h2>
-          <dl class="row mb-0">
-            <dt class="col-sm-4 text-muted fw-normal">E-Mail-Adresse</dt>
-            <dd class="col-sm-8 mb-0 d-flex flex-wrap align-items-center gap-2">
-              <span>{{ user()?.email }}</span>
-              @if (user()?.emailVerified) {
-                <span class="badge text-bg-success">Bestätigt</span>
-              } @else {
-                <span class="badge text-bg-warning">Nicht bestätigt</span>
-              }
-            </dd>
+      <section class="fin-panel account-section" aria-labelledby="accountInfoHeading">
+        <div class="fin-panel__body">
+          <h2 id="accountInfoHeading" class="account-heading">Konto</h2>
+          <dl class="fin-kv">
+            <div>
+              <dt class="fin-kv__label">E-Mail-Adresse</dt>
+              <dd class="account-email">
+                <span class="fin-kv__value fin-break-all">{{ user()?.email }}</span>
+                @if (user()?.emailVerified) {
+                  <span class="fin-chip fin-chip--income">
+                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                    Bestätigt
+                  </span>
+                } @else {
+                  <span class="fin-chip fin-chip--warn">
+                    <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+                    Nicht bestätigt
+                  </span>
+                }
+              </dd>
+            </div>
           </dl>
         </div>
-      </div>
+      </section>
 
-      <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-4">
-          <h2 class="h6 fw-bold mb-3">Passwort ändern</h2>
-          <form [formGroup]="passwordForm" (ngSubmit)="onSubmit()" novalidate>
-            <div class="mb-3">
-              <label for="currentPassword" class="form-label">Aktuelles Passwort</label>
-              <input
-                type="password"
-                id="currentPassword"
-                formControlName="currentPassword"
-                class="form-control"
-                autocomplete="current-password"
-                [class.is-invalid]="isInvalid('currentPassword')"
-                aria-describedby="currentPasswordError"
-              />
-              <div id="currentPasswordError" class="invalid-feedback">
-                Bitte gib dein aktuelles Passwort ein.
-              </div>
+      <section class="fin-panel account-section" aria-labelledby="appearanceHeading">
+        <div class="fin-panel__body account-row">
+          <div class="account-row__text">
+            <h2 id="appearanceHeading" class="account-heading account-heading--tight">
+              Erscheinungsbild
+            </h2>
+            <p class="account-note">
+              „System“ folgt der Einstellung deines Geräts und wechselt automatisch.
+            </p>
+          </div>
+          <app-theme-switch />
+        </div>
+      </section>
+
+      <section class="fin-panel account-section" aria-labelledby="passwordHeading">
+        <div class="fin-panel__body">
+          <h2 id="passwordHeading" class="account-heading">Passwort ändern</h2>
+
+          <form class="fin-form" [formGroup]="passwordForm" (ngSubmit)="onSubmit()" novalidate>
+            <app-password-field
+              [control]="passwordForm.controls.currentPassword"
+              label="Aktuelles Passwort"
+              autocomplete="current-password"
+              error="Bitte gib dein aktuelles Passwort ein."
+              [invalid]="isInvalid('currentPassword')"
+            />
+
+            <app-password-field
+              [control]="passwordForm.controls.newPassword"
+              label="Neues Passwort"
+              autocomplete="new-password"
+              hint="Mindestens 6 Zeichen."
+              error="Das Passwort muss mindestens 6 Zeichen lang sein."
+              [invalid]="isInvalid('newPassword')"
+            />
+
+            <app-password-field
+              [control]="passwordForm.controls.confirmPassword"
+              label="Neues Passwort bestätigen"
+              autocomplete="new-password"
+              error="Die Passwörter stimmen nicht überein."
+              [invalid]="confirmMismatch()"
+            />
+
+            <div class="account-submit">
+              <button type="submit" class="btn btn-primary" [disabled]="loading()">
+                @if (loading()) {
+                  <span
+                    class="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
+                  Wird gespeichert…
+                } @else {
+                  Passwort ändern
+                }
+              </button>
             </div>
-
-            <div class="mb-3">
-              <label for="newPassword" class="form-label">Neues Passwort</label>
-              <input
-                type="password"
-                id="newPassword"
-                formControlName="newPassword"
-                class="form-control"
-                autocomplete="new-password"
-                [class.is-invalid]="isInvalid('newPassword')"
-                aria-describedby="newPasswordError"
-              />
-              <div id="newPasswordError" class="invalid-feedback">Mindestens 6 Zeichen.</div>
-            </div>
-
-            <div class="mb-4">
-              <label for="confirmPassword" class="form-label">Neues Passwort bestätigen</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                formControlName="confirmPassword"
-                class="form-control"
-                autocomplete="new-password"
-                [class.is-invalid]="confirmMismatch()"
-                aria-describedby="confirmError"
-              />
-              <div id="confirmError" class="invalid-feedback">
-                Die Passwörter stimmen nicht überein.
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="passwordForm.invalid || loading()"
-            >
-              @if (loading()) {
-                <span
-                  class="spinner-border spinner-border-sm me-2"
-                  role="status"
-                  aria-hidden="true"
-                ></span>
-                Wird gespeichert…
-              } @else {
-                Passwort ändern
-              }
-            </button>
           </form>
         </div>
-      </div>
+      </section>
 
-      <div class="card border-0 shadow-sm">
-        <div class="card-body p-4 d-flex flex-wrap align-items-center gap-2">
-          <div class="me-auto">
-            <h2 class="h6 fw-bold mb-1">Aktive Sitzungen</h2>
-            <p class="text-muted small mb-0">Verwalte die Geräte, auf denen du angemeldet bist.</p>
+      <section class="fin-panel" aria-labelledby="sessionsHeading">
+        <div class="fin-panel__body account-row">
+          <div class="account-row__text">
+            <h2 id="sessionsHeading" class="account-heading account-heading--tight">
+              Aktive Sitzungen
+            </h2>
+            <p class="account-note">Verwalte die Geräte, auf denen du angemeldet bist.</p>
           </div>
-          <a routerLink="/konto/sitzungen" class="btn btn-outline-primary">
-            <i class="bi bi-shield-lock me-1"></i> Sitzungen verwalten
+          <a routerLink="/konto/sitzungen" class="btn btn-outline-secondary">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span>Verwalten</span>
           </a>
         </div>
-      </div>
+      </section>
     </div>
   `,
+  styles: [
+    `
+      .account-page {
+        max-width: 44rem;
+      }
+      .account-section {
+        margin-bottom: var(--fin-space-4);
+      }
+      .account-heading {
+        margin: 0 0 var(--fin-space-4);
+        font-size: var(--fin-text-md);
+      }
+      .account-heading--tight {
+        margin-bottom: var(--fin-space-1);
+      }
+      .account-note {
+        margin: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+      }
+      /* Beschreibung links, Bedienelement rechts — auf schmalen Displays
+         untereinander, damit das Element nicht gequetscht wird. */
+      .account-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-4);
+      }
+      .account-row__text {
+        flex: 1 1 14rem;
+        min-width: 0;
+      }
+      .account-email {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--fin-space-2);
+        margin: 0.15rem 0 0;
+      }
+      .account-submit {
+        margin-top: var(--fin-space-2);
+      }
+    `,
+  ],
 })
 export class AccountComponent {
   private fb = inject(FormBuilder);

@@ -29,9 +29,9 @@ import { formatMoney } from '../../utils/money.util';
         ></div>
       </div>
 
-      <p class="budget-caption mb-0" [class.text-danger]="isOver()">
+      <p class="budget-caption" [class.text-danger]="isOver()">
         @if (isOver()) {
-          <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+          <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
         }
         <span>{{ caption() }}</span>
       </p>
@@ -40,25 +40,38 @@ import { formatMoney } from '../../utils/money.util';
   styles: [
     `
       .progress {
-        height: 0.5rem;
-        border-radius: 999px;
-        background-color: var(--bs-secondary-bg);
+        height: 0.375rem;
+        border-radius: var(--fin-radius-pill);
+        background-color: var(--fin-surface-active);
+        overflow: hidden;
       }
       .progress-bar {
-        background-color: var(--bs-primary);
-        border-radius: 999px;
-        transition: width 0.25s ease;
+        height: 100%;
+        background-color: var(--fin-accent);
+        border-radius: var(--fin-radius-pill);
+        /* Der Balken wächst sichtbar mit, wenn sich Ausgaben ändern. Breite ist
+           hier bewusst animiert statt transform: der Balken muss exakt am
+           Nullpunkt beginnen, eine Skalierung würde ihn verzerren. */
+        transition: width var(--fin-duration-slow) var(--fin-ease-out);
       }
       .progress-bar--warn {
-        background-color: var(--bs-warning);
+        background-color: var(--fin-warn);
       }
       .progress-bar--over {
-        background-color: var(--color-expense);
+        background-color: var(--fin-expense);
       }
       .budget-caption {
-        margin-top: 0.35rem;
-        font-size: 0.8125rem;
-        color: var(--bs-secondary-color);
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-1);
+        margin-top: var(--fin-space-2);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
+      }
+      .budget-caption.text-danger {
+        color: var(--fin-expense) !important;
+        font-weight: 550;
       }
     `,
   ],

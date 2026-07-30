@@ -1,0 +1,339 @@
+// =============================================================================
+// Bootstrap-Brücke
+// =============================================================================
+// Bootstrap liefert Grid, Reset und Formular-Grundlagen; das Erscheinungsbild
+// kommt vollständig aus unseren Tokens. Diese Datei übersetzt die Laufzeit-
+// Variablen von Bootstrap auf die `--fin-*`-Tokens.
+//
+// Warum als Brücke statt als SCSS-Variablen-Override: SCSS-Variablen werden zur
+// Compile-Zeit aufgelöst und können deshalb nicht pro Theme umschalten. Über die
+// Laufzeit-Variablen greift der Theme-Wechsel (`data-bs-theme`) auch für jede
+// Bootstrap-Komponente, die wir nicht explizit anfassen — kein „vergessenes“
+// Element bleibt im falschen Theme hängen.
+//
+// MUSS nach dem Bootstrap-Import eingebunden werden.
+// =============================================================================
+
+:root,
+[data-bs-theme='light'],
+[data-bs-theme='dark'] {
+  // Grundflächen und Text
+  --bs-body-bg: var(--fin-bg);
+  --bs-body-bg-rgb: 247, 245, 242;
+  --bs-body-color: var(--fin-text);
+  --bs-emphasis-color: var(--fin-text-strong);
+  --bs-heading-color: var(--fin-text-strong);
+  --bs-secondary-color: var(--fin-text-muted);
+  --bs-tertiary-color: var(--fin-text-subtle);
+  --bs-secondary-bg: var(--fin-surface-sunken);
+  --bs-tertiary-bg: var(--fin-surface-hover);
+
+  // Linien
+  --bs-border-color: var(--fin-border);
+  --bs-border-color-translucent: var(--fin-border);
+  --bs-border-radius: var(--fin-radius-md);
+  --bs-border-radius-sm: var(--fin-radius-sm);
+  --bs-border-radius-lg: var(--fin-radius-lg);
+  --bs-border-radius-xl: var(--fin-radius-xl);
+  --bs-border-radius-pill: var(--fin-radius-pill);
+
+  // Typografie
+  --bs-body-font-family: var(--fin-font-sans);
+  --bs-body-font-size: var(--fin-text-base);
+  --bs-body-line-height: var(--fin-leading-normal);
+
+  // Akzent — in Bootstrap heisst er „primary“, bei uns ist es die Handlungsfarbe
+  --bs-primary: var(--fin-accent);
+  --bs-primary-text-emphasis: var(--fin-accent-on-tint);
+  --bs-primary-bg-subtle: var(--fin-accent-tint);
+  --bs-primary-border-subtle: var(--fin-accent-tint-strong);
+  --bs-link-color: var(--fin-accent);
+  --bs-link-hover-color: var(--fin-accent-hover);
+  --bs-link-color-rgb: 15, 118, 110;
+
+  // Semantische Farben
+  --bs-success: var(--fin-success);
+  --bs-success-text-emphasis: var(--fin-success);
+  --bs-success-bg-subtle: var(--fin-success-tint);
+  --bs-success-border-subtle: var(--fin-success-tint);
+
+  --bs-danger: var(--fin-danger);
+  --bs-danger-text-emphasis: var(--fin-danger);
+  --bs-danger-bg-subtle: var(--fin-danger-tint);
+  --bs-danger-border-subtle: var(--fin-danger-tint);
+
+  --bs-warning: var(--fin-warn);
+  --bs-warning-text-emphasis: var(--fin-warn);
+  --bs-warning-bg-subtle: var(--fin-warn-tint);
+  --bs-warning-border-subtle: var(--fin-warn-tint);
+
+  --bs-info: var(--fin-info);
+  --bs-info-text-emphasis: var(--fin-info);
+  --bs-info-bg-subtle: var(--fin-info-tint);
+  --bs-info-border-subtle: var(--fin-info-tint);
+
+  --bs-focus-ring-color: var(--fin-accent-ring);
+  --bs-focus-ring-width: 3px;
+
+  // Bootstrap-Schatten auf unsere marineblau getönte Staffelung umlenken.
+  --bs-box-shadow: var(--fin-shadow-md);
+  --bs-box-shadow-sm: var(--fin-shadow-sm);
+  --bs-box-shadow-lg: var(--fin-shadow-lg);
+}
+
+// Bestandstoken aus der Vorgänger-Version. Bleiben als Alias erhalten, damit
+// nichts hart bricht — neue Styles nutzen ausschliesslich `--fin-*`.
+:root {
+  --color-surface: var(--fin-surface);
+  --color-app-bg: var(--fin-bg);
+  --color-income: var(--fin-income);
+  --color-expense: var(--fin-expense);
+}
+
+// -----------------------------------------------------------------------------
+// Karten
+// -----------------------------------------------------------------------------
+
+.card {
+  --bs-card-bg: var(--fin-surface);
+  --bs-card-color: var(--fin-text);
+  --bs-card-border-color: var(--fin-border);
+  --bs-card-border-radius: var(--fin-radius-lg);
+  --bs-card-inner-border-radius: calc(var(--fin-radius-lg) - 1px);
+  --bs-card-cap-bg: transparent;
+  --bs-card-spacer-x: var(--fin-space-5);
+  --bs-card-spacer-y: var(--fin-space-5);
+}
+
+// `border-0 shadow-sm` ist im Bestand das übliche Kartenrezept. Wir geben diesen
+// Karten trotzdem eine hauchfeine Kante: ohne sie verschwimmen Flächen im Dark
+// Mode ineinander, weil Schatten auf dunklem Grund kaum trägt.
+.card.border-0 {
+  border: 1px solid var(--fin-border-subtle) !important;
+}
+
+.card-header,
+.card-footer {
+  border-color: var(--fin-border-subtle);
+}
+
+.card-title {
+  color: var(--fin-text-strong);
+}
+
+// -----------------------------------------------------------------------------
+// Hinweise (Alerts)
+// -----------------------------------------------------------------------------
+// Statt Bootstraps flächigem Pastellblock: getönter Grund mit farbiger Kante
+// links. Das liest sich ruhiger und drängt sich nicht vor den Inhalt.
+
+.alert {
+  --bs-alert-border-radius: var(--fin-radius-md);
+  --bs-alert-padding-x: var(--fin-space-4);
+  --bs-alert-padding-y: var(--fin-space-3);
+  border: 1px solid var(--fin-border);
+  border-left-width: 3px;
+  font-size: var(--fin-text-base);
+  box-shadow: var(--fin-shadow-xs);
+}
+
+.alert-danger {
+  --bs-alert-color: var(--fin-danger);
+  --bs-alert-bg: var(--fin-danger-tint);
+  --bs-alert-border-color: var(--fin-danger);
+}
+
+.alert-warning {
+  --bs-alert-color: var(--fin-warn);
+  --bs-alert-bg: var(--fin-warn-tint);
+  --bs-alert-border-color: var(--fin-warn);
+}
+
+.alert-success {
+  --bs-alert-color: var(--fin-success);
+  --bs-alert-bg: var(--fin-success-tint);
+  --bs-alert-border-color: var(--fin-success);
+}
+
+.alert-info {
+  --bs-alert-color: var(--fin-info);
+  --bs-alert-bg: var(--fin-info-tint);
+  --bs-alert-border-color: var(--fin-info);
+}
+
+// -----------------------------------------------------------------------------
+// Badges
+// -----------------------------------------------------------------------------
+
+.badge {
+  --bs-badge-border-radius: var(--fin-radius-sm);
+  --bs-badge-font-weight: 600;
+  --bs-badge-font-size: var(--fin-text-xs);
+  --bs-badge-padding-x: 0.5em;
+  --bs-badge-padding-y: 0.32em;
+  letter-spacing: var(--fin-tracking-normal);
+}
+
+// Die `text-bg-*`-Varianten aus dem Bestand auf getönte statt volle Flächen
+// umstellen — volle Signalfarben wirken in Listen unruhig.
+.text-bg-success {
+  background-color: var(--fin-success-tint) !important;
+  color: var(--fin-success) !important;
+}
+
+.text-bg-danger {
+  background-color: var(--fin-danger-tint) !important;
+  color: var(--fin-danger) !important;
+}
+
+.text-bg-warning {
+  background-color: var(--fin-warn-tint) !important;
+  color: var(--fin-warn) !important;
+}
+
+.text-bg-secondary {
+  background-color: var(--fin-surface-sunken) !important;
+  color: var(--fin-text-muted) !important;
+}
+
+// -----------------------------------------------------------------------------
+// Fortschritt
+// -----------------------------------------------------------------------------
+
+.progress,
+.progress-stacked {
+  --bs-progress-bg: var(--fin-surface-active);
+  --bs-progress-border-radius: var(--fin-radius-pill);
+  --bs-progress-bar-bg: var(--fin-accent);
+  --bs-progress-height: 0.5rem;
+  overflow: hidden;
+}
+
+// -----------------------------------------------------------------------------
+// Tabellen
+// -----------------------------------------------------------------------------
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--fin-text);
+  --bs-table-border-color: var(--fin-border-subtle);
+  --bs-table-striped-bg: var(--fin-surface-sunken);
+  --bs-table-hover-bg: var(--fin-surface-hover);
+  margin-bottom: 0;
+}
+
+.table > thead {
+  --bs-table-color: var(--fin-text-subtle);
+}
+
+.table > thead th {
+  padding-block: var(--fin-space-3);
+  font-size: var(--fin-text-2xs);
+  font-weight: 650;
+  letter-spacing: var(--fin-tracking-wider);
+  text-transform: uppercase;
+  border-bottom-color: var(--fin-border);
+}
+
+.table > tbody td {
+  padding-block: var(--fin-space-3);
+  vertical-align: middle;
+}
+
+// -----------------------------------------------------------------------------
+// Trennlinien-Utilities
+// -----------------------------------------------------------------------------
+
+.border,
+.border-top,
+.border-bottom,
+.border-start,
+.border-end {
+  border-color: var(--fin-border) !important;
+}
+
+.text-muted {
+  color: var(--fin-text-muted) !important;
+}
+
+.text-primary {
+  color: var(--fin-accent) !important;
+}
+
+.text-danger {
+  color: var(--fin-danger) !important;
+}
+
+.text-body {
+  color: var(--fin-text) !important;
+}
+
+.bg-white,
+.bg-body {
+  background-color: var(--fin-surface) !important;
+}
+
+// -----------------------------------------------------------------------------
+// Ladeanzeige
+// -----------------------------------------------------------------------------
+
+.spinner-border {
+  --bs-spinner-border-width: 0.16em;
+  border-right-color: transparent;
+}
+
+// -----------------------------------------------------------------------------
+// Überlappende Klickfläche
+// -----------------------------------------------------------------------------
+// Wird von den Kontokarten genutzt: der Link deckt die ganze Karte ab, ohne
+// dass verschachtelte interaktive Elemente entstehen.
+
+.stretched-link::after {
+  border-radius: inherit;
+}
+
+// -----------------------------------------------------------------------------
+// Schliessen-Kreuz
+// -----------------------------------------------------------------------------
+// Bootstrap nutzt ein SVG-Hintergrundbild in fester Farbe. Wir maskieren es
+// stattdessen, damit es `currentColor` folgt und im Dark Mode automatisch passt.
+
+.btn-close {
+  --bs-btn-close-focus-shadow: none;
+  width: var(--fin-touch-min);
+  height: var(--fin-touch-min);
+  padding: 0;
+  border-radius: var(--fin-radius-sm);
+  background: none;
+  opacity: 1;
+  color: var(--fin-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color var(--fin-duration-fast) var(--fin-ease-out),
+    color var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+.btn-close::before {
+  content: '';
+  width: 0.8rem;
+  height: 0.8rem;
+  background-color: currentcolor;
+  mask: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e")
+    center / contain no-repeat;
+}
+
+.btn-close:hover {
+  background-color: var(--fin-surface-hover);
+  color: var(--fin-text-strong);
+}
+
+.btn-close-white {
+  color: currentcolor;
+}
+
+.btn-close-white:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}

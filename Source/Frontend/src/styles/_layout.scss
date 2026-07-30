@@ -1,0 +1,183 @@
+// =============================================================================
+// Layout — Seitengerüst, Container, Abschnitte, Safe Areas
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Container
+// -----------------------------------------------------------------------------
+// Bootstraps sprunghafte Breakpoint-Container werden durch einen fliessenden
+// ersetzt: dadurch gibt es keine Momente, in denen der Inhalt beim Skalieren
+// des Fensters plötzlich springt.
+
+.container,
+.container-fluid,
+.fin-container {
+  width: 100%;
+  max-width: var(--fin-container-max);
+  margin-inline: auto;
+  // Seitliche Safe-Area für iPhones im Querformat (Notch/Dynamic Island).
+  padding-inline: max(var(--fin-space-4), env(safe-area-inset-left, 0px));
+  padding-inline-end: max(var(--fin-space-4), env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 48rem) {
+  .container,
+  .container-fluid,
+  .fin-container {
+    padding-inline: var(--fin-space-6);
+  }
+}
+
+.fin-container--narrow {
+  max-width: var(--fin-container-narrow);
+}
+
+// -----------------------------------------------------------------------------
+// Seitengerüst
+// -----------------------------------------------------------------------------
+
+.fin-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  // `dvh` folgt der ein- und ausfahrenden Browserleiste auf iOS, sodass die
+  // Tab-Bar nicht unter der Safari-Leiste verschwindet.
+  min-height: 100dvh;
+}
+
+.fin-main {
+  flex: 1 1 auto;
+  padding-top: var(--fin-space-5);
+  // Unten Platz für die mobile Tab-Bar reservieren, damit das letzte Element
+  // einer Liste nie darunter liegt.
+  padding-bottom: calc(var(--fin-tabbar-total) + var(--fin-space-6));
+}
+
+@media (min-width: 48rem) {
+  .fin-main {
+    padding-top: var(--fin-space-8);
+    // Ab Tablet liegt die Navigation oben — unten ist keine Leiste im Weg.
+    padding-bottom: var(--fin-space-12);
+  }
+}
+
+// Seiten ohne Navigation (Anmelden, Registrieren) brauchen keinen Sockel.
+.fin-main--bare {
+  padding-block: 0;
+}
+
+// -----------------------------------------------------------------------------
+// Abschnitte
+// -----------------------------------------------------------------------------
+
+.fin-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fin-space-3) var(--fin-space-4);
+  margin-bottom: var(--fin-space-6);
+}
+
+.fin-page-header__text {
+  min-width: 0;
+}
+
+.fin-page-header__title {
+  margin-bottom: var(--fin-space-1);
+}
+
+.fin-page-header__subtitle {
+  margin-bottom: 0;
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-base);
+}
+
+.fin-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fin-space-2);
+}
+
+.fin-section {
+  margin-bottom: var(--fin-space-8);
+}
+
+.fin-section:last-child {
+  margin-bottom: 0;
+}
+
+.fin-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fin-space-2) var(--fin-space-4);
+  margin-bottom: var(--fin-space-4);
+}
+
+// Kleines, gesperrtes Label als Abschnittsmarke — ordnet ohne zu dominieren.
+.fin-eyebrow {
+  display: block;
+  color: var(--fin-text-subtle);
+  font-size: var(--fin-text-2xs);
+  font-weight: 650;
+  letter-spacing: var(--fin-tracking-wider);
+  text-transform: uppercase;
+}
+
+// -----------------------------------------------------------------------------
+// Raster
+// -----------------------------------------------------------------------------
+// `auto-fit` mit `minmax` statt Spaltenzahl pro Breakpoint: das Raster findet
+// seine Spalten selbst und braucht keine Media Queries.
+
+.fin-grid {
+  display: grid;
+  gap: var(--fin-space-4);
+}
+
+.fin-grid--stats {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+}
+
+.fin-grid--cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+
+// -----------------------------------------------------------------------------
+// Werkzeugleiste
+// -----------------------------------------------------------------------------
+
+.fin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fin-space-2) var(--fin-space-3);
+}
+
+.fin-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+// -----------------------------------------------------------------------------
+// Sockel für schwebende Aktionen (Mobil)
+// -----------------------------------------------------------------------------
+// Die wichtigste Aktion einer Seite bleibt am unteren Rand in Daumenreichweite,
+// direkt über der Tab-Bar.
+
+.fin-fab {
+  position: fixed;
+  right: max(var(--fin-space-4), env(safe-area-inset-right, 0px));
+  bottom: calc(var(--fin-tabbar-total) + var(--fin-space-4));
+  z-index: var(--fin-z-sticky);
+  box-shadow: var(--fin-shadow-lg);
+}
+
+@media (min-width: 48rem) {
+  // Auf grossen Screens hat die Aktion ihren Platz im Seitenkopf.
+  .fin-fab {
+    display: none;
+  }
+}

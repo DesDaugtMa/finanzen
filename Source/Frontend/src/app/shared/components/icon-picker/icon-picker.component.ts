@@ -33,42 +33,57 @@ import { DEFAULT_ACCENT_COLOR } from '../../utils/color-presets';
   `,
   styles: [
     `
+      fieldset {
+        min-width: 0;
+        border: 0;
+        padding: 0;
+        margin: 0;
+      }
       .icon-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(2.75rem, 1fr));
-        gap: 0.35rem;
+        /* auto-fill mit fester Mindestbreite: das Raster findet seine Spalten
+           selbst und braucht keine Breakpoints. */
+        grid-template-columns: repeat(auto-fill, minmax(var(--fin-touch-min), 1fr));
+        gap: var(--fin-space-2);
       }
       .icon-option {
-        aspect-ratio: 1;
-        min-height: 2.75rem;
-        border-radius: 0.7rem;
-        border: 1px solid var(--bs-border-color-translucent);
-        background-color: var(--color-surface);
-        color: var(--bs-secondary-color);
-        font-size: 1.1rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        aspect-ratio: 1;
+        min-height: var(--fin-touch-min);
+        border: 1px solid var(--fin-border);
+        border-radius: var(--fin-radius-sm);
+        background-color: var(--fin-surface);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-md);
+        cursor: pointer;
         transition:
-          transform 0.15s ease,
-          border-color 0.15s ease;
+          transform var(--fin-duration-fast) var(--fin-ease-out),
+          border-color var(--fin-duration-fast) var(--fin-ease-out),
+          background-color var(--fin-duration-fast) var(--fin-ease-out);
       }
-      .icon-option:hover {
-        transform: translateY(-1px);
-        border-color: var(--bs-border-color);
+      @media (hover: hover) {
+        .icon-option:hover:not(.icon-option--selected) {
+          transform: translateY(-1px);
+          border-color: var(--fin-border-strong);
+          background-color: var(--fin-surface-hover);
+        }
       }
+      /* Die Auswahl trägt die Kategoriefarbe (per Style-Bindung) — Rahmen und
+         getönte Fläche greifen diese Farbe über currentColor auf. */
       .icon-option--selected {
-        border-width: 2px;
-        border-color: currentColor;
+        border-color: currentcolor;
+        background-color: color-mix(in srgb, currentcolor 12%, var(--fin-surface));
       }
       .icon-option:focus-visible {
-        outline: 2px solid var(--bs-primary);
+        outline: 2px solid var(--fin-accent);
         outline-offset: 2px;
       }
       legend.form-label {
         float: none;
         width: auto;
-        font-size: 1rem;
+        padding: 0;
       }
     `,
   ],

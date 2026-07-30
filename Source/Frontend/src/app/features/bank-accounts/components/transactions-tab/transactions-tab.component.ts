@@ -58,29 +58,32 @@ const DEFAULT_PAGE_SIZE = 25;
     TransferFormDialogComponent,
   ],
   template: `
-    <section class="card border-0 shadow-sm surface-card" aria-labelledby="transactionsHeading">
-      <div class="card-body p-3 p-sm-4">
-        <header class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
+    <section class="fin-panel" aria-labelledby="transactionsHeading">
+      <div class="fin-panel__body">
+        <header class="transactions-header">
           <div>
-            <h2 id="transactionsHeading" class="h6 fw-bold mb-1">
+            <h2 id="transactionsHeading" class="transactions-title">
               Buchungen im {{ monthLabel() }}
             </h2>
-            <p class="text-muted small mb-0" aria-live="polite">{{ resultLabel() }}</p>
+            <p class="transactions-count" aria-live="polite">{{ resultLabel() }}</p>
           </div>
 
-          <!-- Auf breiten Displays sitzen die Aktionen in der Kopfzeile, mobil unten in Daumenreichweite. -->
-          <div class="d-none d-sm-flex flex-wrap gap-2">
+          <!-- Auf breiten Displays sitzen die Aktionen in der Kopfzeile, mobil
+               unten in der Aktionsleiste in Daumenreichweite. -->
+          <div class="transactions-actions">
             <button type="button" class="btn btn-outline-secondary" (click)="openTransfer(null)">
-              <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Überweisung
+              <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+              <span>Überweisung</span>
             </button>
             <button type="button" class="btn btn-primary" (click)="openTransaction(null)">
-              <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Buchung
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              <span>Buchung</span>
             </button>
           </div>
         </header>
 
         <app-transaction-filters
-          class="d-block mb-3"
+          class="transactions-filters"
           [categories]="categories()"
           [search]="filter().search"
           [type]="filter().type"
@@ -91,14 +94,21 @@ const DEFAULT_PAGE_SIZE = 25;
         />
 
         @if (loading()) {
-          <div class="text-center py-5">
-            <span class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Buchungen werden geladen …</span>
-            </span>
+          <div class="fin-rows" role="status" aria-label="Buchungen werden geladen">
+            @for (placeholder of skeletonSlots; track $index) {
+              <div class="fin-row">
+                <div class="fin-skeleton fin-skeleton--circle row-skeleton__icon"></div>
+                <div class="fin-row__main row-skeleton__lines">
+                  <div class="fin-skeleton fin-skeleton--line-short"></div>
+                  <div class="fin-skeleton fin-skeleton--text"></div>
+                </div>
+                <div class="fin-skeleton fin-skeleton--amount"></div>
+              </div>
+            }
           </div>
         } @else if (error()) {
-          <div class="alert alert-danger d-flex flex-wrap align-items-center gap-2" role="alert">
-            <span class="me-auto">{{ error() }}</span>
+          <div class="alert alert-danger transactions-error" role="alert">
+            <span>{{ error() }}</span>
             <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
               Erneut versuchen
             </button>
@@ -136,19 +146,17 @@ const DEFAULT_PAGE_SIZE = 25;
           />
 
           @if (totalPages() > 1) {
-            <nav
-              class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3"
-              aria-label="Seiten"
-            >
-              <span class="text-muted small">Seite {{ filter().page }} von {{ totalPages() }}</span>
-              <div class="btn-group">
+            <nav class="pager" aria-label="Seiten">
+              <span class="pager__status"> Seite {{ filter().page }} von {{ totalPages() }} </span>
+              <div class="pager__buttons">
                 <button
                   type="button"
                   class="btn btn-outline-secondary btn-sm"
                   [disabled]="filter().page <= 1"
                   (click)="goToPage(filter().page - 1)"
                 >
-                  <i class="bi bi-chevron-left me-1" aria-hidden="true"></i> Zurück
+                  <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                  <span>Zurück</span>
                 </button>
                 <button
                   type="button"
@@ -156,7 +164,8 @@ const DEFAULT_PAGE_SIZE = 25;
                   [disabled]="filter().page >= totalPages()"
                   (click)="goToPage(filter().page + 1)"
                 >
-                  Weiter <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
+                  <span>Weiter</span>
+                  <i class="bi bi-chevron-right" aria-hidden="true"></i>
                 </button>
               </div>
             </nav>
@@ -165,17 +174,16 @@ const DEFAULT_PAGE_SIZE = 25;
       </div>
     </section>
 
-    <!-- Mobile Aktionsleiste: immer erreichbar, ohne die Liste zu verdecken. -->
-    <div class="action-bar d-sm-none">
-      <button
-        type="button"
-        class="btn btn-outline-secondary flex-grow-1"
-        (click)="openTransfer(null)"
-      >
-        <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Überweisung
+    <!-- Mobile Aktionsleiste: klebt über der Tab-Bar am unteren Rand und bleibt
+         damit erreichbar, ohne die Liste zu verdecken. -->
+    <div class="action-bar">
+      <button type="button" class="btn btn-outline-secondary" (click)="openTransfer(null)">
+        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+        <span>Überweisung</span>
       </button>
-      <button type="button" class="btn btn-primary flex-grow-1" (click)="openTransaction(null)">
-        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Buchung
+      <button type="button" class="btn btn-primary" (click)="openTransaction(null)">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Buchung</span>
       </button>
     </div>
 
@@ -217,25 +225,98 @@ const DEFAULT_PAGE_SIZE = 25;
   `,
   styles: [
     `
-      .surface-card {
-        border-radius: 1rem;
-        background-color: var(--color-surface);
+      .transactions-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+        margin-bottom: var(--fin-space-4);
       }
+      .transactions-title {
+        margin: 0;
+        font-size: var(--fin-text-md);
+      }
+      .transactions-count {
+        margin: 0.15rem 0 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+      }
+      /* Die Aktionen liegen ab Tablet in der Kopfzeile; auf Mobil übernimmt das
+         die klebende Leiste am unteren Rand. */
+      .transactions-actions {
+        display: none;
+        flex-wrap: wrap;
+        gap: var(--fin-space-2);
+      }
+      .transactions-filters {
+        display: block;
+        margin-bottom: var(--fin-space-4);
+      }
+      .transactions-error {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+      }
+
+      .pager {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+        margin-top: var(--fin-space-4);
+        padding-top: var(--fin-space-4);
+        border-top: 1px solid var(--fin-border-subtle);
+      }
+      .pager__status {
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        font-variant-numeric: tabular-nums;
+      }
+      .pager__buttons {
+        display: flex;
+        gap: var(--fin-space-2);
+      }
+
       .action-bar {
         position: sticky;
-        /* Abstand zum unteren Rand, damit die Leiste nicht unter Systemleisten rutscht. */
-        bottom: calc(0.75rem + env(safe-area-inset-bottom));
-        z-index: 1020;
+        /* Sitzt direkt über der Tab-Bar; deren Höhe steckt inklusive
+           Home-Indicator in --fin-tabbar-total. */
+        bottom: calc(var(--fin-tabbar-total) + var(--fin-space-3));
+        z-index: var(--fin-z-sticky);
         display: flex;
-        gap: 0.5rem;
-        margin-top: 0.75rem;
-        padding: 0.5rem;
-        border-radius: 1rem;
-        background-color: var(--color-surface);
-        box-shadow: var(--bs-box-shadow);
+        gap: var(--fin-space-2);
+        margin-top: var(--fin-space-4);
+        padding: var(--fin-space-2);
+        border: 1px solid var(--fin-border);
+        border-radius: var(--fin-radius-lg);
+        background-color: var(--fin-bg-elevated);
+        box-shadow: var(--fin-shadow-lg);
       }
       .action-bar .btn {
-        min-height: 2.75rem;
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      .row-skeleton__icon {
+        flex-shrink: 0;
+      }
+      .row-skeleton__lines {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-2);
+      }
+
+      @media (min-width: 34rem) {
+        .transactions-actions {
+          display: flex;
+        }
+        .action-bar {
+          display: none;
+        }
       }
     `,
   ],
@@ -277,6 +358,9 @@ export class TransactionsTabComponent {
   protected readonly transactions = computed(() => this.result()?.items ?? []);
   protected readonly totalPages = computed(() => this.result()?.totalPages ?? 0);
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
+
+  /** Anzahl der Platzhalter-Zeilen während des Ladens. */
+  protected readonly skeletonSlots = [0, 1, 2, 3, 4];
 
   protected readonly hasActiveFilters = computed(() => {
     const filter = this.filter();
