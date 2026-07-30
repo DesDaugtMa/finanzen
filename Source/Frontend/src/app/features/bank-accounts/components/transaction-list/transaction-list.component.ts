@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import {
   SortDirection,
   Transaction,
   TransactionSort,
 } from '../../../../core/models/transaction.model';
+import { ViewportService } from '../../../../core/services/viewport.service';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { CategoryBadgeComponent } from '../../../../shared/components/category-badge/category-badge.component';
 import { formatDate } from '../../../../shared/utils/month.util';
@@ -15,175 +16,189 @@ interface SortableColumn {
 
 /**
  * Liste der Buchungen eines Monats. Ab Tablet als Tabelle mit sortierbaren Spalten,
- * darunter als Karten — dieselben Daten, jeweils in der Form, die auf dem Gerät
- * gut lesbar ist.
+ * darunter als Zeilenkarten — dieselben Daten, jeweils in der Form, die auf dem
+ * Gerät gut lesbar ist.
+ *
+ * Es wird immer nur *eine* der beiden Formen gerendert. Beide gleichzeitig im DOM
+ * zu halten und die unpassende per CSS auszublenden hiesse, auf dem Smartphone
+ * eine vollständige Tabelle mit bis zu 25 Zeilen mitzuschleppen, die niemand
+ * sieht — doppelte Knotenzahl und doppelte Layout-Arbeit auf dem schwächeren
+ * Gerät.
  */
 @Component({
   selector: 'app-transaction-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MoneyAmountComponent, CategoryBadgeComponent],
   template: `
-    <!-- Tabelle ab Tablet -->
-    <div class="transaction-table-wrap">
-      <table class="table align-middle transaction-table">
-        <caption class="visually-hidden">
-          Buchungen des gewählten Monats
-        </caption>
-        <thead>
-          <tr>
-            @for (column of columns; track column.key) {
-              <th
-                scope="col"
-                [class.text-end]="column.key === 'Amount'"
-                [attr.aria-sort]="ariaSort(column.key)"
-              >
-                <button type="button" class="sort-button" (click)="sortChange.emit(column.key)">
-                  {{ column.label }}
-                  <i class="bi" [class]="sortIcon(column.key)" aria-hidden="true"></i>
-                </button>
-              </th>
-            }
-            <th scope="col"><span class="visually-hidden">Aktionen</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of transactions(); track item.id) {
+    @if (viewport.isWide()) {
+      <!-- Tabelle ab Tablet -->
+      <div class="transaction-table-wrap">
+        <table class="table align-middle transaction-table">
+          <caption class="visually-hidden">
+            Buchungen des gewählten Monats
+          </caption>
+          <thead>
             <tr>
-              <td class="text-nowrap">{{ formatDate(item.bookingDate) }}</td>
-              <td>
-                <span class="transaction-title">
-                  <span class="fin-break-all">{{ item.title }}</span>
-                  @if (item.isTransfer) {
-                    <span class="fin-chip">
-                      <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-                      {{ item.counterAccountName }}
-                    </span>
-                  }
-                  @if (item.note) {
-                    <i
-                      class="bi bi-chat-left-text text-muted"
-                      [attr.title]="item.note"
-                      aria-hidden="true"
-                    ></i>
-                  }
-                </span>
-              </td>
-              <td>
-                <app-category-badge
-                  [name]="item.categoryName"
-                  [color]="item.categoryColor"
-                  [icon]="item.categoryIcon"
-                />
-              </td>
-              <td class="text-end">
-                <app-money-amount
-                  [amount]="item.amount"
-                  [currency]="item.currency"
-                  [tone]="item.type === 'Income' ? 'income' : 'expense'"
-                />
-              </td>
-              <td>
-                <div class="transaction-actions">
-                  <button
-                    type="button"
-                    class="btn fin-btn-icon"
-                    [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
-                    (click)="edit.emit(item)"
-                  >
-                    <i class="bi bi-pencil" aria-hidden="true"></i>
+              @for (column of columns; track column.key) {
+                <th
+                  scope="col"
+                  [class.text-end]="column.key === 'Amount'"
+                  [attr.aria-sort]="ariaSort(column.key)"
+                >
+                  <button type="button" class="sort-button" (click)="sortChange.emit(column.key)">
+                    {{ column.label }}
+                    <i class="bi" [class]="sortIcon(column.key)" aria-hidden="true"></i>
                   </button>
-                  <button
-                    type="button"
-                    class="btn fin-btn-icon row-remove"
-                    [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
-                    (click)="remove.emit(item)"
-                  >
-                    <i class="bi bi-trash" aria-hidden="true"></i>
-                  </button>
-                </div>
-              </td>
+                </th>
+              }
+              <th scope="col"><span class="visually-hidden">Aktionen</span></th>
             </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (item of transactions(); track item.id) {
+              <tr>
+                <td class="text-nowrap">{{ formatDate(item.bookingDate) }}</td>
+                <td>
+                  <span class="transaction-title">
+                    <span class="fin-break-all">{{ item.title }}</span>
+                    @if (item.isTransfer) {
+                      <span class="fin-chip">
+                        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
+                        {{ item.counterAccountName }}
+                      </span>
+                    }
+                    @if (item.note) {
+                      <i
+                        class="bi bi-chat-left-text text-muted"
+                        [attr.title]="item.note"
+                        aria-hidden="true"
+                      ></i>
+                    }
+                  </span>
+                </td>
+                <td>
+                  <app-category-badge
+                    [name]="item.categoryName"
+                    [color]="item.categoryColor"
+                    [icon]="item.categoryIcon"
+                  />
+                </td>
+                <td class="text-end">
+                  <app-money-amount
+                    [amount]="item.amount"
+                    [currency]="item.currency"
+                    [tone]="item.type === 'Income' ? 'income' : 'expense'"
+                  />
+                </td>
+                <td>
+                  <div class="transaction-actions">
+                    <button
+                      type="button"
+                      class="btn fin-btn-icon"
+                      [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
+                      (click)="edit.emit(item)"
+                    >
+                      <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn fin-btn-icon row-remove"
+                      [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
+                      (click)="remove.emit(item)"
+                    >
+                      <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <!--
+        Zeilenkarten auf schmalen Displays. Bezeichnung und Betrag stehen in der
+        oberen Zeile, Metadaten und Aktionen in der unteren: nebeneinander in
+        einer einzigen Zeile blieben der Bezeichnung neben Betrag und zwei
+        Schaltflächen auf einem 320px-Display nur wenige Pixel.
+      -->
+      <ul class="tx-list">
+        @for (item of transactions(); track item.id) {
+          <li class="tx-row">
+            <span class="tx-row__lead" aria-hidden="true">
+              <app-category-badge
+                [showLabel]="false"
+                [name]="item.categoryName"
+                [color]="item.categoryColor"
+                [icon]="item.categoryIcon"
+              />
+            </span>
 
-    <!-- Zeilenliste auf schmalen Displays -->
-    <ul class="fin-rows transaction-rows">
-      @for (item of transactions(); track item.id) {
-        <li class="fin-row">
-          <span class="row-icon" aria-hidden="true">
-            <app-category-badge
-              [showLabel]="false"
-              [name]="item.categoryName"
-              [color]="item.categoryColor"
-              [icon]="item.categoryIcon"
+            <p class="tx-row__title">{{ item.title }}</p>
+
+            <app-money-amount
+              class="tx-row__amount"
+              [amount]="item.amount"
+              [currency]="item.currency"
+              [tone]="item.type === 'Income' ? 'income' : 'expense'"
             />
-          </span>
 
-          <div class="fin-row__main">
-            <p class="fin-row__title">{{ item.title }}</p>
-            <p class="fin-row__meta">
+            <p class="tx-row__meta">
               <span>{{ formatDate(item.bookingDate) }}</span>
               <span class="fin-dot"></span>
-              <span class="row-category">{{ item.categoryName ?? 'Ohne Kategorie' }}</span>
+              <span>{{ item.categoryName ?? 'Ohne Kategorie' }}</span>
               @if (item.isTransfer) {
                 <span class="fin-chip">
                   <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
                   {{ item.counterAccountName }}
                 </span>
               }
-              @if (item.note) {
-                <i class="bi bi-chat-left-text" [attr.title]="item.note" aria-hidden="true"></i>
-              }
             </p>
-          </div>
 
-          <div class="fin-row__aside">
-            <app-money-amount
-              [amount]="item.amount"
-              [currency]="item.currency"
-              [tone]="item.type === 'Income' ? 'income' : 'expense'"
-            />
-            <button
-              type="button"
-              class="btn fin-btn-icon"
-              [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
-              (click)="edit.emit(item)"
-            >
-              <i class="bi bi-pencil" aria-hidden="true"></i>
-            </button>
-            <button
-              type="button"
-              class="btn fin-btn-icon row-remove"
-              [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
-              (click)="remove.emit(item)"
-            >
-              <i class="bi bi-trash" aria-hidden="true"></i>
-            </button>
-          </div>
-        </li>
-      }
-    </ul>
+            <div class="tx-row__actions">
+              <button
+                type="button"
+                class="btn fin-btn-icon"
+                [attr.aria-label]="'Buchung ' + item.title + ' bearbeiten'"
+                (click)="edit.emit(item)"
+              >
+                <i class="bi bi-pencil" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                class="btn fin-btn-icon row-remove"
+                [attr.aria-label]="'Buchung ' + item.title + ' löschen'"
+                (click)="remove.emit(item)"
+              >
+                <i class="bi bi-trash" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <!--
+              Die Notiz steht als Text in der Zeile und nicht nur als
+              title-Attribut an einem Symbol: auf dem Touchscreen gibt es kein
+              Hover, ein Tooltip wäre dort also unerreichbar und die Notiz für
+              Mobilnutzer unsichtbar.
+            -->
+            @if (item.note) {
+              <p class="tx-row__note">
+                <i class="bi bi-chat-left-text" aria-hidden="true"></i>
+                <span>{{ item.note }}</span>
+              </p>
+            }
+          </li>
+        }
+      </ul>
+    }
   `,
   styles: [
     `
-      /* Ab Tablet die Tabelle, darunter die Zeilenliste. Der Umschaltpunkt ist
-         die Breite, ab der vier Spalten plus Aktionen ohne Quetschen passen. */
+      /* Der Umschaltpunkt zwischen Tabelle und Zeilenkarten liegt bei 48rem —
+         der Breite, ab der vier Spalten plus Aktionen ohne Quetschen passen.
+         Welche Form gerendert wird, entscheidet der ViewportService; hier steht
+         nur noch die Gestaltung. */
       .transaction-table-wrap {
-        display: none;
         overflow-x: auto;
-      }
-      .transaction-rows {
-        display: flex;
-      }
-      @media (min-width: 48rem) {
-        .transaction-table-wrap {
-          display: block;
-        }
-        .transaction-rows {
-          display: none;
-        }
       }
 
       .sort-button {
@@ -235,21 +250,112 @@ interface SortableColumn {
         color: var(--fin-danger);
       }
 
-      .row-icon {
-        flex-shrink: 0;
+      /* -------------------------------------------------------------------
+         Zeilenkarte (Mobil)
+         ------------------------------------------------------------------- */
+
+      .tx-list {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        list-style: none;
       }
-      /* In der Zeilenliste steht der Kategoriename schon als Text in der
-         Metazeile — das Symbol daneben genügt. */
-      .row-category {
+
+      /*
+        Zwei Zeilen, drei Spalten. Das Kategoriesymbol steht links über beide
+        Zeilen, rechts liegen Betrag und Aktionen übereinander. Die mittlere
+        Spalte nimmt den Rest — minmax(0, 1fr) ist nötig, damit sie unter ihre
+        Inhaltsbreite schrumpfen darf und die Kürzung greift.
+      */
+      .tx-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+          'lead title  amount'
+          'lead meta   actions'
+          'note note   note';
+        align-items: center;
+        gap: var(--fin-space-1) var(--fin-space-3);
+        padding: var(--fin-space-3) var(--fin-space-4);
+        border-top: 1px solid var(--fin-border-subtle);
+      }
+      .tx-row:first-child {
+        border-top: 0;
+      }
+
+      .tx-row__lead {
+        grid-area: lead;
+        align-self: start;
+        /* Auf Höhe der ersten Textzeile, nicht auf Höhe der ganzen Karte. */
+        margin-top: 0.1rem;
+      }
+
+      .tx-row__title {
+        grid-area: title;
+        margin: 0;
+        color: var(--fin-text-strong);
+        font-size: var(--fin-text-base);
+        font-weight: 600;
+        line-height: var(--fin-leading-snug);
+        /* Bis zu zwei Zeilen statt harter Kürzung: die Bezeichnung ist das
+           Merkmal, an dem eine Buchung wiedererkannt wird. */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 12rem;
+        overflow-wrap: anywhere;
+      }
+
+      .tx-row__amount {
+        grid-area: amount;
+        justify-self: end;
+        align-self: start;
+      }
+
+      .tx-row__meta {
+        grid-area: meta;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--fin-space-1) var(--fin-space-2);
+        margin: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
+      }
+
+      .tx-row__actions {
+        grid-area: actions;
+        display: flex;
+        justify-self: end;
+        gap: var(--fin-space-1);
+      }
+
+      .tx-row__note {
+        grid-area: note;
+        display: flex;
+        align-items: flex-start;
+        gap: var(--fin-space-2);
+        margin: var(--fin-space-1) 0 0;
+        padding: var(--fin-space-2) var(--fin-space-3);
+        border-radius: var(--fin-radius-sm);
+        background-color: var(--fin-surface-sunken);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
+        overflow-wrap: anywhere;
+      }
+      .tx-row__note i {
+        flex-shrink: 0;
+        margin-top: 0.1rem;
       }
     `,
   ],
 })
 export class TransactionListComponent {
+  protected readonly viewport = inject(ViewportService);
+
   readonly transactions = input.required<Transaction[]>();
   readonly sort = input.required<TransactionSort>();
   readonly direction = input.required<SortDirection>();

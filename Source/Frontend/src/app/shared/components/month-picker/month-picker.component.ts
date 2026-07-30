@@ -26,7 +26,6 @@ import {
   selector: 'app-month-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'd-inline-block position-relative',
     '[class.month-picker--on-brand]': "tone() === 'on-brand'",
     '(document:click)': 'onDocumentClick($event)',
     '(document:keydown.escape)': 'close()',
@@ -114,30 +113,63 @@ import {
   `,
   styles: [
     `
+      /* Auf schmalen Displays nimmt die Leiste die volle Breite: die drei
+         Schaltflächen werden dadurch zu grossen, sicher treffbaren Zielen, und
+         die feste Mindestbreite des Auslösers kann auf kleinen Telefonen
+         (320px) nicht mehr aus dem Container laufen. Ab Tablet schrumpft sie
+         auf ihre Inhaltsbreite zurück. */
+      :host {
+        display: block;
+        position: relative;
+      }
+      @media (min-width: 34rem) {
+        :host {
+          display: inline-block;
+        }
+      }
       .month-nav {
         /* Die drei Schaltflächen wirken als ein Element: nur die Außenkanten
            sind gerundet, innen stoßen sie mit geteilter Linie aneinander. */
-        display: inline-flex;
+        display: flex;
+        width: 100%;
         border-radius: var(--fin-radius-sm);
+      }
+      @media (min-width: 34rem) {
+        .month-nav {
+          display: inline-flex;
+          width: auto;
+        }
       }
       .month-step {
         --bs-btn-padding-x: var(--fin-space-3);
+        /* Die Pfeile behalten ihre Breite, der Auslöser in der Mitte dehnt sich. */
+        flex: 0 0 auto;
       }
       .month-trigger {
-        min-width: 10.5rem;
+        flex: 1 1 auto;
+        min-width: 0;
         font-variant-numeric: tabular-nums;
       }
+      @media (min-width: 34rem) {
+        .month-trigger {
+          flex: 0 0 auto;
+          min-width: 10.5rem;
+        }
+      }
       .month-label {
-        font-variant-numeric: tabular-nums;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .month-panel {
         position: absolute;
         z-index: var(--fin-z-dropdown);
         top: calc(100% + var(--fin-space-2));
+        /* Auf Mobil deckt das Panel die Breite des Auslösers ab — so kann es
+           weder aus dem sichtbaren Bereich laufen, noch stehen die Monatsfelder
+           unnötig schmal. */
+        right: 0;
         left: 0;
-        /* Nie breiter als der Bildschirm minus Rand — sonst läuft das Panel auf
-           dem Smartphone aus dem sichtbaren Bereich heraus. */
-        width: min(20rem, calc(100vw - 2rem));
         padding: var(--fin-space-3);
         background-color: var(--fin-bg-elevated);
         border: 1px solid var(--fin-border);
@@ -145,6 +177,12 @@ import {
         box-shadow: var(--fin-shadow-lg);
         animation: fin-pop-in var(--fin-duration-fast) var(--fin-ease-out) both;
         transform-origin: top left;
+      }
+      @media (min-width: 34rem) {
+        .month-panel {
+          right: auto;
+          width: 20rem;
+        }
       }
       .month-panel__head {
         display: flex;
@@ -163,8 +201,9 @@ import {
         gap: var(--fin-space-1);
       }
       .month-cell {
-        /* Angenehmes Touch-Ziel auch auf schmalen Displays. */
-        min-height: 2.5rem;
+        /* Volles Touch-Mindestmass (44px, WCAG 2.5.5) statt knapper 40px —
+           zwölf Felder dicht an dicht wollen sicher treffbar sein. */
+        min-height: var(--fin-touch-min);
         border: 0;
         border-radius: var(--fin-radius-xs);
         background-color: transparent;

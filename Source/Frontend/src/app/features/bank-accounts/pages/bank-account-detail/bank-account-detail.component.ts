@@ -286,6 +286,17 @@ type TabId = (typeof TAB_IDS)[number];
         color: rgba(255, 255, 255, 0.7);
         font-size: var(--fin-text-sm);
       }
+      /* Auf Mobil bekommt die Monatsauswahl eine eigene, volle Zeile unter der
+         Beschriftung. Nebeneinander bliebe für die drei Schaltflächen auf einem
+         320px-Display kein ausreichender Platz. */
+      .detail-hero__period app-month-picker {
+        flex: 1 1 100%;
+      }
+      @media (min-width: 34rem) {
+        .detail-hero__period app-month-picker {
+          flex: 0 0 auto;
+        }
+      }
       .detail-hero__period-label strong {
         color: #fff;
       }

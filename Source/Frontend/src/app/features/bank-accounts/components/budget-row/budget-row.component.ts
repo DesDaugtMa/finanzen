@@ -96,20 +96,33 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
         border-top: none;
         padding-top: var(--fin-space-2);
       }
+      /* Auf Mobil stehen Kategorie und Betragsfeld untereinander: nebeneinander
+         blieben dem Kategorienamen auf einem schmalen Display nur rund 90px,
+         womit er auf ein paar Zeichen gekürzt würde. Ab Tablet ist genug Breite
+         für eine Zeile — dort sitzt das Feld rechts. */
       .budget-row__head {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
         gap: var(--fin-space-2);
         margin-bottom: var(--fin-space-3);
       }
       .budget-row__category {
-        flex: 1 1 auto;
         min-width: 0;
       }
-      .budget-input {
-        flex-shrink: 0;
-        width: 9.5rem;
+      @media (min-width: 34rem) {
+        .budget-row__head {
+          flex-direction: row;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+        .budget-row__category {
+          flex: 1 1 auto;
+        }
+        .budget-input {
+          flex-shrink: 0;
+          width: 9.5rem;
+        }
       }
       .row-status {
         display: flex;

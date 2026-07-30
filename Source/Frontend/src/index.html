@@ -9,8 +9,20 @@
       `viewport-fit=cover` ist Voraussetzung dafür, dass `env(safe-area-inset-*)`
       überhaupt Werte liefert. Ohne diesen Wert liegt die untere Tab-Bar auf
       iPhones unter dem Home-Indicator.
+
+      `interactive-widget=resizes-content` lässt die Bildschirmtastatur den
+      Layout-Viewport verkleinern. Ohne diesen Wert bleibt `dvh` bei offener
+      Tastatur unverändert, und der am unteren Rand verankerte Dialog (Sheet)
+      liegt mit seiner Aktionsleiste hinter der Tastatur — der Speichern-Knopf
+      wäre beim Ausfüllen eines Formulars nicht erreichbar.
+
+      Bewusst *kein* `maximum-scale`/`user-scalable=no`: das Sperren des Zooms
+      verstösst gegen WCAG 1.4.4.
     -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta
       name="description"
       content="Persönliche Finanzen im Blick: Konten, Buchungen, Kategorien und Budgets."

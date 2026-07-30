@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DOCUMENT,
+  DestroyRef,
   ElementRef,
   computed,
   inject,
@@ -42,7 +43,6 @@ interface NavTarget {
   host: {
     '(document:click)': 'onDocumentClick($event)',
     '(document:keydown.escape)': 'closeMenu()',
-    '(window:scroll)': 'onScroll()',
   },
   template: `
     <header class="fin-topbar" [class.fin-topbar--scrolled]="scrolled()">
@@ -212,6 +212,37 @@ export class NavbarComponent {
     this.targets.filter((target) => !target.adminOnly || this.authService.isAdmin()),
   );
 
+  /**
+   * Scroll-Beobachtung für die Trennlinie der Kopfzeile.
+   *
+   * Bewusst nicht als Host-Listener (`(window:scroll)`): der wäre nicht passiv
+   * und würde bei jedem einzelnen Scroll-Ereignis einen Change-Detection-Lauf
+   * auslösen — auf dem Smartphone die klassische Ursache für ruckelndes
+   * Scrollen. Hier wird stattdessen passiv gelauscht und über
+   * `requestAnimationFrame` auf höchstens einen Signal-Schreibvorgang pro Bild
+   * gedrosselt; unveränderte Werte schreibt das Signal ohnehin nicht durch.
+   */
+  constructor() {
+    const view = this.document.defaultView;
+    if (!view) return;
+
+    let pending = false;
+
+    const onScroll = (): void => {
+      if (pending) return;
+      pending = true;
+
+      view.requestAnimationFrame(() => {
+        pending = false;
+        // Kleine Schwelle, damit die Linie bei minimalem Überscrollen nicht flackert.
+        this.scrolled.set(view.scrollY > 4);
+      });
+    };
+
+    view.addEventListener('scroll', onScroll, { passive: true });
+    inject(DestroyRef).onDestroy(() => view.removeEventListener('scroll', onScroll));
+  }
+
   /** Initialen aus der E-Mail-Adresse — es gibt (noch) keinen Anzeigenamen. */
   protected readonly initials = computed(() => {
     const email = this.authService.currentUser()?.email ?? '';
@@ -243,12 +274,5 @@ export class NavbarComponent {
     if (this.host.nativeElement.contains(event.target as Node)) return;
 
     this.closeMenu();
-  }
-
-  protected onScroll(): void {
-    const offset = this.document.defaultView?.scrollY ?? 0;
-    // Kleine Hysterese-freie Schwelle: erst ab ein paar Pixeln, damit die Linie
-    // bei minimalem Überscrollen nicht flackert.
-    this.scrolled.set(offset > 4);
   }
 }

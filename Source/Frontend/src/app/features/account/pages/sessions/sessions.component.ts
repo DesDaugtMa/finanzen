@@ -122,10 +122,26 @@ import { SessionInfo } from '../../../../core/models/auth.model';
         justify-content: space-between;
         gap: var(--fin-space-3);
       }
-      /* Browser-Kennungen sind lang; die Zeile bleibt einzeilig und kürzt, damit
-         die Liste scanbar bleibt. Vollständig steht sie im Titel-Attribut. */
+      /* Browser-Kennungen sind lang. Auf dem Smartphone gibt es kein Hover, das
+         title-Attribut ist dort also unerreichbar — eine einzeilige Kürzung
+         würde die Geräteerkennung damit unmöglich machen. Deshalb bis zu zwei
+         Zeilen anzeigen; ab Tablet greift wieder die einzeilige, scanbare Form,
+         wo der Titel per Hover verfügbar ist. */
       .session-agent {
         font-weight: 600;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+      }
+      @media (min-width: 48rem) {
+        .session-agent {
+          display: block;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
       }
       .sessions-skeleton {
         display: flex;

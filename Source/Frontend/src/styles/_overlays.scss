@@ -113,6 +113,16 @@
   // durchschlägt, sobald das Ende erreicht ist.
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  // Wenn der Browser ein fokussiertes Feld in den Blick scrollt, würde es
+  // sonst genau unter der Oberkante bzw. hinter dem Dialogfuss zu liegen
+  // kommen. Der Puffer gilt für `scroll-into-view` jeder Art — auch für das
+  // automatische Scrollen beim Aufklappen der Bildschirmtastatur.
+  scroll-padding-block: var(--fin-space-4) var(--fin-space-8);
+}
+
+// Formularfelder im Dialog behalten beim Anspringen Luft nach oben und unten.
+.fin-dialog__body :is(input, select, textarea) {
+  scroll-margin-block: var(--fin-space-4);
 }
 
 .fin-dialog__footer {

@@ -55,6 +55,25 @@
   min-height: 2.25rem;
 }
 
+// Auf Touch-Geräten bekommt auch die kleine Variante das volle Touch-Mindestmass
+// von 44px. Sie steckt in Pagern, Zeilenaktionen und Fehlerhinweisen — überall
+// dort wäre ein 36px-Ziel mit dem Daumen unsicher zu treffen. Schriftgrad und
+// Innenabstand bleiben unverändert, es wächst nur die Trefferfläche; die
+// kompakte Optik geht dadurch nicht verloren.
+@media (pointer: coarse) {
+  .btn-sm {
+    min-height: var(--fin-touch-min);
+  }
+
+  .form-control-sm,
+  .form-select-sm,
+  .input-group-sm > .form-control,
+  .input-group-sm > .form-select,
+  .input-group-sm > .input-group-text {
+    min-height: var(--fin-touch-min);
+  }
+}
+
 .btn-lg {
   --bs-btn-padding-x: var(--fin-space-5);
   --bs-btn-padding-y: 0.75rem;
@@ -258,10 +277,30 @@
     background-color var(--fin-duration-fast) var(--fin-ease-out);
 }
 
+// Bootstraps Grössenklassen setzen ihre eigene, kleinere Schriftgrösse und
+// gewinnen dabei über die Regel oben (`.input-group-sm > .form-control` ist
+// spezifischer als `.form-control`). Auf Mobil würde iOS Safari beim
+// Fokussieren solcher Felder deshalb wieder hineinzoomen — die 16px werden hier
+// für alle Grössenvarianten erzwungen. Die kompaktere Optik bleibt über
+// Innenabstand und Höhe erhalten, nur der Schriftgrad nicht.
+.input-group-sm > .form-control,
+.input-group-sm > .form-select,
+.form-control-sm,
+.form-select-sm {
+  font-size: 1rem;
+}
+
 @media (min-width: 48rem) {
   .form-control,
   .form-select {
     font-size: var(--fin-text-base);
+  }
+
+  .input-group-sm > .form-control,
+  .input-group-sm > .form-select,
+  .form-control-sm,
+  .form-select-sm {
+    font-size: var(--fin-text-sm);
   }
 }
 
