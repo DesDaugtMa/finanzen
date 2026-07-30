@@ -61,15 +61,8 @@ jobs:
           npm ci
           npm run build -- --configuration production
 
-      # Öffentliche Google-Client-ID zur Laufzeit-Config hinzufügen (kein Secret,
-      # steckt ohnehin im Browser). Nur wenn Repo-Variable GOOGLE_CLIENT_ID gesetzt ist.
-      - name: Inject Google Client ID into runtime config
-        if: ${{ vars.GOOGLE_CLIENT_ID != '' }}
-        run: |
-          cfg="$FRONTEND_DIST/assets/config/appconfig.json"
-          tmp="$(mktemp)"
-          sed "s#REPLACE_WITH_PROD_GOOGLE_CLIENT_ID#${{ vars.GOOGLE_CLIENT_ID }}#" "$cfg" > "$tmp"
-          mv "$tmp" "$cfg"
+      # Die Google-Client-ID steht fest in appconfig.json bzw. appsettings.json
+      # (kein Secret — sie steckt ohnehin im Browser).
 
       # --- Deploy ---
       - name: Stop finanzen.service
