@@ -11,16 +11,18 @@ import { MoneyAmountComponent, MoneyTone } from '../money-amount/money-amount.co
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MoneyAmountComponent],
   template: `
-    <div class="stat-tile h-100">
-      <div class="d-flex align-items-center gap-2 mb-1">
-        <i class="bi bi-{{ icon() }} stat-icon" aria-hidden="true"></i>
-        <span class="stat-label text-uppercase">{{ label() }}</span>
+    <div class="stat-tile">
+      <div class="stat-head">
+        <span class="fin-emblem fin-emblem--sm fin-emblem--muted" aria-hidden="true">
+          <i class="bi bi-{{ icon() }}"></i>
+        </span>
+        <span class="fin-eyebrow stat-label">{{ label() }}</span>
       </div>
 
       <app-money-amount [amount]="amount()" [currency]="currency()" [tone]="tone()" size="lg" />
 
       @if (hint()) {
-        <p class="stat-hint mb-0">{{ hint() }}</p>
+        <p class="stat-hint">{{ hint() }}</p>
       }
     </div>
   `,
@@ -31,24 +33,32 @@ import { MoneyAmountComponent, MoneyTone } from '../money-amount/money-amount.co
         height: 100%;
       }
       .stat-tile {
-        background-color: var(--color-surface);
-        border: 1px solid var(--bs-border-color-translucent);
-        border-radius: 1rem;
-        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        /* Gleiche Höhe im Raster, auch wenn nur ein Teil der Kacheln einen
+           Zusatzhinweis hat. */
+        height: 100%;
+        padding: var(--fin-space-4);
+        background-color: var(--fin-surface);
+        border: 1px solid var(--fin-border-subtle);
+        border-radius: var(--fin-radius-lg);
+        box-shadow: var(--fin-shadow-sm);
+      }
+      .stat-head {
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-2);
+        margin-bottom: var(--fin-space-3);
       }
       .stat-label {
-        font-size: 0.7rem;
-        letter-spacing: 0.06em;
-        color: var(--bs-secondary-color);
-      }
-      .stat-icon {
-        color: var(--bs-secondary-color);
-        font-size: 0.9rem;
+        /* Bricht bei langen Beschriftungen, statt die Kachel zu weiten. */
+        min-width: 0;
       }
       .stat-hint {
-        margin-top: 0.25rem;
-        font-size: 0.8125rem;
-        color: var(--bs-secondary-color);
+        margin: var(--fin-space-1) 0 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
       }
     `,
   ],

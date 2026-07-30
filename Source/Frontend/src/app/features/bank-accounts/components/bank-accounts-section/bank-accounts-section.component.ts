@@ -37,40 +37,42 @@ type DialogState =
     EmptyStateComponent,
   ],
   template: `
-    <section aria-labelledby="bankAccountsHeading">
-      <header class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <section class="fin-section" aria-labelledby="bankAccountsHeading">
+      <header class="fin-section-header">
         <div>
-          <h2 id="bankAccountsHeading" class="h5 fw-bold mb-1">Girokonten</h2>
-          @if (accounts().length > 0) {
-            <p class="text-muted small mb-0">
-              <span
-                >Gesamt über {{ accounts().length }}
-                {{ accounts().length === 1 ? 'Konto' : 'Konten' }}:</span
-              >
-              <app-money-amount
-                class="ms-1"
-                [amount]="totalBalance()"
-                [currency]="totalCurrency()"
-                size="sm"
-              />
-            </p>
-          }
+          <span class="fin-eyebrow">Deine Konten</span>
+          <h2 id="bankAccountsHeading" class="accounts-title">Girokonten</h2>
         </div>
 
         <button type="button" class="btn btn-primary" (click)="openCreate()">
-          <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Girokonto hinzufügen
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          <span>Girokonto</span>
         </button>
       </header>
 
       @if (loading()) {
-        <div class="text-center py-5">
-          <span class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Girokonten werden geladen …</span>
-          </span>
+        <!--
+          Skelett statt Spinner: es zeigt bereits die Form der kommenden Karten,
+          die Seite springt beim Eintreffen der Daten nicht, und die Wartezeit
+          wirkt kürzer, weil Struktur sichtbar ist.
+        -->
+        <div class="fin-grid fin-grid--cards" role="status" aria-label="Girokonten werden geladen">
+          @for (placeholder of skeletonSlots; track $index) {
+            <div class="fin-panel account-skeleton">
+              <div class="account-skeleton__head">
+                <div class="fin-skeleton fin-skeleton--circle"></div>
+                <div class="account-skeleton__lines">
+                  <div class="fin-skeleton fin-skeleton--title"></div>
+                  <div class="fin-skeleton fin-skeleton--line-short"></div>
+                </div>
+              </div>
+              <div class="fin-skeleton fin-skeleton--amount"></div>
+            </div>
+          }
         </div>
       } @else if (error()) {
-        <div class="alert alert-danger d-flex flex-wrap align-items-center gap-2" role="alert">
-          <span class="me-auto">{{ error() }}</span>
+        <div class="alert alert-danger accounts-error" role="alert">
+          <span>{{ error() }}</span>
           <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
             Erneut versuchen
           </button>
@@ -81,14 +83,30 @@ type DialogState =
           title="Noch kein Girokonto angelegt"
           message="Lege dein erstes Girokonto an, um Kontostände und Buchungen im Blick zu behalten."
         >
-          <button type="button" class="btn btn-primary" (click)="openCreate()">
-            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Erstes Girokonto anlegen
+          <button type="button" class="btn btn-primary btn-lg" (click)="openCreate()">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Erstes Girokonto anlegen</span>
           </button>
         </app-empty-state>
       } @else {
-        <ul class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3 list-unstyled mb-0">
+        <!-- Gesamtsumme als eigene Markenfläche über dem Raster: die wichtigste
+             Zahl der Startseite bekommt den prominentesten Platz. -->
+        <div class="fin-brand-surface accounts-total">
+          <span class="accounts-total__label">Gesamtvermögen</span>
+          <app-money-amount
+            class="accounts-total__value"
+            [amount]="totalBalance()"
+            [currency]="totalCurrency()"
+            size="lg"
+          />
+          <span class="accounts-total__hint">
+            über {{ accounts().length }} {{ accounts().length === 1 ? 'Konto' : 'Konten' }}
+          </span>
+        </div>
+
+        <ul class="fin-grid fin-grid--cards fin-stagger accounts-list">
           @for (account of accounts(); track account.id) {
-            <li class="col">
+            <li>
               <app-bank-account-card
                 [account]="account"
                 (edit)="openEdit($event)"
@@ -125,6 +143,81 @@ type DialogState =
       }
     }
   `,
+  styles: [
+    `
+      .accounts-title {
+        margin: 0;
+        font-size: var(--fin-text-xl);
+      }
+      .accounts-error {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+      }
+      .accounts-total {
+        padding: var(--fin-space-5);
+        margin-bottom: var(--fin-space-4);
+        /* Auf der dunklen Markenfläche brauchen die Geldfarben aufgehellte
+           Varianten, sonst reicht der Kontrast eines negativen Saldos nicht.
+           Custom Properties durchdringen die View-Encapsulation und erreichen
+           damit das eingebettete app-money-amount. */
+        --fin-expense: #ffb3a1;
+        --fin-income: #9fe6bf;
+      }
+      @media (min-width: 34rem) {
+        .accounts-total {
+          padding: var(--fin-space-6) var(--fin-space-8);
+        }
+      }
+      .accounts-total__label {
+        display: block;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: var(--fin-text-2xs);
+        font-weight: 650;
+        letter-spacing: var(--fin-tracking-wider);
+        text-transform: uppercase;
+      }
+      .accounts-total__value {
+        display: block;
+        margin-top: var(--fin-space-2);
+        /* Auf der dunklen Markenfläche muss der Betrag weiß bleiben — die
+           Vorzeichenfarbe aus app-money-amount würde hier zu wenig Kontrast
+           haben. Das Vorzeichen selbst bleibt erhalten. */
+        color: #fff;
+        font-size: var(--fin-text-3xl);
+      }
+      .accounts-total__hint {
+        display: block;
+        margin-top: var(--fin-space-1);
+        color: rgba(255, 255, 255, 0.68);
+        font-size: var(--fin-text-sm);
+      }
+      .accounts-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .account-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-5);
+        padding: var(--fin-space-4);
+      }
+      .account-skeleton__head {
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-3);
+      }
+      .account-skeleton__lines {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-2);
+      }
+    `,
+  ],
 })
 export class BankAccountsSectionComponent implements OnInit {
   private readonly bankAccountApi = inject(BankAccountApiService);
@@ -135,6 +228,9 @@ export class BankAccountsSectionComponent implements OnInit {
   protected readonly saving = signal(false);
   protected readonly error = signal('');
   protected readonly dialog = signal<DialogState>({ kind: 'none' });
+
+  /** Anzahl der Platzhalter-Karten während des Ladens. */
+  protected readonly skeletonSlots = [0, 1, 2];
 
   /**
    * Summe aller Kontostände. Über Cent gerechnet, damit sich beim Addieren

@@ -1,39 +1,42 @@
-/* Bootstrap – Finanzen-Theme (Primärfarbe an Finanz-App angepasst) */
-@use "bootstrap/scss/bootstrap" as * with (
-  $primary: #0f766e
+// =============================================================================
+// Finanzen — globales Stylesheet
+// =============================================================================
+// Reihenfolge ist bedeutungstragend:
+//
+//   1. Tokens           definieren die Variablen, auf die alles Weitere zugreift
+//   2. Bootstrap        liefert Reset, Grid und Formular-Grundlagen
+//   3. Bootstrap-Brücke übersetzt Bootstraps Laufzeit-Variablen auf die Tokens
+//   4. Eigene Schichten Basis, Bewegung, Layout, Muster, Navigation, Overlays
+//
+// Bootstrap dient hier nur als Fundament. Das Erscheinungsbild kommt vollständig
+// aus den Tokens und den Schichten darüber. Der Theme-Wechsel läuft über
+// `data-bs-theme` am <html>-Element, damit auch Bootstrap-Komponenten, die wir
+// nicht selbst überschreiben, korrekt mitschalten.
+// =============================================================================
+
+@use 'styles/tokens';
+
+// Die SCSS-Variablen von Bootstrap werden zur Compile-Zeit aufgelöst und können
+// deshalb nicht pro Theme umschalten. Hier wird nur Strukturelles gesetzt
+// (Rundungen, Übergänge) — alles Farbige läuft über die Brücke.
+@use 'bootstrap/scss/bootstrap' as bootstrap with (
+  $border-radius: 0.75rem,
+  $border-radius-sm: 0.5rem,
+  $border-radius-lg: 1rem,
+  $border-radius-xl: 1.25rem,
+  $enable-shadows: false,
+  $enable-gradients: false,
+  $transition-base: all 0.15s cubic-bezier(0.22, 0.61, 0.36, 1),
+  $transition-collapse: height 0.22s cubic-bezier(0.22, 0.61, 0.36, 1)
 );
-@import "bootstrap-icons/font/bootstrap-icons.css";
 
-:root {
-  /* Semantische Zusatz-Tokens (Geld) */
-  --color-income: #198754;
-  --color-expense: #dc3545;
-  --color-surface: #ffffff;
-  --color-app-bg: #f6f8fa;
+@use 'styles/bootstrap-bridge';
+@use 'styles/base';
+@use 'styles/motion';
+@use 'styles/layout';
+@use 'styles/patterns';
+@use 'styles/navigation';
+@use 'styles/controls';
+@use 'styles/overlays';
 
-  /* Toast-Hintergründe */
-  --color-toast-success-bg: rgba(25, 135, 84, 0.97);
-  --color-toast-danger-bg: rgba(220, 53, 69, 0.97);
-  --color-toast-info-bg: rgba(13, 110, 253, 0.97);
-  --color-toast-warning-bg: rgba(255, 193, 7, 0.97);
-}
-
-html,
-body {
-  min-height: 100%;
-}
-
-body {
-  background-color: var(--color-app-bg);
-}
-
-/* Dezente Animationen respektieren Nutzereinstellung */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+@import 'bootstrap-icons/font/bootstrap-icons.css';

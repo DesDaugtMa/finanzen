@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthCardComponent } from '../../../../shared/components/auth-card/auth-card.component';
+import { TextFieldComponent } from '../../../../shared/components/text-field/text-field.component';
 import { AccountApiService } from '../../../../core/services/account-api.service';
 
 @Component({
   selector: 'app-forgot-password',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AuthCardComponent],
+  imports: [ReactiveFormsModule, RouterLink, AuthCardComponent, TextFieldComponent],
   template: `
     <app-auth-card title="Passwort vergessen" subtitle="Wir senden dir einen Link zum Zurücksetzen">
       @if (submitted()) {
@@ -15,50 +16,52 @@ import { AccountApiService } from '../../../../core/services/account-api.service
           Falls ein Konto zu dieser E-Mail existiert, haben wir dir einen Link zum Zurücksetzen
           gesendet.
         </div>
-        <a routerLink="/login" class="btn btn-outline-secondary w-100">Zurück zur Anmeldung</a>
+        <a routerLink="/login" class="btn btn-outline-secondary w-100 mt-3">
+          Zurück zur Anmeldung
+        </a>
       } @else {
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-          <div class="mb-4">
-            <label for="email" class="form-label">E-Mail-Adresse</label>
-            <input
-              type="email"
-              id="email"
-              formControlName="email"
-              class="form-control form-control-lg"
-              autocomplete="email"
-              placeholder="name@beispiel.de"
-              [class.is-invalid]="isInvalid()"
-              aria-describedby="emailError"
-            />
-            <div id="emailError" class="invalid-feedback">
-              Bitte gib eine gültige E-Mail-Adresse ein.
-            </div>
+        <form class="fin-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <app-text-field
+            [control]="form.controls.email"
+            label="E-Mail-Adresse"
+            type="email"
+            size="lg"
+            autocomplete="email"
+            inputMode="email"
+            placeholder="name@beispiel.de"
+            error="Bitte gib eine gültige E-Mail-Adresse ein."
+            [invalid]="isInvalid()"
+          />
+
+          <div class="fin-form-actions">
+            <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading()">
+              @if (loading()) {
+                <span
+                  class="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                Wird gesendet…
+              } @else {
+                Link anfordern
+              }
+            </button>
           </div>
 
-          <button
-            type="submit"
-            class="btn btn-primary btn-lg w-100"
-            [disabled]="form.invalid || loading()"
-          >
-            @if (loading()) {
-              <span
-                class="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Wird gesendet…
-            } @else {
-              Link anfordern
-            }
-          </button>
-
-          <p class="text-center text-muted small mt-4 mb-0">
-            <a routerLink="/login" class="text-decoration-none">Zurück zur Anmeldung</a>
-          </p>
+          <p class="back-link"><a routerLink="/login">Zurück zur Anmeldung</a></p>
         </form>
       }
     </app-auth-card>
   `,
+  styles: [
+    `
+      .back-link {
+        margin: 0;
+        font-size: var(--fin-text-sm);
+        text-align: center;
+      }
+    `,
+  ],
 })
 export class ForgotPasswordComponent {
   private fb = inject(FormBuilder);

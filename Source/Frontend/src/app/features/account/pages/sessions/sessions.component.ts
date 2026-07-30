@@ -9,26 +9,42 @@ import { SessionInfo } from '../../../../core/models/auth.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe],
   template: `
-    <div class="container py-4" style="max-width: 48rem;">
-      <div class="d-flex flex-wrap align-items-center gap-2 mb-4">
-        <h1 class="h4 fw-bold mb-0 me-auto">Aktive Sitzungen</h1>
-        <button
-          type="button"
-          class="btn btn-outline-danger btn-sm"
-          [disabled]="loading() || sessions().length <= 1"
-          (click)="revokeOthers()"
-        >
-          Alle anderen abmelden
-        </button>
-      </div>
+    <div class="container sessions-page">
+      <header class="fin-page-header">
+        <div class="fin-page-header__text">
+          <span class="fin-eyebrow">Sicherheit</span>
+          <h1 class="fin-page-header__title">Aktive Sitzungen</h1>
+          <p class="fin-page-header__subtitle">Geräte, auf denen du derzeit angemeldet bist.</p>
+        </div>
+
+        <div class="fin-page-header__actions">
+          <button
+            type="button"
+            class="btn btn-outline-danger btn-sm"
+            [disabled]="loading() || sessions().length <= 1"
+            (click)="revokeOthers()"
+          >
+            Alle anderen abmelden
+          </button>
+        </div>
+      </header>
 
       @if (loading()) {
-        <div class="text-center py-5">
-          <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
+        <div class="fin-panel fin-panel--flush" role="status" aria-label="Sitzungen werden geladen">
+          <div class="fin-rows">
+            @for (placeholder of skeletonSlots; track $index) {
+              <div class="fin-row">
+                <div class="fin-row__main sessions-skeleton">
+                  <div class="fin-skeleton fin-skeleton--line-short"></div>
+                  <div class="fin-skeleton fin-skeleton--text"></div>
+                </div>
+              </div>
+            }
+          </div>
         </div>
       } @else if (error()) {
-        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
-          <span class="me-auto">{{ error() }}</span>
+        <div class="alert alert-danger sessions-error" role="alert">
+          <span>{{ error() }}</span>
           <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
             Erneut versuchen
           </button>
@@ -36,37 +52,104 @@ import { SessionInfo } from '../../../../core/models/auth.model';
       } @else if (sessions().length === 0) {
         <div class="alert alert-info" role="alert">Keine aktiven Sitzungen gefunden.</div>
       } @else {
-        <div class="list-group shadow-sm">
-          @for (session of sessions(); track session.id) {
-            <div class="list-group-item d-flex flex-wrap align-items-center gap-2">
-              <div class="me-auto">
-                <div class="fw-semibold">
-                  {{ session.userAgent || 'Unbekanntes Gerät' }}
-                  @if (session.isCurrent) {
-                    <span class="badge text-bg-success ms-2">Dieses Gerät</span>
-                  }
-                </div>
-                <div class="text-muted small">
-                  IP: {{ session.ipAddress || '—' }} · Zuletzt aktiv:
-                  {{ session.lastSeenAt | date: 'short' }}
-                </div>
-              </div>
-              @if (!session.isCurrent) {
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm"
-                  [disabled]="revoking() === session.id"
-                  (click)="revoke(session.id)"
+        <div class="fin-panel fin-panel--flush">
+          <ul class="fin-rows">
+            @for (session of sessions(); track session.id) {
+              <li class="fin-row">
+                <span
+                  class="fin-emblem fin-emblem--sm"
+                  [class.fin-emblem--muted]="!session.isCurrent"
+                  aria-hidden="true"
                 >
-                  Abmelden
-                </button>
-              }
-            </div>
-          }
+                  <i class="bi bi-{{ session.isCurrent ? 'laptop' : 'display' }}"></i>
+                </span>
+
+                <div class="fin-row__main">
+                  <p
+                    class="fin-row__title session-agent"
+                    [attr.title]="session.userAgent || 'Unbekanntes Gerät'"
+                  >
+                    {{ session.userAgent || 'Unbekanntes Gerät' }}
+                  </p>
+                  <p class="fin-row__meta">
+                    @if (session.isCurrent) {
+                      <span class="fin-chip fin-chip--accent">Dieses Gerät</span>
+                    }
+                    <span>IP {{ session.ipAddress || '—' }}</span>
+                    <span class="fin-dot"></span>
+                    <span>Zuletzt aktiv {{ session.lastSeenAt | date: 'short' }}</span>
+                  </p>
+                </div>
+
+                @if (!session.isCurrent) {
+                  <div class="fin-row__aside">
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      [disabled]="revoking() === session.id"
+                      [attr.aria-label]="
+                        'Sitzung ' + (session.userAgent || 'Unbekanntes Gerät') + ' abmelden'
+                      "
+                      (click)="revoke(session.id)"
+                    >
+                      @if (revoking() === session.id) {
+                        <span
+                          class="spinner-border spinner-border-sm"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                      }
+                      Abmelden
+                    </button>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
         </div>
       }
     </div>
   `,
+  styles: [
+    `
+      .sessions-page {
+        max-width: 44rem;
+      }
+      .sessions-error {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+      }
+      /* Browser-Kennungen sind lang. Auf dem Smartphone gibt es kein Hover, das
+         title-Attribut ist dort also unerreichbar — eine einzeilige Kürzung
+         würde die Geräteerkennung damit unmöglich machen. Deshalb bis zu zwei
+         Zeilen anzeigen; ab Tablet greift wieder die einzeilige, scanbare Form,
+         wo der Titel per Hover verfügbar ist. */
+      .session-agent {
+        font-weight: 600;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+      }
+      @media (min-width: 48rem) {
+        .session-agent {
+          display: block;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+      }
+      .sessions-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-2);
+      }
+    `,
+  ],
 })
 export class SessionsComponent implements OnInit {
   private sessionsApi = inject(SessionsApiService);
@@ -76,6 +159,9 @@ export class SessionsComponent implements OnInit {
   protected loading = signal(true);
   protected error = signal('');
   protected revoking = signal<string | null>(null);
+
+  /** Anzahl der Platzhalter-Zeilen während des Ladens. */
+  protected readonly skeletonSlots = [0, 1, 2];
 
   ngOnInit(): void {
     this.load();

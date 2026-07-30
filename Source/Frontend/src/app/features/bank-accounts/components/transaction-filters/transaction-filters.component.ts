@@ -18,25 +18,23 @@ export interface TransactionFilterChange {
   selector: 'app-transaction-filters',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="d-flex flex-column gap-2">
-      <div class="row g-2">
-        <div class="col-12 col-lg-6">
+    <div class="filters">
+      <div class="filters__grid">
+        <div class="filters__search">
           <label for="txSearch" class="visually-hidden">Buchungen durchsuchen</label>
-          <div class="input-group">
-            <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
-            <input
-              type="search"
-              id="txSearch"
-              class="form-control"
-              placeholder="Bezeichnung oder Notiz durchsuchen"
-              autocomplete="off"
-              [value]="search()"
-              (input)="onSearch($event)"
-            />
-          </div>
+          <i class="bi bi-search filters__search-icon" aria-hidden="true"></i>
+          <input
+            type="search"
+            id="txSearch"
+            class="form-control filters__search-input"
+            placeholder="Bezeichnung oder Notiz durchsuchen"
+            autocomplete="off"
+            [value]="search()"
+            (input)="onSearch($event)"
+          />
         </div>
 
-        <div class="col-12 col-sm-6 col-lg-3">
+        <span class="filters__select">
           <label for="txTypeFilter" class="visually-hidden">Art der Buchung</label>
           <select
             id="txTypeFilter"
@@ -48,9 +46,9 @@ export interface TransactionFilterChange {
             <option value="Income">Nur Einnahmen</option>
             <option value="Expense">Nur Ausgaben</option>
           </select>
-        </div>
+        </span>
 
-        <div class="col-12 col-sm-6 col-lg-3">
+        <span class="filters__select">
           <label for="txCategoryFilter" class="visually-hidden">Kategorie</label>
           <select
             id="txCategoryFilter"
@@ -64,22 +62,66 @@ export interface TransactionFilterChange {
               <option [value]="category.id">{{ category.name }}</option>
             }
           </select>
-        </div>
+        </span>
       </div>
 
       @if (hasActiveFilters()) {
-        <div>
-          <button
-            type="button"
-            class="btn btn-sm btn-link px-0 text-decoration-none"
-            (click)="reset.emit()"
-          >
-            <i class="bi bi-x-circle me-1" aria-hidden="true"></i> Filter zurücksetzen
-          </button>
-        </div>
+        <button type="button" class="btn btn-sm btn-link filters__reset" (click)="reset.emit()">
+          <i class="bi bi-x-circle" aria-hidden="true"></i>
+          <span>Filter zurücksetzen</span>
+        </button>
       }
     </div>
   `,
+  styles: [
+    `
+      .filters {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--fin-space-2);
+      }
+      .filters__grid {
+        display: grid;
+        gap: var(--fin-space-2);
+        width: 100%;
+      }
+      /* Suchfeld über die volle Breite, die beiden Auswahlfelder daneben — erst
+         ab der Breite, ab der alle drei lesbar nebeneinander passen. */
+      @media (min-width: 48rem) {
+        .filters__grid {
+          grid-template-columns: 2fr 1fr 1fr;
+        }
+      }
+      /* Ohne display:block bliebe das span inline und das Auswahlfeld würde die
+         Rasterzelle nicht ausfüllen. */
+      .filters__select {
+        display: block;
+      }
+      .filters__search {
+        position: relative;
+      }
+      .filters__search-icon {
+        position: absolute;
+        top: 50%;
+        left: var(--fin-space-3);
+        transform: translateY(-50%);
+        color: var(--fin-text-subtle);
+        pointer-events: none;
+      }
+      .filters__search-input {
+        padding-left: var(--fin-space-10);
+      }
+      /* Das eigene Löschkreuz von Safari doppelt unsere Zurücksetzen-Aktion. */
+      .filters__search-input::-webkit-search-decoration,
+      .filters__search-input::-webkit-search-cancel-button {
+        appearance: none;
+      }
+      .filters__reset {
+        margin-left: calc(-1 * var(--fin-space-3));
+      }
+    `,
+  ],
 })
 export class TransactionFiltersComponent {
   readonly categories = input.required<Category[]>();

@@ -25,9 +25,9 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
     @let line = budget();
 
     <div class="budget-row">
-      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+      <div class="budget-row__head">
         <app-category-badge
-          class="flex-grow-1 min-width-0"
+          class="budget-row__category"
           [name]="line.categoryName"
           [color]="line.categoryColor"
           [icon]="line.categoryIcon"
@@ -37,7 +37,7 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
           <div class="input-group input-group-sm">
             <input
               type="text"
-              class="form-control text-end"
+              class="form-control fin-input-amount"
               inputmode="decimal"
               autocomplete="off"
               [id]="inputId()"
@@ -56,20 +56,20 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
           </div>
 
           @if (saving()) {
-            <span class="row-status text-muted">
+            <span class="row-status">
               <span
-                class="spinner-border spinner-border-sm me-1"
+                class="spinner-border spinner-border-sm"
                 role="status"
                 aria-hidden="true"
               ></span>
               Wird gespeichert …
             </span>
           } @else if (invalid()) {
-            <span [id]="errorId()" class="row-status text-danger"
-              >Bitte einen gültigen Betrag eingeben.</span
-            >
+            <span [id]="errorId()" class="row-status row-status--error">
+              Bitte einen gültigen Betrag eingeben.
+            </span>
           } @else if (line.amount === null && line.suggestedAmount !== null) {
-            <span class="row-status text-muted">Vorschlag: {{ suggestionLabel() }}</span>
+            <span class="row-status">Vorschlag: {{ suggestionLabel() }}</span>
           }
         </div>
       </div>
@@ -88,23 +88,54 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
         display: block;
       }
       .budget-row {
-        padding: 0.85rem 0;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
+        padding: var(--fin-space-4) 0;
+        border-top: 1px solid var(--fin-border-subtle);
       }
-      :host(:last-of-type) .budget-row {
-        border-bottom: none;
+      /* Erste Zeile ohne Linie: sie schließt direkt an die Überschrift an. */
+      :host(:first-of-type) .budget-row {
+        border-top: none;
+        padding-top: var(--fin-space-2);
       }
-      .budget-input {
-        width: 9.5rem;
-        flex-shrink: 0;
+      /* Auf Mobil stehen Kategorie und Betragsfeld untereinander: nebeneinander
+         blieben dem Kategorienamen auf einem schmalen Display nur rund 90px,
+         womit er auf ein paar Zeichen gekürzt würde. Ab Tablet ist genug Breite
+         für eine Zeile — dort sitzt das Feld rechts. */
+      .budget-row__head {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--fin-space-2);
+        margin-bottom: var(--fin-space-3);
+      }
+      .budget-row__category {
+        min-width: 0;
+      }
+      @media (min-width: 34rem) {
+        .budget-row__head {
+          flex-direction: row;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+        .budget-row__category {
+          flex: 1 1 auto;
+        }
+        .budget-input {
+          flex-shrink: 0;
+          width: 9.5rem;
+        }
       }
       .row-status {
-        display: block;
-        margin-top: 0.2rem;
-        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-1);
+        margin-top: var(--fin-space-1);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-xs);
+        font-variant-numeric: tabular-nums;
       }
-      .min-width-0 {
-        min-width: 0;
+      .row-status--error {
+        color: var(--fin-danger);
+        font-weight: 550;
       }
     `,
   ],

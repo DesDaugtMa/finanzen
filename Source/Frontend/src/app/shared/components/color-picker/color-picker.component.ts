@@ -34,33 +34,48 @@ import { ACCENT_COLOR_PRESETS } from '../../utils/color-presets';
   `,
   styles: [
     `
+      fieldset {
+        min-width: 0;
+        border: 0;
+        padding: 0;
+        margin: 0;
+      }
       .color-swatch {
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 0.75rem;
-        border: 2px solid transparent;
-        color: #fff;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        width: var(--fin-touch-min);
+        height: var(--fin-touch-min);
         padding: 0;
-        transition: transform 0.15s ease;
+        border: 0;
+        border-radius: var(--fin-radius-md);
+        color: #fff;
+        cursor: pointer;
+        transition:
+          transform var(--fin-duration-fast) var(--fin-ease-spring),
+          box-shadow var(--fin-duration-fast) var(--fin-ease-out);
       }
-      .color-swatch:hover {
-        transform: scale(1.06);
+      @media (hover: hover) {
+        .color-swatch:hover {
+          transform: scale(1.08);
+        }
       }
+      /* Auswahl als abgesetzter Ring in Flächenfarbe plus Häkchen: der Ring
+         funktioniert auf jeder Farbe, das Häkchen macht die Auswahl auch ohne
+         Farbwahrnehmung eindeutig. */
       .color-swatch--selected {
-        border-color: var(--bs-body-color);
-        box-shadow: 0 0 0 2px var(--color-surface) inset;
+        box-shadow:
+          0 0 0 2px var(--fin-surface),
+          0 0 0 4px var(--fin-text-strong);
       }
       .color-swatch:focus-visible {
-        outline: 2px solid var(--bs-primary);
-        outline-offset: 2px;
+        outline: 2px solid var(--fin-accent);
+        outline-offset: 3px;
       }
       legend.form-label {
         float: none;
         width: auto;
-        font-size: 1rem;
+        padding: 0;
       }
     `,
   ],

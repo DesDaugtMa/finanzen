@@ -1,0 +1,253 @@
+// =============================================================================
+// Basis — Dokument, Typografie, Fokus, Scroll-Verhalten
+// =============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  // Verhindert, dass iOS Safari beim Drehen des Geräts die Schrift aufbläst.
+  -webkit-text-size-adjust: 100%;
+  // Sanftes Scrollen bei Anker-Navigation; wird unten für Reduced Motion abgeschaltet.
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--fin-bg);
+  color: var(--fin-text);
+  font-family: var(--fin-font-sans);
+  font-size: var(--fin-text-base);
+  line-height: var(--fin-leading-normal);
+  letter-spacing: var(--fin-tracking-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  // Bei Pull-to-Refresh in der installierten PWA nicht die ganze Seite mitziehen.
+  overscroll-behavior-y: none;
+  transition:
+    background-color var(--fin-duration-base) var(--fin-ease-out),
+    color var(--fin-duration-base) var(--fin-ease-out);
+}
+
+// -----------------------------------------------------------------------------
+// Typografie
+// -----------------------------------------------------------------------------
+// Grosse Grade werden fester und enger gesetzt, kleine luftiger — das ist der
+// Unterschied zwischen „skaliert“ und „gestaltet“.
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 var(--fin-space-2);
+  color: var(--fin-text-strong);
+  font-weight: 650;
+  line-height: var(--fin-leading-tight);
+  letter-spacing: var(--fin-tracking-tight);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--fin-text-2xl);
+  letter-spacing: var(--fin-tracking-tighter);
+}
+
+h2 {
+  font-size: var(--fin-text-xl);
+}
+
+h3 {
+  font-size: var(--fin-text-lg);
+}
+
+h4,
+h5,
+h6 {
+  font-size: var(--fin-text-md);
+}
+
+@media (min-width: 48rem) {
+  h1 {
+    font-size: var(--fin-text-3xl);
+  }
+
+  h2 {
+    font-size: var(--fin-text-2xl);
+  }
+}
+
+p {
+  margin: 0 0 var(--fin-space-4);
+  // Fliesstext angenehm lesbar halten, auch wenn der Container breit ist.
+  max-width: 72ch;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+small,
+.fin-small {
+  font-size: var(--fin-text-sm);
+  line-height: var(--fin-leading-snug);
+}
+
+strong,
+b {
+  font-weight: 650;
+}
+
+a {
+  color: var(--fin-accent);
+  text-decoration-color: color-mix(in srgb, var(--fin-accent) 40%, transparent);
+  text-underline-offset: 0.18em;
+  transition: color var(--fin-duration-fast) var(--fin-ease-out);
+}
+
+a:hover {
+  color: var(--fin-accent-hover);
+  text-decoration-color: currentcolor;
+}
+
+hr {
+  height: 1px;
+  margin: var(--fin-space-6) 0;
+  border: 0;
+  background-color: var(--fin-border);
+  opacity: 1;
+}
+
+// Alle Ziffernanzeigen laufen tabellarisch, damit Beträge in Listen und
+// Tabellen exakt untereinander stehen und beim Aktualisieren nicht springen.
+.fin-tnum,
+th,
+td {
+  font-variant-numeric: tabular-nums;
+}
+
+// -----------------------------------------------------------------------------
+// Fokus
+// -----------------------------------------------------------------------------
+// Ein einziger, deutlich sichtbarer Fokusring für die ganze App (WCAG 2.4.7).
+// `:focus-visible` statt `:focus`, damit Mausklicks keinen Ring hinterlassen.
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--fin-accent);
+  outline-offset: 2px;
+  border-radius: var(--fin-radius-xs);
+}
+
+::selection {
+  background-color: var(--fin-accent-tint-strong);
+  color: var(--fin-accent-on-tint);
+}
+
+// -----------------------------------------------------------------------------
+// Scrollbars — dezent, aber sichtbar genug zum Greifen
+// -----------------------------------------------------------------------------
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--fin-border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--fin-border-strong);
+  border: 3px solid transparent;
+  border-radius: var(--fin-radius-pill);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--fin-text-subtle);
+}
+
+// -----------------------------------------------------------------------------
+// Touch-Verhalten
+// -----------------------------------------------------------------------------
+
+button,
+[role='button'],
+a,
+label,
+summary {
+  // Kein grauer Highlight-Blitz beim Antippen auf iOS.
+  -webkit-tap-highlight-color: transparent;
+  // Verhindert die 300ms-Verzögerung und ungewolltes Doppeltipp-Zoomen.
+  touch-action: manipulation;
+}
+
+// -----------------------------------------------------------------------------
+// Reduced Motion
+// -----------------------------------------------------------------------------
+// Nutzer, die Bewegung reduzieren, bekommen dieselbe UI ohne Animation.
+// Nicht auf 0 gesetzt, sondern auf einen unmerklichen Wert, damit
+// `transitionend`/`animationend`-Handler weiterhin feuern.
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Hilfsklassen
+// -----------------------------------------------------------------------------
+
+// Für rein akustische Beschriftungen wird Bootstraps `visually-hidden` genutzt —
+// die Klasse ist bereits vorhanden und im Bestand etabliert; eine zweite eigene
+// Variante würde nur auseinanderdriften.
+
+// Sprungmarke zum Hauptinhalt: unsichtbar, bis sie den Fokus erhält.
+.fin-skip-link {
+  position: fixed;
+  top: var(--fin-space-2);
+  left: 50%;
+  z-index: var(--fin-z-toast);
+  padding: var(--fin-space-3) var(--fin-space-5);
+  border-radius: var(--fin-radius-pill);
+  background-color: var(--fin-accent);
+  color: var(--fin-text-on-accent);
+  font-size: var(--fin-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--fin-shadow-lg);
+  transform: translate(-50%, calc(-100% - var(--fin-space-4)));
+  transition: transform var(--fin-duration-base) var(--fin-ease-spring);
+}
+
+.fin-skip-link:focus-visible {
+  transform: translate(-50%, 0);
+}

@@ -40,42 +40,49 @@ type DialogState =
     CopyCategoriesDialogComponent,
   ],
   template: `
-    <section class="card border-0 shadow-sm surface-card" aria-labelledby="categoriesHeading">
-      <div class="card-body p-3 p-sm-4">
-        <header class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
-          <div>
-            <h2 id="categoriesHeading" class="h6 fw-bold mb-1">Kategorien dieses Kontos</h2>
-            <p class="text-muted small mb-0">
+    <section class="fin-panel" aria-labelledby="categoriesHeading">
+      <div class="fin-panel__body">
+        <header class="categories-header">
+          <div class="categories-header__text">
+            <h2 id="categoriesHeading" class="categories-title">Kategorien dieses Kontos</h2>
+            <p class="categories-note">
               Kategorien gelten für alle Monate. Wie viel pro Monat zur Verfügung steht, legst du
               unter „Budgets“ fest.
             </p>
           </div>
 
-          <div class="d-flex flex-wrap gap-2">
+          <div class="categories-actions">
             <button type="button" class="btn btn-outline-secondary" (click)="openCopy()">
-              <i class="bi bi-copy me-1" aria-hidden="true"></i> Aus anderem Konto
+              <i class="bi bi-copy" aria-hidden="true"></i>
+              <span>Übernehmen</span>
             </button>
             <button type="button" class="btn btn-primary" (click)="openCreate()">
-              <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Kategorie
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              <span>Kategorie</span>
             </button>
           </div>
         </header>
 
         @if (loading()) {
-          <div class="text-center py-5">
-            <span class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Kategorien werden geladen …</span>
-            </span>
+          <div class="fin-rows" role="status" aria-label="Kategorien werden geladen">
+            @for (placeholder of skeletonSlots; track $index) {
+              <div class="fin-row">
+                <div class="fin-skeleton fin-skeleton--circle categories-skeleton__icon"></div>
+                <div class="fin-row__main">
+                  <div class="fin-skeleton fin-skeleton--line-short"></div>
+                </div>
+              </div>
+            }
           </div>
         } @else if (error()) {
-          <div class="alert alert-danger mb-0" role="alert">{{ error() }}</div>
+          <div class="alert alert-danger" role="alert">{{ error() }}</div>
         } @else if (categories().length === 0) {
           <app-empty-state
             icon="tags"
             title="Noch keine Kategorien"
             message="Mit Kategorien siehst du, wofür dein Geld ausgegeben wird — und kannst pro Monat Budgets festlegen."
           >
-            <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <div class="categories-empty-actions">
               <button type="button" class="btn btn-primary" (click)="openCreate()">
                 Erste Kategorie anlegen
               </button>
@@ -85,37 +92,39 @@ type DialogState =
             </div>
           </app-empty-state>
         } @else {
-          <ul class="list-unstyled mb-0">
+          <ul class="fin-rows categories-list">
             @for (category of categories(); track category.id) {
-              <li class="category-row d-flex align-items-center gap-2">
+              <li class="fin-row categories-row">
                 <app-category-badge
-                  class="flex-grow-1 min-width-0"
+                  class="categories-row__badge"
                   [name]="category.name"
                   [color]="category.color"
                   [icon]="category.icon"
                 />
 
-                <span class="text-muted small flex-shrink-0 d-none d-sm-inline">
+                <span class="categories-row__count">
                   {{ category.transactionCount }}
                   {{ category.transactionCount === 1 ? 'Buchung' : 'Buchungen' }}
                 </span>
 
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light icon-button"
-                  [attr.aria-label]="'Kategorie ' + category.name + ' bearbeiten'"
-                  (click)="openEdit(category)"
-                >
-                  <i class="bi bi-pencil" aria-hidden="true"></i>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-light icon-button text-danger"
-                  [attr.aria-label]="'Kategorie ' + category.name + ' löschen'"
-                  (click)="openDelete(category)"
-                >
-                  <i class="bi bi-trash" aria-hidden="true"></i>
-                </button>
+                <div class="categories-row__actions">
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon"
+                    [attr.aria-label]="'Kategorie ' + category.name + ' bearbeiten'"
+                    (click)="openEdit(category)"
+                  >
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon categories-row__remove"
+                    [attr.aria-label]="'Kategorie ' + category.name + ' löschen'"
+                    (click)="openDelete(category)"
+                  >
+                    <i class="bi bi-trash" aria-hidden="true"></i>
+                  </button>
+                </div>
               </li>
             }
           </ul>
@@ -154,25 +163,73 @@ type DialogState =
   `,
   styles: [
     `
-      .surface-card {
-        border-radius: 1rem;
-        background-color: var(--color-surface);
+      .categories-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+        margin-bottom: var(--fin-space-4);
       }
-      .category-row {
-        padding: 0.6rem 0;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
-      }
-      .category-row:last-child {
-        border-bottom: none;
-      }
-      .icon-button {
-        width: 2.25rem;
-        height: 2.25rem;
-        line-height: 1;
-        flex-shrink: 0;
-      }
-      .min-width-0 {
+      .categories-header__text {
+        flex: 1 1 16rem;
         min-width: 0;
+      }
+      .categories-title {
+        margin: 0 0 var(--fin-space-1);
+        font-size: var(--fin-text-md);
+      }
+      .categories-note {
+        margin: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+      }
+      .categories-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--fin-space-2);
+      }
+      .categories-empty-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: var(--fin-space-2);
+      }
+
+      /* Die Zeilen laufen bis an die Panelkante, der Innenabstand des Panels
+         wird dafür lokal zurückgenommen — Trennlinien über die volle Breite
+         lesen sich als zusammenhängende Liste. */
+      .categories-list {
+        margin: 0 calc(-1 * var(--fin-space-5)) calc(-1 * var(--fin-space-5));
+      }
+      .categories-row__badge {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .categories-row__count {
+        flex-shrink: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        font-variant-numeric: tabular-nums;
+        /* Auf schmalen Displays weichen die Buchungszahlen den Aktionen. */
+        display: none;
+      }
+      @media (min-width: 34rem) {
+        .categories-row__count {
+          display: inline;
+        }
+      }
+      .categories-row__actions {
+        display: flex;
+        flex-shrink: 0;
+        gap: var(--fin-space-1);
+      }
+      .categories-row__remove:hover {
+        background-color: var(--fin-danger-tint);
+        color: var(--fin-danger);
+      }
+      .categories-skeleton__icon {
+        flex-shrink: 0;
       }
     `,
   ],
@@ -194,6 +251,9 @@ export class CategoriesTabComponent {
   protected readonly saving = signal(false);
   protected readonly accounts = signal<BankAccount[]>([]);
   protected readonly accountsLoading = signal(false);
+
+  /** Anzahl der Platzhalter-Zeilen während des Ladens. */
+  protected readonly skeletonSlots = [0, 1, 2, 3];
 
   /** Als Quelle kommen nur die übrigen Konten des Nutzers in Frage. */
   protected readonly otherAccounts = computed(() =>

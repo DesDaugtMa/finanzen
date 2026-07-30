@@ -1,0 +1,178 @@
+// =============================================================================
+// Bewegung
+// =============================================================================
+// Regeln, an die sich jede Animation in der App hält:
+//
+//   1. Nur `transform` und `opacity` animieren — alles andere löst Layout- oder
+//      Paint-Arbeit im Hauptthread aus und ruckelt auf dem Smartphone.
+//   2. Unter 350ms. Länger fühlt sich nicht „premium“ an, sondern langsam.
+//   3. Nichts läuft in Endlosschleife, ausser es zeigt echten Fortschritt an.
+//   4. Keine Animation darf eine Eingabe verzögern oder blockieren.
+//
+// Reduced Motion wird zentral in `_base.scss` abgehandelt.
+// =============================================================================
+
+// Auftauchen mit leichtem Anheben — für Seiteninhalte und Listen.
+@keyframes fin-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fin-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Aufpoppen aus dem Ursprung — für Menüs und Popover.
+@keyframes fin-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Dialog: kommt eine Spur von unten und skaliert minimal auf.
+@keyframes fin-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Auf Mobil fährt der Dialog als Sheet vom unteren Rand ein.
+@keyframes fin-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+// Toast: von rechts hereingleiten.
+@keyframes fin-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Wanderndes Glanzlicht für Skelett-Platzhalter.
+@keyframes fin-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Anwendungs-Klassen
+// -----------------------------------------------------------------------------
+
+.fin-animate-rise {
+  animation: fin-rise-in var(--fin-duration-slow) var(--fin-ease-out) both;
+}
+
+.fin-animate-fade {
+  animation: fin-fade-in var(--fin-duration-base) var(--fin-ease-out) both;
+}
+
+// Gestaffeltes Erscheinen von Listenkindern. Sehr kurz gehalten und nach dem
+// achten Element abgeschnitten — sonst wartet man bei langen Listen dem
+// Aufbau hinterher, was das Gegenteil von schnell wirkt.
+.fin-stagger > * {
+  animation: fin-rise-in var(--fin-duration-slow) var(--fin-ease-out) both;
+}
+
+@for $i from 1 through 8 {
+  .fin-stagger > *:nth-child(#{$i}) {
+    animation-delay: #{($i - 1) * 35}ms;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Skelett-Platzhalter
+// -----------------------------------------------------------------------------
+// Beim Laden die Form des kommenden Inhalts andeuten statt einen Spinner zeigen:
+// die Seite springt beim Eintreffen der Daten nicht, und die Wartezeit wirkt
+// kürzer, weil bereits Struktur sichtbar ist.
+
+.fin-skeleton {
+  border-radius: var(--fin-radius-xs);
+  background-color: var(--fin-surface-sunken);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--fin-text) 7%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: fin-shimmer 1.4s linear infinite;
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
+}
+
+.fin-skeleton--text {
+  height: 0.75rem;
+  margin-block: 0.25rem;
+}
+
+.fin-skeleton--title {
+  height: 1.25rem;
+  width: 45%;
+}
+
+.fin-skeleton--line {
+  height: 0.75rem;
+  width: 100%;
+}
+
+.fin-skeleton--line-short {
+  height: 0.75rem;
+  width: 60%;
+}
+
+.fin-skeleton--amount {
+  height: 1.5rem;
+  width: 6rem;
+}
+
+.fin-skeleton--circle {
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+// Im Ruhemodus (Reduced Motion) wird das Glanzlicht still gestellt — dann muss
+// die Fläche allein durch ihren Ton als Platzhalter erkennbar bleiben.
+@media (prefers-reduced-motion: reduce) {
+  .fin-skeleton {
+    background-image: none;
+  }
+}

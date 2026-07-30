@@ -1,7 +1,19 @@
-@if (authService.isAuthenticated()) {
-  <app-navbar />
-}
+@let authenticated = authService.isAuthenticated();
 
-<router-outlet />
+<div class="fin-shell">
+  @if (authenticated) {
+    <!--
+      Sprungmarke: Tastaturnutzer überspringen damit die Navigation. Sie ist
+      unsichtbar, bis sie den Fokus erhält (WCAG 2.4.1).
+    -->
+    <a class="fin-skip-link" href="#hauptinhalt">Zum Hauptinhalt springen</a>
+    <app-navbar />
+  }
+
+  <main id="hauptinhalt" class="fin-main" [class.fin-main--bare]="!authenticated" tabindex="-1">
+    <router-outlet />
+  </main>
+</div>
 
 <app-toast-container />
+<app-update-notice />

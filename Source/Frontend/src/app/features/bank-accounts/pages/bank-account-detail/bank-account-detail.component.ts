@@ -48,58 +48,73 @@ type TabId = (typeof TAB_IDS)[number];
     CategoriesTabComponent,
   ],
   template: `
-    <div class="container py-4 detail-page">
-      <a routerLink="/" class="btn btn-link px-0 mb-2 text-decoration-none">
-        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Zurück zur Übersicht
+    <div class="container detail-page">
+      <a routerLink="/" class="detail-back">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <span>Übersicht</span>
       </a>
 
       @if (loading()) {
-        <div class="text-center py-5">
-          <span class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Konto wird geladen …</span>
-          </span>
+        <div class="fin-panel detail-skeleton" role="status" aria-label="Konto wird geladen">
+          <div class="detail-skeleton__head">
+            <div class="fin-skeleton fin-skeleton--circle"></div>
+            <div class="detail-skeleton__lines">
+              <div class="fin-skeleton fin-skeleton--title"></div>
+              <div class="fin-skeleton fin-skeleton--line-short"></div>
+            </div>
+          </div>
+          <div class="fin-skeleton fin-skeleton--amount"></div>
         </div>
       } @else if (error()) {
-        <div class="alert alert-danger d-flex flex-wrap align-items-center gap-2" role="alert">
-          <span class="me-auto">{{ error() }}</span>
+        <div class="alert alert-danger detail-error" role="alert">
+          <span>{{ error() }}</span>
           <button type="button" class="btn btn-sm btn-outline-danger" (click)="reload()">
             Erneut versuchen
           </button>
         </div>
       } @else if (account(); as item) {
-        <header class="card shadow-sm detail-card mb-3" [style.border-top-color]="accentColor()">
-          <div class="card-body p-3 p-sm-4">
-            <div class="d-flex flex-wrap align-items-start gap-3">
-              <span
-                class="account-avatar flex-shrink-0"
-                [style.background-color]="accentColor()"
-                aria-hidden="true"
-              >
-                <i class="bi bi-bank2"></i>
-              </span>
+        <!-- Kopfbereich als Markenfläche: Kontostand ist die Leitzahl der Seite
+             und bekommt deshalb den stärksten Auftritt. -->
+        <header class="fin-brand-surface detail-hero">
+          <div class="detail-hero__top">
+            <span
+              class="detail-hero__avatar"
+              [style.background-color]="accentColor()"
+              aria-hidden="true"
+            >
+              <i class="bi bi-bank2"></i>
+            </span>
 
-              <div class="flex-grow-1 min-width-0">
-                <h1 class="h4 fw-bold mb-1 text-break">{{ item.name }}</h1>
-                <p class="text-muted small mb-0">{{ subtitle() }}</p>
-              </div>
-
-              <div class="text-sm-end">
-                <p class="text-muted text-uppercase detail-label mb-1">Kontostand</p>
-                <app-money-amount [amount]="balance()" [currency]="item.currency" size="lg" />
-              </div>
+            <div class="detail-hero__ident">
+              <h1 class="detail-hero__name fin-break-all">{{ item.name }}</h1>
+              <p class="detail-hero__meta fin-break-all">{{ subtitle() }}</p>
             </div>
+          </div>
 
-            <div class="d-flex flex-wrap align-items-center gap-2 mt-3 pt-3 border-top">
-              <span class="text-muted small me-auto">
-                Angezeigter Zeitraum: <strong class="text-body">{{ monthLabel() }}</strong>
-              </span>
-              <app-month-picker [month]="month()" (monthChange)="selectMonth($event)" />
-            </div>
+          <div class="detail-hero__balance">
+            <span class="detail-hero__label">Kontostand</span>
+            <app-money-amount
+              class="detail-hero__amount"
+              [amount]="balance()"
+              [currency]="item.currency"
+              size="lg"
+            />
+          </div>
+
+          <div class="detail-hero__period">
+            <span class="detail-hero__period-label">
+              Zeitraum <strong>{{ monthLabel() }}</strong>
+            </span>
+            <app-month-picker
+              tone="on-brand"
+              [month]="month()"
+              (monthChange)="selectMonth($event)"
+            />
           </div>
         </header>
 
         <app-tab-nav
-          class="d-block mb-3"
+          class="detail-tabs"
           label="Bereiche des Kontos"
           [tabs]="tabs()"
           [active]="tab()"
@@ -159,33 +174,159 @@ type TabId = (typeof TAB_IDS)[number];
       .detail-page {
         max-width: 64rem;
       }
-      .detail-card {
-        border-radius: 1rem;
-        /* Die Akzentfarbe des Kontos sitzt als Inline-Style auf border-top-color. */
-        border: 1px solid var(--bs-border-color-translucent);
-        border-top-width: 3px;
-        background-color: var(--color-surface);
+      .detail-back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--fin-space-2);
+        min-height: var(--fin-touch-min);
+        margin-bottom: var(--fin-space-3);
+        margin-left: calc(-1 * var(--fin-space-2));
+        padding-inline: var(--fin-space-2);
+        border-radius: var(--fin-radius-sm);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-base);
+        font-weight: 600;
+        text-decoration: none;
+        transition:
+          color var(--fin-duration-fast) var(--fin-ease-out),
+          background-color var(--fin-duration-fast) var(--fin-ease-out);
       }
-      .account-avatar {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 0.9rem;
+      .detail-back:hover {
+        background-color: var(--fin-surface-hover);
+        color: var(--fin-text-strong);
+      }
+      .detail-back i {
+        transition: transform var(--fin-duration-base) var(--fin-ease-out);
+      }
+      /* Der Pfeil rückt beim Überfahren minimal in seine Richtung — winziger
+         Hinweis darauf, wohin der Link führt. */
+      .detail-back:hover i {
+        transform: translateX(-2px);
+      }
+      .detail-error {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+      }
+
+      .detail-hero {
+        padding: var(--fin-space-5);
+        margin-bottom: var(--fin-space-5);
+        /* Aufgehellte Geldfarben für die dunkle Fläche — sonst reicht der
+           Kontrast eines negativen Saldos nicht. */
+        --fin-expense: #ffb3a1;
+        --fin-income: #9fe6bf;
+      }
+      @media (min-width: 34rem) {
+        .detail-hero {
+          padding: var(--fin-space-6);
+        }
+      }
+      .detail-hero__top {
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-3);
+      }
+      .detail-hero__avatar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: var(--fin-radius-md);
         color: #fff;
-        font-size: 1.4rem;
+        font-size: var(--fin-text-lg);
+        /* Feine helle Kante, damit die Kontofarbe auf dunklem Grund nicht
+           verschwimmt. */
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
       }
-      .min-width-0 {
+      .detail-hero__ident {
         min-width: 0;
       }
-      .detail-label {
-        font-size: 0.7rem;
-        letter-spacing: 0.06em;
+      .detail-hero__name {
+        margin: 0;
+        color: #fff;
+        font-size: var(--fin-text-lg);
       }
+      .detail-hero__meta {
+        margin: 0.1rem 0 0;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: var(--fin-text-sm);
+      }
+      .detail-hero__balance {
+        margin-top: var(--fin-space-5);
+      }
+      .detail-hero__label {
+        display: block;
+        margin-bottom: var(--fin-space-1);
+        color: rgba(255, 255, 255, 0.72);
+        font-size: var(--fin-text-2xs);
+        font-weight: 650;
+        letter-spacing: var(--fin-tracking-wider);
+        text-transform: uppercase;
+      }
+      .detail-hero__amount {
+        color: #fff;
+        font-size: var(--fin-text-3xl);
+      }
+      .detail-hero__period {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+        margin-top: var(--fin-space-5);
+        padding-top: var(--fin-space-4);
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .detail-hero__period-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: var(--fin-text-sm);
+      }
+      /* Auf Mobil bekommt die Monatsauswahl eine eigene, volle Zeile unter der
+         Beschriftung. Nebeneinander bliebe für die drei Schaltflächen auf einem
+         320px-Display kein ausreichender Platz. */
+      .detail-hero__period app-month-picker {
+        flex: 1 1 100%;
+      }
+      @media (min-width: 34rem) {
+        .detail-hero__period app-month-picker {
+          flex: 0 0 auto;
+        }
+      }
+      .detail-hero__period-label strong {
+        color: #fff;
+      }
+
+      .detail-tabs {
+        display: block;
+        margin-bottom: var(--fin-space-5);
+      }
+
       /* Der Panel-Container ist per Tastatur anspringbar, soll aber keinen Fokusrahmen zeigen. */
       [role='tabpanel']:focus {
         outline: none;
+      }
+
+      .detail-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-5);
+        padding: var(--fin-space-5);
+      }
+      .detail-skeleton__head {
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-3);
+      }
+      .detail-skeleton__lines {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-2);
       }
     `,
   ],

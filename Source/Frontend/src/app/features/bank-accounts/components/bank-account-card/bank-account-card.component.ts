@@ -1,133 +1,199 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BankAccount } from '../../../../core/models/bank-account.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { maskIban } from '../../../../shared/utils/iban.util';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
 
-/** Übersichtskarte eines Girokontos. Die gesamte Karte führt zur Detailseite. */
+/**
+ * Übersichtskarte eines Girokontos. Die gesamte Karte führt zur Detailseite.
+ *
+ * Das Aktionsmenü ist bewusst selbst gebaut und signalgesteuert — wie das
+ * Kontomenü in der Navigation. Damit braucht die App kein Bootstrap-JavaScript,
+ * und Öffnen, Schließen und Fokus liegen vollständig in unserer Hand.
+ */
 @Component({
   selector: 'app-bank-account-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, MoneyAmountComponent],
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+    '(document:keydown.escape)': 'closeMenu()',
+  },
   template: `
     @let item = account();
 
-    <article class="account-card card shadow-sm h-100" [style.border-top-color]="accentColor()">
-      <div class="card-body d-flex flex-column p-3 p-sm-4">
-        <div class="d-flex align-items-start gap-3">
-          <span
-            class="account-avatar flex-shrink-0"
-            [style.background-color]="accentColor()"
-            aria-hidden="true"
+    <article class="account-card fin-panel fin-panel--interactive">
+      <!-- Farbstreifen oben: ordnet die Karte ihrem Konto zu, ohne die ganze
+           Fläche einzufärben. Die Farbe kommt aus den Kontodaten. -->
+      <span
+        class="account-card__stripe"
+        [style.background-color]="accentColor()"
+        aria-hidden="true"
+      ></span>
+
+      <div class="account-card__head">
+        <span
+          class="account-card__avatar"
+          [style.background-color]="accentColor()"
+          aria-hidden="true"
+        >
+          <i class="bi bi-bank2"></i>
+        </span>
+
+        <div class="account-card__ident">
+          <h3 class="account-card__name">
+            <!--
+              stretched-link macht die gesamte Karte klickbar, ohne verschachtelte
+              interaktive Elemente zu erzeugen (das wäre nicht barrierefrei).
+            -->
+            <a class="stretched-link account-card__link" [routerLink]="['/girokonten', item.id]">
+              {{ item.name }}
+            </a>
+          </h3>
+          <p class="account-card__meta">{{ subtitle() }}</p>
+        </div>
+
+        <div class="account-card__actions">
+          <button
+            type="button"
+            class="btn fin-btn-icon"
+            [attr.aria-expanded]="menuOpen()"
+            aria-haspopup="menu"
+            [attr.aria-label]="'Aktionen für ' + item.name"
+            (click)="toggleMenu()"
           >
-            <i class="bi bi-bank2"></i>
-          </span>
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+          </button>
 
-          <div class="flex-grow-1 min-width-0">
-            <h3 class="h6 fw-bold mb-1 text-truncate">
-              <a class="stretched-link account-link" [routerLink]="['/girokonten', item.id]">{{
-                item.name
-              }}</a>
-            </h3>
-            <p class="text-muted small mb-0 text-truncate">{{ subtitle() }}</p>
-          </div>
-
-          <div class="dropdown card-actions flex-shrink-0">
-            <button
-              type="button"
-              class="btn btn-sm btn-light rounded-circle account-menu-button"
-              data-bs-toggle="dropdown"
-              data-bs-boundary="viewport"
-              aria-expanded="false"
-              [attr.aria-label]="'Aktionen für ' + item.name"
-            >
-              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-              <li>
-                <button type="button" class="dropdown-item" (click)="edit.emit(item)">
-                  <i class="bi bi-pencil me-2" aria-hidden="true"></i> Bearbeiten
-                </button>
-              </li>
-              <li><hr class="dropdown-divider" /></li>
-              <li>
-                <button type="button" class="dropdown-item text-danger" (click)="remove.emit(item)">
-                  <i class="bi bi-trash me-2" aria-hidden="true"></i> Löschen
-                </button>
-              </li>
-            </ul>
-          </div>
+          @if (menuOpen()) {
+            <div class="fin-menu account-card__menu" role="menu">
+              <button type="button" class="fin-menu__item" role="menuitem" (click)="emitEdit(item)">
+                <i class="bi bi-pencil fin-menu__icon" aria-hidden="true"></i>
+                <span>Bearbeiten</span>
+              </button>
+              <div class="fin-menu__separator" role="none"></div>
+              <button
+                type="button"
+                class="fin-menu__item fin-menu__item--danger"
+                role="menuitem"
+                (click)="emitRemove(item)"
+              >
+                <i class="bi bi-trash fin-menu__icon" aria-hidden="true"></i>
+                <span>Löschen</span>
+              </button>
+            </div>
+          }
         </div>
+      </div>
 
-        <div class="mt-auto pt-3">
-          <p class="text-muted text-uppercase account-label mb-1">Kontostand</p>
-          <app-money-amount [amount]="item.currentBalance" [currency]="item.currency" size="lg" />
-        </div>
+      <div class="account-card__balance">
+        <span class="fin-eyebrow">Kontostand</span>
+        <app-money-amount [amount]="item.currentBalance" [currency]="item.currency" size="lg" />
       </div>
     </article>
   `,
   styles: [
     `
-      /* Ohne Höhe am Host greift h-100 der Karte nicht — Karten im Raster wären ungleich hoch. */
+      /* Ohne Höhe am Host greift die Kartenhöhe im Raster nicht — die Karten
+         wären dann ungleich hoch. */
       :host {
         display: block;
         height: 100%;
       }
       .account-card {
-        border-radius: 1rem;
-        /* Die Akzentfarbe des Kontos sitzt als Inline-Style auf border-top-color. */
-        border: 1px solid var(--bs-border-color-translucent);
-        border-top-width: 3px;
-        background-color: var(--color-surface);
-        transition:
-          transform 0.15s ease,
-          box-shadow 0.15s ease;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: var(--fin-space-4);
+        overflow: hidden;
       }
-      .account-card:hover,
-      .account-card:focus-within {
-        transform: translateY(-2px);
-        box-shadow: var(--bs-box-shadow) !important;
+      @media (min-width: 34rem) {
+        .account-card {
+          padding: var(--fin-space-5);
+        }
       }
-      .account-avatar {
-        width: 2.75rem;
-        height: 2.75rem;
-        border-radius: 0.85rem;
+      .account-card__stripe {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+        height: 3px;
+      }
+      .account-card__head {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--fin-space-3);
+      }
+      .account-card__avatar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: var(--fin-radius-md);
         color: #fff;
-        font-size: 1.25rem;
+        font-size: var(--fin-text-md);
       }
-      /* Ohne min-width:0 bricht text-truncate im Flex-Kind nicht um. */
-      .min-width-0 {
+      /* min-width: 0 ist Voraussetzung dafür, dass die Kürzung im Flex-Kind greift. */
+      .account-card__ident {
+        flex: 1 1 auto;
         min-width: 0;
       }
-      .account-link {
+      .account-card__name {
+        margin: 0;
+        font-size: var(--fin-text-md);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .account-card__link {
         color: inherit;
         text-decoration: none;
       }
-      .account-link:hover {
-        text-decoration: underline;
+      .account-card__link:hover {
+        color: var(--fin-accent);
       }
-      .account-link:focus-visible {
-        outline: 2px solid var(--bs-primary);
-        outline-offset: 2px;
-        border-radius: 0.25rem;
+      .account-card__link:focus-visible {
+        outline: 2px solid var(--fin-accent);
+        outline-offset: 3px;
+        border-radius: var(--fin-radius-xs);
       }
-      .account-label {
-        font-size: 0.7rem;
-        letter-spacing: 0.06em;
+      .account-card__meta {
+        margin: 0.1rem 0 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       /* Über der stretched-link-Fläche, damit das Menü nicht zur Detailseite navigiert. */
-      .card-actions {
+      .account-card__actions {
         position: relative;
         z-index: 2;
+        flex-shrink: 0;
+        margin: calc(-1 * var(--fin-space-1)) calc(-1 * var(--fin-space-2)) 0 0;
       }
-      .account-menu-button {
-        width: 2.25rem;
-        height: 2.25rem;
-        line-height: 1;
+      .account-card__menu {
+        min-width: 11rem;
+      }
+      .account-card__balance {
+        margin-top: auto;
+        padding-top: var(--fin-space-5);
+      }
+      .account-card__balance .fin-eyebrow {
+        margin-bottom: var(--fin-space-1);
       }
     `,
   ],
@@ -138,6 +204,10 @@ export class BankAccountCardComponent {
   readonly edit = output<BankAccount>();
   readonly remove = output<BankAccount>();
 
+  protected readonly menuOpen = signal(false);
+
+  private readonly host = inject(ElementRef<HTMLElement>);
+
   protected readonly accentColor = computed(() => this.account().color ?? DEFAULT_ACCENT_COLOR);
 
   protected readonly subtitle = computed(() => {
@@ -145,4 +215,29 @@ export class BankAccountCardComponent {
     const parts = [bankName, iban ? maskIban(iban) : null].filter(Boolean);
     return parts.length > 0 ? parts.join(' · ') : 'Girokonto';
   });
+
+  protected toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  protected closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+
+  protected emitEdit(account: BankAccount): void {
+    this.closeMenu();
+    this.edit.emit(account);
+  }
+
+  protected emitRemove(account: BankAccount): void {
+    this.closeMenu();
+    this.remove.emit(account);
+  }
+
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.menuOpen()) return;
+    if (this.host.nativeElement.contains(event.target as Node)) return;
+
+    this.closeMenu();
+  }
 }

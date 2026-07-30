@@ -28,14 +28,15 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
   imports: [MoneyAmountComponent, EmptyStateComponent, BudgetProgressComponent, BudgetRowComponent],
   template: `
     @if (loading()) {
-      <div class="text-center py-5">
-        <span class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Budgets werden geladen …</span>
-        </span>
+      <div class="fin-panel budget-skeleton" role="status" aria-label="Budgets werden geladen">
+        <div class="fin-skeleton fin-skeleton--title"></div>
+        <div class="fin-skeleton fin-skeleton--line"></div>
+        <div class="fin-skeleton fin-skeleton--line"></div>
+        <div class="fin-skeleton fin-skeleton--line-short"></div>
       </div>
     } @else if (error()) {
-      <div class="alert alert-danger d-flex flex-wrap align-items-center gap-2" role="alert">
-        <span class="me-auto">{{ error() }}</span>
+      <div class="alert alert-danger budgets-error" role="alert">
+        <span>{{ error() }}</span>
         <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
           Erneut versuchen
         </button>
@@ -48,34 +49,31 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
           message="Budgets werden je Kategorie festgelegt. Lege zuerst im Bereich „Kategorien“ fest, wofür du Geld ausgibst."
         />
       } @else {
-        <section
-          class="card border-0 shadow-sm surface-card mb-3"
-          aria-labelledby="budgetSummaryHeading"
-        >
-          <div class="card-body p-3 p-sm-4">
-            <h2 id="budgetSummaryHeading" class="h6 fw-bold mb-3">Gesamt im {{ monthLabel() }}</h2>
+        <section class="fin-panel budgets-panel" aria-labelledby="budgetSummaryHeading">
+          <div class="fin-panel__body">
+            <h2 id="budgetSummaryHeading" class="budgets-heading">Gesamt im {{ monthLabel() }}</h2>
 
-            <dl class="row g-3 mb-3">
-              <div class="col-4">
-                <dt class="text-muted small fw-normal">Budgetiert</dt>
-                <dd class="mb-0">
+            <dl class="budget-totals">
+              <div>
+                <dt class="fin-kv__label">Budgetiert</dt>
+                <dd>
                   <app-money-amount [amount]="month.totalBudget" [currency]="month.currency" />
                 </dd>
               </div>
-              <div class="col-4">
-                <dt class="text-muted small fw-normal">Ausgegeben</dt>
-                <dd class="mb-0">
+              <div>
+                <dt class="fin-kv__label">Ausgegeben</dt>
+                <dd>
                   <app-money-amount
                     [amount]="month.totalSpentBudgeted"
                     [currency]="month.currency"
                   />
                 </dd>
               </div>
-              <div class="col-4">
-                <dt class="text-muted small fw-normal">
+              <div>
+                <dt class="fin-kv__label">
                   {{ month.totalRemaining < 0 ? 'Überschritten' : 'Übrig' }}
                 </dt>
-                <dd class="mb-0">
+                <dd>
                   <app-money-amount [amount]="month.totalRemaining" [currency]="month.currency" />
                 </dd>
               </div>
@@ -91,9 +89,9 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
         </section>
 
         @if (month.hasSuggestions) {
-          <div class="alert alert-info d-flex flex-wrap align-items-center gap-2" role="status">
-            <i class="bi bi-lightbulb" aria-hidden="true"></i>
-            <span class="me-auto">
+          <div class="alert alert-info suggestion-bar" role="status">
+            <i class="bi bi-lightbulb suggestion-bar__icon" aria-hidden="true"></i>
+            <span class="suggestion-bar__text">
               Für einige Kategorien gibt es Werte aus {{ suggestionSourceLabel() }}. Sie sind noch
               nicht gespeichert.
             </span>
@@ -105,20 +103,22 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
             >
               @if (applying()) {
                 <span
-                  class="spinner-border spinner-border-sm me-1"
+                  class="spinner-border spinner-border-sm"
                   role="status"
                   aria-hidden="true"
                 ></span>
               }
-              Vorschläge übernehmen
+              Übernehmen
             </button>
           </div>
         }
 
-        <section class="card border-0 shadow-sm surface-card" aria-labelledby="budgetListHeading">
-          <div class="card-body p-3 p-sm-4">
-            <h2 id="budgetListHeading" class="h6 fw-bold mb-1">Budget je Kategorie</h2>
-            <p class="text-muted small mb-3">
+        <section class="fin-panel" aria-labelledby="budgetListHeading">
+          <div class="fin-panel__body">
+            <h2 id="budgetListHeading" class="budgets-heading budgets-heading--tight">
+              Budget je Kategorie
+            </h2>
+            <p class="budgets-note">
               Änderungen werden automatisch gespeichert. Ein leeres Feld entfernt das Budget für
               diesen Monat.
             </p>
@@ -138,9 +138,59 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
   `,
   styles: [
     `
-      .surface-card {
-        border-radius: 1rem;
-        background-color: var(--color-surface);
+      .budgets-error,
+      .suggestion-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--fin-space-3);
+      }
+      .budgets-error {
+        justify-content: space-between;
+      }
+      .suggestion-bar {
+        margin-bottom: var(--fin-space-4);
+      }
+      .suggestion-bar__icon {
+        flex-shrink: 0;
+        font-size: var(--fin-text-md);
+      }
+      .suggestion-bar__text {
+        /* Nimmt den freien Platz, damit die Schaltfläche rechts außen sitzt und
+           erst bei echtem Platzmangel umbricht. */
+        flex: 1 1 14rem;
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
+      }
+      .budgets-panel {
+        margin-bottom: var(--fin-space-4);
+      }
+      .budgets-heading {
+        margin: 0 0 var(--fin-space-4);
+        font-size: var(--fin-text-md);
+      }
+      .budgets-heading--tight {
+        margin-bottom: var(--fin-space-1);
+      }
+      .budgets-note {
+        margin: 0 0 var(--fin-space-4);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+      }
+      .budget-totals {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+        gap: var(--fin-space-4);
+        margin: 0 0 var(--fin-space-5);
+      }
+      .budget-totals dd {
+        margin: 0.15rem 0 0;
+      }
+      .budget-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-4);
+        padding: var(--fin-space-5);
       }
     `,
   ],

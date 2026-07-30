@@ -10,34 +10,35 @@ import { ModalDialogComponent } from '../../../../shared/components/modal-dialog
   template: `
     <app-modal-dialog title="Kategorien übernehmen" (closed)="cancelled.emit()">
       @if (loading()) {
-        <div class="text-center py-4">
-          <span class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Konten werden geladen …</span>
-          </span>
+        <div class="copy-loading" role="status">
+          <span class="spinner-border" aria-hidden="true"></span>
+          <span class="visually-hidden">Konten werden geladen …</span>
         </div>
       } @else if (accounts().length === 0) {
-        <p class="mb-0">
-          Es gibt noch kein weiteres Girokonto, aus dem Kategorien übernommen werden könnten.
-        </p>
+        <p>Es gibt noch kein weiteres Girokonto, aus dem Kategorien übernommen werden könnten.</p>
       } @else {
-        <label for="sourceAccount" class="form-label">Quelle</label>
-        <select
-          id="sourceAccount"
-          class="form-select"
-          [value]="selectedId() ?? ''"
-          [disabled]="saving()"
-          (change)="onSelect($event)"
-        >
-          @for (account of accounts(); track account.id) {
-            <option [value]="account.id">{{ account.name }}</option>
-          }
-        </select>
-        <p class="form-text mb-0">
-          Kategorien, die es hier schon gibt, werden übersprungen. Budgets werden nicht übernommen.
-        </p>
+        <div>
+          <label for="sourceAccount" class="form-label">Quelle</label>
+          <select
+            id="sourceAccount"
+            class="form-select"
+            [value]="selectedId() ?? ''"
+            [disabled]="saving()"
+            aria-describedby="copyHint"
+            (change)="onSelect($event)"
+          >
+            @for (account of accounts(); track account.id) {
+              <option [value]="account.id">{{ account.name }}</option>
+            }
+          </select>
+          <p id="copyHint" class="form-text">
+            Kategorien, die es hier schon gibt, werden übersprungen. Budgets werden nicht
+            übernommen.
+          </p>
+        </div>
       }
 
-      <div dialogFooter class="d-flex flex-wrap gap-2 justify-content-end w-100">
+      <div dialogFooter class="fin-dialog-actions">
         <button
           type="button"
           class="btn btn-light"
@@ -53,17 +54,23 @@ import { ModalDialogComponent } from '../../../../shared/components/modal-dialog
           (click)="submit()"
         >
           @if (saving()) {
-            <span
-              class="spinner-border spinner-border-sm me-1"
-              role="status"
-              aria-hidden="true"
-            ></span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           }
           Übernehmen
         </button>
       </div>
     </app-modal-dialog>
   `,
+  styles: [
+    `
+      .copy-loading {
+        display: flex;
+        justify-content: center;
+        padding: var(--fin-space-6) 0;
+        color: var(--fin-accent);
+      }
+    `,
+  ],
 })
 export class CopyCategoriesDialogComponent {
   readonly accounts = input.required<BankAccount[]>();

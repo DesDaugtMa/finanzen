@@ -24,75 +24,69 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
   ],
   template: `
     @if (loading()) {
-      <div class="text-center py-5">
-        <span class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Kennzahlen werden geladen …</span>
-        </span>
+      <div class="fin-grid fin-grid--stats" role="status" aria-label="Kennzahlen werden geladen">
+        @for (placeholder of skeletonSlots; track $index) {
+          <div class="fin-panel stat-skeleton">
+            <div class="fin-skeleton fin-skeleton--line-short"></div>
+            <div class="fin-skeleton fin-skeleton--amount"></div>
+          </div>
+        }
       </div>
     } @else if (error()) {
-      <div class="alert alert-danger d-flex flex-wrap align-items-center gap-2" role="alert">
-        <span class="me-auto">{{ error() }}</span>
+      <div class="alert alert-danger overview-error" role="alert">
+        <span>{{ error() }}</span>
         <button type="button" class="btn btn-sm btn-outline-danger" (click)="retry.emit()">
           Erneut versuchen
         </button>
       </div>
     } @else if (summary(); as data) {
-      <div class="row g-3 mb-3">
-        <div class="col-12 col-sm-4">
-          <app-stat-tile
-            label="Einnahmen"
-            icon="arrow-down-left-circle"
-            tone="income"
-            [amount]="data.income"
-            [currency]="data.currency"
-          />
-        </div>
-        <div class="col-12 col-sm-4">
-          <app-stat-tile
-            label="Ausgaben"
-            icon="arrow-up-right-circle"
-            tone="expense"
-            [amount]="data.expenses"
-            [currency]="data.currency"
-          />
-        </div>
-        <div class="col-12 col-sm-4">
-          <app-stat-tile
-            label="Saldo des Monats"
-            icon="calculator"
-            [amount]="data.net"
-            [currency]="data.currency"
-            [hint]="balanceHint()"
-          />
-        </div>
+      <div class="fin-grid fin-grid--stats overview-stats">
+        <app-stat-tile
+          label="Einnahmen"
+          icon="arrow-down-left-circle"
+          tone="income"
+          [amount]="data.income"
+          [currency]="data.currency"
+        />
+        <app-stat-tile
+          label="Ausgaben"
+          icon="arrow-up-right-circle"
+          tone="expense"
+          [amount]="data.expenses"
+          [currency]="data.currency"
+        />
+        <app-stat-tile
+          label="Saldo des Monats"
+          icon="calculator"
+          [amount]="data.net"
+          [currency]="data.currency"
+          [hint]="balanceHint()"
+        />
       </div>
 
-      <section
-        class="card border-0 shadow-sm surface-card mb-3"
-        aria-labelledby="budgetTotalsHeading"
-      >
-        <div class="card-body p-3 p-sm-4">
-          <h2 id="budgetTotalsHeading" class="h6 fw-bold mb-3">Budgets im {{ monthLabel() }}</h2>
+      <section class="fin-panel overview-panel" aria-labelledby="budgetTotalsHeading">
+        <div class="fin-panel__body">
+          <h2 id="budgetTotalsHeading" class="overview-heading">Budgets im {{ monthLabel() }}</h2>
 
           @if (data.totalBudget > 0) {
-            <dl class="row g-3 mb-3">
-              <div class="col-4">
-                <dt class="text-muted small fw-normal">Budgetiert</dt>
-                <dd class="mb-0">
+            <dl class="budget-totals">
+              <div>
+                <dt class="fin-kv__label">Budgetiert</dt>
+                <dd>
                   <app-money-amount [amount]="data.totalBudget" [currency]="data.currency" />
                 </dd>
               </div>
-              <div class="col-4">
-                <dt class="text-muted small fw-normal">Ausgegeben</dt>
-                <dd class="mb-0">
+              <div>
+                <dt class="fin-kv__label">Ausgegeben</dt>
+                <dd>
                   <app-money-amount [amount]="data.totalSpentBudgeted" [currency]="data.currency" />
                 </dd>
               </div>
-              <div class="col-4">
-                <dt class="text-muted small fw-normal">
+              <div>
+                <dt class="fin-kv__label">
                   {{ data.totalRemaining < 0 ? 'Überschritten' : 'Übrig' }}
                 </dt>
-                <dd class="mb-0">
+                <dd>
                   <app-money-amount [amount]="data.totalRemaining" [currency]="data.currency" />
                 </dd>
               </div>
@@ -105,7 +99,7 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
               [currency]="data.currency"
             />
           } @else {
-            <p class="text-muted mb-0">
+            <p class="overview-note">
               Für diesen Monat ist noch kein Budget hinterlegt. Im Bereich „Budgets“ legst du je
               Kategorie fest, wie viel zur Verfügung steht.
             </p>
@@ -113,9 +107,9 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
         </div>
       </section>
 
-      <section class="card border-0 shadow-sm surface-card" aria-labelledby="spendingHeading">
-        <div class="card-body p-3 p-sm-4">
-          <h2 id="spendingHeading" class="h6 fw-bold mb-3">Ausgaben nach Kategorie</h2>
+      <section class="fin-panel" aria-labelledby="spendingHeading">
+        <div class="fin-panel__body">
+          <h2 id="spendingHeading" class="overview-heading">Ausgaben nach Kategorie</h2>
 
           @if (data.spending.length === 0) {
             <app-empty-state
@@ -128,19 +122,18 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
               </button>
             </app-empty-state>
           } @else {
-            <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+            <ul class="spending-list">
               @for (item of data.spending; track item.categoryId ?? 0) {
-                <li>
-                  <div class="d-flex align-items-center gap-2 mb-1">
+                <li class="spending-item">
+                  <div class="spending-item__head">
                     <app-category-badge
-                      class="flex-grow-1 min-width-0"
+                      class="spending-item__category"
                       [name]="item.categoryId === null ? null : item.categoryName"
                       [color]="item.categoryColor"
                       [icon]="item.categoryIcon"
                     />
-                    <span class="text-muted small flex-shrink-0">{{ item.share }} %</span>
+                    <span class="spending-item__share">{{ item.share }} %</span>
                     <app-money-amount
-                      class="flex-shrink-0"
                       size="sm"
                       tone="expense"
                       [amount]="item.amount"
@@ -148,13 +141,12 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
                     />
                   </div>
 
-                  <div
-                    class="share-track"
-                    role="img"
-                    [attr.aria-label]="
-                      item.categoryName + ': ' + item.share + ' Prozent der Ausgaben'
-                    "
-                  >
+                  <!--
+                    Der Anteilsbalken ist eine reine Wiederholung der Prozentzahl
+                    daneben; als role=presentation bleibt er aus der Vorlesereihen-
+                    folge heraus, statt sie zu verdoppeln.
+                  -->
+                  <div class="share-track" role="presentation">
                     <span
                       class="share-fill"
                       [style.width.%]="item.share"
@@ -171,24 +163,83 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
   `,
   styles: [
     `
-      .surface-card {
-        border-radius: 1rem;
-        background-color: var(--color-surface);
+      .overview-error {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--fin-space-3);
+      }
+      .overview-stats {
+        margin-bottom: var(--fin-space-4);
+      }
+      .overview-panel {
+        margin-bottom: var(--fin-space-4);
+      }
+      .overview-heading {
+        margin: 0 0 var(--fin-space-4);
+        font-size: var(--fin-text-md);
+      }
+      .overview-note {
+        margin: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-base);
+      }
+
+      .budget-totals {
+        display: grid;
+        /* Drei Werte nebeneinander, auf sehr schmalen Displays zweispaltig —
+           umbrechen ist besser als die Beträge zu quetschen. */
+        grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+        gap: var(--fin-space-4);
+        margin: 0 0 var(--fin-space-5);
+      }
+      .budget-totals dd {
+        margin: 0.15rem 0 0;
+      }
+
+      .spending-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-4);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .spending-item__head {
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-2);
+        margin-bottom: var(--fin-space-2);
+      }
+      .spending-item__category {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .spending-item__share {
+        flex-shrink: 0;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+        font-variant-numeric: tabular-nums;
       }
       .share-track {
-        height: 0.4rem;
-        border-radius: 999px;
-        background-color: var(--bs-secondary-bg);
+        height: 0.375rem;
+        border-radius: var(--fin-radius-pill);
+        background-color: var(--fin-surface-active);
         overflow: hidden;
       }
       .share-fill {
         display: block;
         height: 100%;
-        border-radius: 999px;
-        transition: width 0.25s ease;
+        border-radius: var(--fin-radius-pill);
+        transition: width var(--fin-duration-slow) var(--fin-ease-out);
       }
-      .min-width-0 {
-        min-width: 0;
+
+      .stat-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-3);
+        padding: var(--fin-space-4);
       }
     `,
   ],
@@ -203,6 +254,9 @@ export class AccountOverviewTabComponent {
   readonly showTransactions = output<void>();
 
   protected readonly defaultColor = DEFAULT_ACCENT_COLOR;
+
+  /** Anzahl der Platzhalter-Kacheln während des Ladens. */
+  protected readonly skeletonSlots = [0, 1, 2];
 
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
 

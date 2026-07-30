@@ -1,0 +1,320 @@
+// =============================================================================
+// Überlagerungen — Dialoge und Meldungen
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Dialog
+// -----------------------------------------------------------------------------
+// Zwei Erscheinungsformen, eine Komponente:
+//
+//   Mobil    Sheet, das vom unteren Rand einfährt und dort verankert bleibt.
+//            Formulare sind so einhändig bedienbar und die Aktionen liegen in
+//            Daumenreichweite.
+//   Desktop  Zentrierter Dialog.
+
+.fin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fin-z-backdrop);
+  background-color: var(--fin-scrim);
+  // Leichte Weichzeichnung des Hintergrunds schiebt den Dialog optisch nach
+  // vorn, ohne ihn mit Schatten überladen zu müssen.
+  backdrop-filter: blur(3px);
+  animation: fin-fade-in var(--fin-duration-base) var(--fin-ease-out) both;
+}
+
+.fin-dialog-layer {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fin-z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  // Kein Innenabstand auf Mobil: das Sheet sitzt bündig am unteren Rand.
+  padding: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 34rem) {
+  .fin-dialog-layer {
+    align-items: center;
+    padding: var(--fin-space-4);
+  }
+}
+
+.fin-dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 30rem;
+  // Nie höher als der sichtbare Bereich; `dvh` berücksichtigt die
+  // ein-/ausfahrende Browserleiste auf iOS.
+  max-height: 92dvh;
+  background-color: var(--fin-bg-elevated);
+  border: 1px solid var(--fin-border);
+  border-bottom: 0;
+  border-radius: var(--fin-radius-2xl) var(--fin-radius-2xl) 0 0;
+  box-shadow: var(--fin-shadow-xl);
+  animation: fin-sheet-in var(--fin-duration-slow) var(--fin-ease-out) both;
+}
+
+@media (min-width: 34rem) {
+  .fin-dialog {
+    max-height: 88dvh;
+    border-bottom: 1px solid var(--fin-border);
+    border-radius: var(--fin-radius-xl);
+    animation: fin-dialog-in var(--fin-duration-base) var(--fin-ease-out) both;
+  }
+}
+
+.fin-dialog--lg {
+  max-width: 46rem;
+}
+
+.fin-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fin-space-3);
+  flex: 0 0 auto;
+  padding: var(--fin-space-5) var(--fin-space-5) var(--fin-space-4);
+}
+
+.fin-dialog__title {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-top: 0.35rem;
+  font-size: var(--fin-text-lg);
+  font-weight: 650;
+  letter-spacing: var(--fin-tracking-tight);
+}
+
+// Griffleiste als Affordanz, dass das Sheet von unten kommt. Nur auf Mobil,
+// wo die Geste erwartet wird.
+.fin-dialog__grip {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 0.25rem;
+  margin: var(--fin-space-3) auto 0;
+  border-radius: var(--fin-radius-pill);
+  background-color: var(--fin-border-strong);
+}
+
+@media (min-width: 34rem) {
+  .fin-dialog__grip {
+    display: none;
+  }
+}
+
+.fin-dialog__body {
+  flex: 1 1 auto;
+  padding: 0 var(--fin-space-5) var(--fin-space-5);
+  overflow-y: auto;
+  // Verhindert, dass die Scroll-Geste im Dialog auf die Seite darunter
+  // durchschlägt, sobald das Ende erreicht ist.
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  // Wenn der Browser ein fokussiertes Feld in den Blick scrollt, würde es
+  // sonst genau unter der Oberkante bzw. hinter dem Dialogfuss zu liegen
+  // kommen. Der Puffer gilt für `scroll-into-view` jeder Art — auch für das
+  // automatische Scrollen beim Aufklappen der Bildschirmtastatur.
+  scroll-padding-block: var(--fin-space-4) var(--fin-space-8);
+}
+
+// Formularfelder im Dialog behalten beim Anspringen Luft nach oben und unten.
+.fin-dialog__body :is(input, select, textarea) {
+  scroll-margin-block: var(--fin-space-4);
+}
+
+.fin-dialog__footer {
+  flex: 0 0 auto;
+  padding: var(--fin-space-4) var(--fin-space-5);
+  border-top: 1px solid var(--fin-border-subtle);
+  background-color: var(--fin-bg-elevated);
+  border-radius: 0 0 var(--fin-radius-xl) var(--fin-radius-xl);
+  // Auf Mobil zusätzlich über den Home-Indicator hinaus polstern.
+  padding-bottom: max(var(--fin-space-4), env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 34rem) {
+  .fin-dialog__footer {
+    padding-bottom: var(--fin-space-4);
+  }
+}
+
+// Aktionsleiste im Dialogfuß. Wird vom Aufrufer per `[dialogFooter]` in den
+// Dialog projiziert, deshalb eine eigene Klasse statt eines Kind-Selektors.
+.fin-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--fin-space-2);
+  width: 100%;
+}
+
+// Auf schmalen Displays füllen die Aktionen die Breite. Die bestätigende Aktion
+// steht dabei oben — sie ist das erwartete Ziel, und der Daumen erreicht bei
+// gestapelten Buttons die untere Position leichter, weshalb dort „Abbrechen“
+// gerade nicht liegen soll.
+.fin-dialog-actions > .btn {
+  flex: 1 1 100%;
+}
+
+.fin-dialog-actions > .btn.btn-primary,
+.fin-dialog-actions > .btn.btn-danger {
+  order: -1;
+}
+
+@media (min-width: 34rem) {
+  .fin-dialog-actions > .btn {
+    flex: 0 0 auto;
+  }
+
+  // Ab Tablet gilt wieder die gewohnte Reihenfolge: bestätigen rechts außen.
+  .fin-dialog-actions > .btn.btn-primary,
+  .fin-dialog-actions > .btn.btn-danger {
+    order: 0;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Meldungen (Toasts)
+// -----------------------------------------------------------------------------
+
+.fin-toasts {
+  position: fixed;
+  z-index: var(--fin-z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fin-space-2);
+  // Auf Mobil erscheinen Meldungen oben — unten liegt die Tab-Bar, und dort
+  // würden sie Bedienelemente verdecken.
+  top: calc(env(safe-area-inset-top, 0px) + var(--fin-space-3));
+  right: var(--fin-space-3);
+  left: var(--fin-space-3);
+  pointer-events: none;
+}
+
+@media (min-width: 34rem) {
+  .fin-toasts {
+    left: auto;
+    width: min(24rem, calc(100vw - 2rem));
+  }
+}
+
+.fin-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fin-space-3);
+  padding: var(--fin-space-3) var(--fin-space-3) var(--fin-space-3) var(--fin-space-4);
+  background-color: var(--fin-bg-elevated);
+  border: 1px solid var(--fin-border);
+  // Farbige Kante links statt vollflächig gefärbter Meldung: der Text bleibt in
+  // der Textfarbe und damit unter allen Umständen kontrastreich lesbar.
+  border-left: 3px solid var(--fin-text-subtle);
+  border-radius: var(--fin-radius-md);
+  box-shadow: var(--fin-shadow-lg);
+  animation: fin-toast-in var(--fin-duration-base) var(--fin-ease-out) both;
+  pointer-events: auto;
+}
+
+.fin-toast__icon {
+  flex: 0 0 auto;
+  margin-top: 0.05rem;
+  font-size: var(--fin-text-md);
+  line-height: var(--fin-leading-snug);
+}
+
+.fin-toast__message {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--fin-text);
+  font-size: var(--fin-text-base);
+  line-height: var(--fin-leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.fin-toast--success {
+  border-left-color: var(--fin-success);
+}
+
+.fin-toast--success .fin-toast__icon {
+  color: var(--fin-success);
+}
+
+.fin-toast--danger {
+  border-left-color: var(--fin-danger);
+}
+
+.fin-toast--danger .fin-toast__icon {
+  color: var(--fin-danger);
+}
+
+.fin-toast--warning {
+  border-left-color: var(--fin-warn);
+}
+
+.fin-toast--warning .fin-toast__icon {
+  color: var(--fin-warn);
+}
+
+.fin-toast--info {
+  border-left-color: var(--fin-info);
+}
+
+.fin-toast--info .fin-toast__icon {
+  color: var(--fin-info);
+}
+
+// -----------------------------------------------------------------------------
+// Aktualisierungshinweis der PWA
+// -----------------------------------------------------------------------------
+// Sitzt über der Tab-Bar und drängt sich nicht auf: eine neue Version ist kein
+// Fehler, der einen Dialog rechtfertigt.
+
+.fin-update-bar {
+  position: fixed;
+  z-index: var(--fin-z-toast);
+  bottom: calc(var(--fin-tabbar-total) + var(--fin-space-3));
+  left: var(--fin-space-3);
+  right: var(--fin-space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-3);
+  padding: var(--fin-space-3) var(--fin-space-3) var(--fin-space-3) var(--fin-space-4);
+  background-color: var(--fin-surface-inverse);
+  color: var(--fin-text-on-brand);
+  border-radius: var(--fin-radius-md);
+  box-shadow: var(--fin-shadow-xl);
+  animation: fin-rise-in var(--fin-duration-slow) var(--fin-ease-out) both;
+}
+
+@media (min-width: 48rem) {
+  .fin-update-bar {
+    left: auto;
+    bottom: var(--fin-space-5);
+    right: var(--fin-space-5);
+    max-width: 26rem;
+  }
+}
+
+.fin-update-bar__text {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: var(--fin-text-sm);
+  line-height: var(--fin-leading-snug);
+}
+
+.fin-update-bar .btn {
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: color-mix(in srgb, currentcolor 35%, transparent);
+  --bs-btn-color: currentcolor;
+  --bs-btn-hover-bg: color-mix(in srgb, currentcolor 14%, transparent);
+  --bs-btn-hover-border-color: currentcolor;
+  --bs-btn-hover-color: currentcolor;
+  flex: 0 0 auto;
+}
+
+.fin-update-bar :focus-visible {
+  outline-color: currentcolor;
+}

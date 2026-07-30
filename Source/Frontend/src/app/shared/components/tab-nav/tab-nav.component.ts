@@ -20,12 +20,12 @@ export interface TabItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tab-scroll">
-      <div class="nav nav-pills flex-nowrap gap-1" role="tablist" [attr.aria-label]="label()">
+      <div class="tab-list" role="tablist" [attr.aria-label]="label()">
         @for (tab of tabs(); track tab.id) {
           <button
             type="button"
             role="tab"
-            class="nav-link tab-button d-inline-flex align-items-center gap-2"
+            class="tab-button"
             [class.active]="tab.id === active()"
             [id]="'tab-' + tab.id"
             [attr.aria-selected]="tab.id === active()"
@@ -37,7 +37,7 @@ export interface TabItem {
             <i class="bi bi-{{ tab.icon }}" aria-hidden="true"></i>
             <span>{{ tab.label }}</span>
             @if (tab.badge !== null && tab.badge !== undefined) {
-              <span class="badge tab-badge">{{ tab.badge }}</span>
+              <span class="tab-badge">{{ tab.badge }}</span>
             }
           </button>
         }
@@ -46,41 +46,73 @@ export interface TabItem {
   `,
   styles: [
     `
-      /* Horizontal scrollen statt umbrechen — auf dem Smartphone bleiben alle Reiter erreichbar. */
+      /* Horizontal scrollen statt umbrechen — auf dem Smartphone bleiben alle
+         Reiter erreichbar, ohne dass die Leiste mehrzeilig wird. */
       .tab-scroll {
         overflow-x: auto;
         scrollbar-width: none;
-        margin-inline: -0.25rem;
-        padding: 0.25rem;
+        /* Einrastend scrollen: der angetippte Reiter bleibt nicht halb am Rand. */
+        scroll-snap-type: x proximity;
+        margin-inline: calc(-1 * var(--fin-space-1));
+        padding: var(--fin-space-1);
       }
       .tab-scroll::-webkit-scrollbar {
         display: none;
       }
+      /* Die Leiste liegt in einer eingesenkten Spur; der aktive Reiter hebt sich
+         daraus als helle Fläche heraus. Ruhiger als gefärbte Pillen und
+         funktioniert in hell wie dunkel gleich gut. */
+      .tab-list {
+        display: inline-flex;
+        gap: 0.125rem;
+        padding: 0.25rem;
+        background-color: var(--fin-surface-sunken);
+        border-radius: var(--fin-radius-md);
+      }
       .tab-button {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--fin-space-2);
+        min-height: var(--fin-touch-min);
+        padding: 0 var(--fin-space-4);
+        border: 0;
+        border-radius: var(--fin-radius-sm);
+        background-color: transparent;
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-base);
+        font-weight: 600;
         white-space: nowrap;
-        min-height: 2.75rem;
-        color: var(--bs-body-color);
-        background-color: var(--color-surface);
-        border: 1px solid var(--bs-border-color-translucent);
+        scroll-snap-align: start;
+        cursor: pointer;
+        transition:
+          background-color var(--fin-duration-fast) var(--fin-ease-out),
+          color var(--fin-duration-fast) var(--fin-ease-out),
+          box-shadow var(--fin-duration-fast) var(--fin-ease-out);
       }
       .tab-button:hover:not(.active) {
-        background-color: var(--bs-tertiary-bg);
+        color: var(--fin-text-strong);
       }
       .tab-button.active {
-        border-color: transparent;
+        background-color: var(--fin-surface);
+        color: var(--fin-text-strong);
+        box-shadow: var(--fin-shadow-xs);
       }
       .tab-button:focus-visible {
-        outline: 2px solid var(--bs-primary);
-        outline-offset: 2px;
+        outline: 2px solid var(--fin-accent);
+        outline-offset: -2px;
       }
       .tab-badge {
-        background-color: var(--bs-secondary-bg);
-        color: var(--bs-secondary-color);
+        padding: 0.05rem 0.4rem;
+        border-radius: var(--fin-radius-xs);
+        background-color: var(--fin-surface-active);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-xs);
         font-variant-numeric: tabular-nums;
+        line-height: 1.5;
       }
       .tab-button.active .tab-badge {
-        background-color: rgba(255, 255, 255, 0.25);
-        color: #fff;
+        background-color: var(--fin-accent-tint);
+        color: var(--fin-accent-on-tint);
       }
     `,
   ],
