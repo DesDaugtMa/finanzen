@@ -18,8 +18,13 @@ import { AuthService } from '../../../../core/services/auth.service';
           </div>
         }
         @case ('success') {
-          <div class="alert alert-success" role="alert">Deine E-Mail-Adresse wurde erfolgreich bestätigt.</div>
-          <a [routerLink]="authService.isAuthenticated() ? '/' : '/login'" class="btn btn-primary w-100">
+          <div class="alert alert-success" role="alert">
+            Deine E-Mail-Adresse wurde erfolgreich bestätigt.
+          </div>
+          <a
+            [routerLink]="authService.isAuthenticated() ? '/' : '/login'"
+            class="btn btn-primary w-100"
+          >
             {{ authService.isAuthenticated() ? 'Zur Startseite' : 'Zur Anmeldung' }}
           </a>
         }

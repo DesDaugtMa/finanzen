@@ -184,11 +184,6 @@ namespace Backend.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -303,6 +298,10 @@ namespace Backend.Migrations
                         .HasMaxLength(34)
                         .HasColumnType("character varying(34)");
 
+                    b.Property<decimal>("InitialBalance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -318,7 +317,8 @@ namespace Backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "Type")
+                        .HasDatabaseName("IX_Accounts_UserId_Type");
 
                     b.ToTable("Accounts");
                 });
@@ -369,6 +369,9 @@ namespace Backend.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Color")
                         .HasMaxLength(7)
                         .HasColumnType("character varying(7)");
@@ -388,14 +391,11 @@ namespace Backend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "Name")
+                    b.HasIndex("AccountId", "Name")
                         .IsUnique()
-                        .HasDatabaseName("IX_Categories_UserId_Name")
+                        .HasDatabaseName("IX_Categories_AccountId_Name")
                         .HasFilter("\"DeletedAt\" IS NULL");
 
                     b.ToTable("Categories");
@@ -603,13 +603,13 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Domain.Entities.Finance.Category", b =>
                 {
-                    b.HasOne("Backend.Domain.Entities.Auth.User", "User")
+                    b.HasOne("Backend.Domain.Entities.Finance.Account", "Account")
                         .WithMany("Categories")
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("User");
+                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("Backend.Domain.Entities.Finance.Transaction", b =>
@@ -657,14 +657,14 @@ namespace Backend.Migrations
                 {
                     b.Navigation("Accounts");
 
-                    b.Navigation("Categories");
-
                     b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("Backend.Domain.Entities.Finance.Account", b =>
                 {
                     b.Navigation("Budgets");
+
+                    b.Navigation("Categories");
 
                     b.Navigation("Transactions");
                 });

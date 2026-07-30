@@ -19,16 +19,33 @@ import { RegistrationTokenInfo } from '../../../../core/models/auth.model';
           <form [formGroup]="form" (ngSubmit)="create()" class="row g-2 align-items-end">
             <div class="col-12 col-sm-6">
               <label for="description" class="form-label">Beschreibung (optional)</label>
-              <input type="text" id="description" formControlName="description" class="form-control" placeholder="z. B. für Max" />
+              <input
+                type="text"
+                id="description"
+                formControlName="description"
+                class="form-control"
+                placeholder="z. B. für Max"
+              />
             </div>
             <div class="col-8 col-sm-3">
               <label for="expiresInDays" class="form-label">Gültig (Tage)</label>
-              <input type="number" id="expiresInDays" formControlName="expiresInDays" class="form-control" min="1" placeholder="∞" />
+              <input
+                type="number"
+                id="expiresInDays"
+                formControlName="expiresInDays"
+                class="form-control"
+                min="1"
+                placeholder="∞"
+              />
             </div>
             <div class="col-4 col-sm-3">
               <button type="submit" class="btn btn-primary w-100" [disabled]="creating()">
                 @if (creating()) {
-                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  <span
+                    class="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                 } @else {
                   Erstellen
                 }
@@ -39,11 +56,15 @@ import { RegistrationTokenInfo } from '../../../../core/models/auth.model';
       </div>
 
       @if (loading()) {
-        <div class="text-center py-5"><span class="spinner-border text-primary" role="status" aria-hidden="true"></span></div>
+        <div class="text-center py-5">
+          <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
+        </div>
       } @else if (error()) {
         <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
           <span class="me-auto">{{ error() }}</span>
-          <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">Erneut versuchen</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
+            Erneut versuchen
+          </button>
         </div>
       } @else if (tokens().length === 0) {
         <div class="alert alert-info" role="alert">Noch keine Einladungs-Token vorhanden.</div>
@@ -55,7 +76,8 @@ import { RegistrationTokenInfo } from '../../../../core/models/auth.model';
                 <div class="me-auto">
                   <div class="fw-semibold font-monospace text-break">{{ token.token }}</div>
                   <div class="text-muted small">
-                    {{ token.description || 'Ohne Beschreibung' }} · erstellt {{ token.createdAt | date: 'short' }}
+                    {{ token.description || 'Ohne Beschreibung' }} · erstellt
+                    {{ token.createdAt | date: 'short' }}
                     @if (token.expiresAt) {
                       · läuft ab {{ token.expiresAt | date: 'short' }}
                     }
@@ -72,10 +94,18 @@ import { RegistrationTokenInfo } from '../../../../core/models/auth.model';
 
               @if (token.isActive && !token.isUsed) {
                 <div class="d-flex flex-wrap gap-2 mt-2">
-                  <button type="button" class="btn btn-outline-primary btn-sm" (click)="copyLink(token.token)">
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    (click)="copyLink(token.token)"
+                  >
                     <i class="bi bi-clipboard me-1"></i> Registrierungslink kopieren
                   </button>
-                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="deactivate(token.token)">
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    (click)="deactivate(token.token)"
+                  >
                     Deaktivieren
                   </button>
                 </div>
@@ -146,7 +176,9 @@ export class RegistrationTokensComponent implements OnInit {
   protected deactivate(token: string): void {
     this.tokenApi.deactivate(token).subscribe({
       next: () => {
-        this.tokens.update((list) => list.map((t) => (t.token === token ? { ...t, isActive: false } : t)));
+        this.tokens.update((list) =>
+          list.map((t) => (t.token === token ? { ...t, isActive: false } : t)),
+        );
         this.toastService.success('Token deaktiviert.');
       },
       error: (err: Error) => this.toastService.error(err.message || 'Deaktivieren fehlgeschlagen.'),

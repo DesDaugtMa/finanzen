@@ -25,4 +25,8 @@ export class AccountApiService {
   resendVerification(email: string): Observable<MessageResponse> {
     return this.api.post<MessageResponse>('auth/resend-verification', { email });
   }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<MessageResponse> {
+    return this.api.post<MessageResponse>('auth/change-password', { currentPassword, newPassword });
+  }
 }

@@ -20,14 +20,16 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.Icon)
             .HasMaxLength(100);
 
-        builder.HasIndex(c => new { c.UserId, c.Name })
+        // Der Name ist nur innerhalb eines Kontos eindeutig; gelöschte Kategorien
+        // blockieren den Namen nicht, damit er erneut vergeben werden kann.
+        builder.HasIndex(c => new { c.AccountId, c.Name })
             .IsUnique()
-            .HasDatabaseName("IX_Categories_UserId_Name")
+            .HasDatabaseName("IX_Categories_AccountId_Name")
             .HasFilter("\"DeletedAt\" IS NULL");
 
-        builder.HasOne(c => c.User)
-            .WithMany(u => u.Categories)
-            .HasForeignKey(c => c.UserId)
+        builder.HasOne(c => c.Account)
+            .WithMany(a => a.Categories)
+            .HasForeignKey(c => c.AccountId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasQueryFilter(c => c.DeletedAt == null);

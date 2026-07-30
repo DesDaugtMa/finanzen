@@ -55,13 +55,17 @@ export class AuthService {
   }
 
   validateToken(token: string): Observable<{ valid: boolean }> {
-    return this.apiService.get<{ valid: boolean }>(`auth/validate-token/${encodeURIComponent(token)}`);
+    return this.apiService.get<{ valid: boolean }>(
+      `auth/validate-token/${encodeURIComponent(token)}`,
+    );
   }
 
   logout(): void {
     const refreshToken = this.getRefreshToken();
     if (refreshToken) {
-      this.rawHttp.post(this.buildApiUrl('auth/logout'), { refreshToken }).subscribe({ error: () => {} });
+      this.rawHttp
+        .post(this.buildApiUrl('auth/logout'), { refreshToken })
+        .subscribe({ error: () => {} });
     }
 
     this.clearStorage();
@@ -133,7 +137,6 @@ export class AuthService {
     localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
 
     const userInfo: UserInfo = {
-      displayName: response.displayName,
       email: response.email,
       role: response.role,
       emailVerified: response.emailVerified,

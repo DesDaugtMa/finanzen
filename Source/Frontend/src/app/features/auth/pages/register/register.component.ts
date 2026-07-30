@@ -35,20 +35,6 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
         @case ('valid') {
           <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
             <div class="mb-3">
-              <label for="displayName" class="form-label">Anzeigename</label>
-              <input
-                type="text"
-                id="displayName"
-                formControlName="displayName"
-                class="form-control form-control-lg"
-                autocomplete="nickname"
-                [class.is-invalid]="isInvalid('displayName')"
-                aria-describedby="displayNameError"
-              />
-              <div id="displayNameError" class="invalid-feedback">Mindestens 3 Zeichen.</div>
-            </div>
-
-            <div class="mb-3">
               <label for="email" class="form-label">E-Mail-Adresse</label>
               <input
                 type="email"
@@ -60,7 +46,9 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
                 [class.is-invalid]="isInvalid('email')"
                 aria-describedby="emailError"
               />
-              <div id="emailError" class="invalid-feedback">Bitte gib eine gültige E-Mail-Adresse ein.</div>
+              <div id="emailError" class="invalid-feedback">
+                Bitte gib eine gültige E-Mail-Adresse ein.
+              </div>
             </div>
 
             <div class="mb-3">
@@ -90,12 +78,22 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
                 [class.is-invalid]="confirmMismatch()"
                 aria-describedby="confirmError"
               />
-              <div id="confirmError" class="invalid-feedback">Die Passwörter stimmen nicht überein.</div>
+              <div id="confirmError" class="invalid-feedback">
+                Die Passwörter stimmen nicht überein.
+              </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="registerForm.invalid || loading()">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg w-100"
+              [disabled]="registerForm.invalid || loading()"
+            >
               @if (loading()) {
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  class="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
                 Konto wird erstellt…
               } @else {
                 Konto erstellen
@@ -136,7 +134,6 @@ export class RegisterComponent implements OnInit {
 
   protected registerForm = this.fb.nonNullable.group(
     {
-      displayName: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]],
@@ -167,7 +164,9 @@ export class RegisterComponent implements OnInit {
       next: () => this.tokenState.set('valid'),
       error: (err: Error) => {
         this.tokenState.set('invalid');
-        this.tokenError.set(err.message || 'Der Einladungslink ist ungültig oder wurde bereits verwendet.');
+        this.tokenError.set(
+          err.message || 'Der Einladungslink ist ungültig oder wurde bereits verwendet.',
+        );
       },
     });
   }
@@ -189,9 +188,9 @@ export class RegisterComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const { displayName, email, password } = this.registerForm.getRawValue();
+    const { email, password } = this.registerForm.getRawValue();
 
-    this.authService.register({ displayName, email, password, registrationToken: this.token }).subscribe({
+    this.authService.register({ email, password, registrationToken: this.token }).subscribe({
       next: () => {
         this.loading.set(false);
         this.toastService.success('Willkommen! Bitte bestätige deine E-Mail-Adresse.');

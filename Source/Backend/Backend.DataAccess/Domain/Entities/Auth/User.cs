@@ -6,7 +6,6 @@ public class User
 {
     public int Id { get; set; }
     public required string Email { get; set; }
-    public required string DisplayName { get; set; }
     public string? PasswordHash { get; set; }
 
     /// <summary>Externer Auth-Anbieter, z. B. "Google". Null bei reiner E-Mail/Passwort-Anmeldung.</summary>
@@ -28,5 +27,4 @@ public class User
 
     public ICollection<UserSession> Sessions { get; set; } = [];
     public ICollection<Account> Accounts { get; set; } = [];
-    public ICollection<Category> Categories { get; set; } = [];
 }

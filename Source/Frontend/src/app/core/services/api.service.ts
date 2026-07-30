@@ -6,7 +6,9 @@ import { AppConfigService } from './app-config.service';
 
 export interface ApiOptions {
   headers?: HttpHeaders | Record<string, string | string[]>;
-  params?: HttpParams | Record<string, string | number | boolean>;
+  /** Arrays werden als wiederholter Parameter gesendet (`?ids=1&ids=2`). */
+  params?:
+    HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -27,15 +29,21 @@ export class ApiService {
   }
 
   post<T>(path: string, body: unknown, options?: ApiOptions): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}${path}`, body, options).pipe(catchError(this.handleError));
+    return this.http
+      .post<T>(`${this.baseUrl}${path}`, body, options)
+      .pipe(catchError(this.handleError));
   }
 
   put<T>(path: string, body: unknown, options?: ApiOptions): Observable<T> {
-    return this.http.put<T>(`${this.baseUrl}${path}`, body, options).pipe(catchError(this.handleError));
+    return this.http
+      .put<T>(`${this.baseUrl}${path}`, body, options)
+      .pipe(catchError(this.handleError));
   }
 
   delete<T>(path: string, options?: ApiOptions): Observable<T> {
-    return this.http.delete<T>(`${this.baseUrl}${path}`, options).pipe(catchError(this.handleError));
+    return this.http
+      .delete<T>(`${this.baseUrl}${path}`, options)
+      .pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
@@ -50,9 +58,24 @@ export class ApiService {
     } else if (error.status === 403) {
       message = 'Du hast keine Berechtigung für diese Aktion.';
     } else {
-      message = `Serverfehler ${error.status}.`;
+      // Modellvalidierung von [ApiController] liefert ValidationProblemDetails statt unserer ErrorResponse.
+      message = extractValidationMessage(error.error) ?? `Serverfehler ${error.status}.`;
     }
 
     return throwError(() => new Error(message));
   }
+}
+
+/** Zieht die erste Validierungsmeldung aus einem ValidationProblemDetails-Body. */
+function extractValidationMessage(body: unknown): string | null {
+  if (!body || typeof body !== 'object' || !('errors' in body)) return null;
+
+  const errors = (body as { errors: unknown }).errors;
+  if (!errors || typeof errors !== 'object') return null;
+
+  const firstMessage = Object.values(errors as Record<string, unknown>)
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .find((value): value is string => typeof value === 'string' && value.length > 0);
+
+  return firstMessage ?? null;
 }

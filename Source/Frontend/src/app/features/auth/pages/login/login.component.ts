@@ -28,7 +28,9 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
             [class.is-invalid]="isInvalid('email')"
             aria-describedby="emailError"
           />
-          <div id="emailError" class="invalid-feedback">Bitte gib eine gültige E-Mail-Adresse ein.</div>
+          <div id="emailError" class="invalid-feedback">
+            Bitte gib eine gültige E-Mail-Adresse ein.
+          </div>
         </div>
 
         <div class="mb-2">
@@ -47,12 +49,22 @@ import { GoogleAuthStateService } from '../../../../core/services/google-auth-st
         </div>
 
         <div class="mb-4 text-end">
-          <a routerLink="/forgot-password" class="small link-secondary text-decoration-none">Passwort vergessen?</a>
+          <a routerLink="/forgot-password" class="small link-secondary text-decoration-none"
+            >Passwort vergessen?</a
+          >
         </div>
 
-        <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loginForm.invalid || loading()">
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg w-100"
+          [disabled]="loginForm.invalid || loading()"
+        >
           @if (loading()) {
-            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <span
+              class="spinner-border spinner-border-sm me-2"
+              role="status"
+              aria-hidden="true"
+            ></span>
             Wird angemeldet…
           } @else {
             Anmelden
@@ -117,7 +129,9 @@ export class LoginComponent {
       },
       error: (error: Error) => {
         this.loading.set(false);
-        this.toastService.error(error.message || 'Login fehlgeschlagen. Bitte überprüfe deine Daten.');
+        this.toastService.error(
+          error.message || 'Login fehlgeschlagen. Bitte überprüfe deine Daten.',
+        );
       },
     });
   }

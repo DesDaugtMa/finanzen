@@ -29,7 +29,9 @@ import { SessionInfo } from '../../../../core/models/auth.model';
       } @else if (error()) {
         <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
           <span class="me-auto">{{ error() }}</span>
-          <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">Erneut versuchen</button>
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
+            Erneut versuchen
+          </button>
         </div>
       } @else if (sessions().length === 0) {
         <div class="alert alert-info" role="alert">Keine aktiven Sitzungen gefunden.</div>
@@ -45,7 +47,8 @@ import { SessionInfo } from '../../../../core/models/auth.model';
                   }
                 </div>
                 <div class="text-muted small">
-                  IP: {{ session.ipAddress || '—' }} · Zuletzt aktiv: {{ session.lastSeenAt | date: 'short' }}
+                  IP: {{ session.ipAddress || '—' }} · Zuletzt aktiv:
+                  {{ session.lastSeenAt | date: 'short' }}
                 </div>
               </div>
               @if (!session.isCurrent) {

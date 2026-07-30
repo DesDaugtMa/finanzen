@@ -19,7 +19,9 @@ import { ToastService } from '../../../../core/services/toast.service';
     <app-auth-card title="Neues Passwort" subtitle="Vergib ein neues Passwort für dein Konto">
       @if (!token()) {
         <div class="alert alert-danger" role="alert">Kein gültiger Reset-Link.</div>
-        <a routerLink="/forgot-password" class="btn btn-outline-secondary w-100">Neuen Link anfordern</a>
+        <a routerLink="/forgot-password" class="btn btn-outline-secondary w-100"
+          >Neuen Link anfordern</a
+        >
       } @else {
         <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
           <div class="mb-3">
@@ -49,12 +51,22 @@ import { ToastService } from '../../../../core/services/toast.service';
               [class.is-invalid]="confirmMismatch()"
               aria-describedby="confirmError"
             />
-            <div id="confirmError" class="invalid-feedback">Die Passwörter stimmen nicht überein.</div>
+            <div id="confirmError" class="invalid-feedback">
+              Die Passwörter stimmen nicht überein.
+            </div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="form.invalid || loading()">
+          <button
+            type="submit"
+            class="btn btn-primary btn-lg w-100"
+            [disabled]="form.invalid || loading()"
+          >
             @if (loading()) {
-              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <span
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
               Wird gespeichert…
             } @else {
               Passwort zurücksetzen

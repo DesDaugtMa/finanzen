@@ -53,7 +53,7 @@ public sealed class AccountService(
 
         var link = $"{FrontendBase}/verify-email/{Uri.EscapeDataString(token.Token)}";
         var body = $"""
-            <p>Hallo {System.Net.WebUtility.HtmlEncode(user.DisplayName)},</p>
+            <p>Hallo,</p>
             <p>bitte bestätige deine E-Mail-Adresse für die Finanzen-App:</p>
             <p><a href="{link}">E-Mail-Adresse bestätigen</a></p>
             <p>Der Link ist 48 Stunden gültig.</p>
@@ -86,7 +86,7 @@ public sealed class AccountService(
 
         var link = $"{FrontendBase}/reset-password/{Uri.EscapeDataString(token.Token)}";
         var body = $"""
-            <p>Hallo {System.Net.WebUtility.HtmlEncode(user.DisplayName)},</p>
+            <p>Hallo,</p>
             <p>du hast das Zurücksetzen deines Passworts angefragt. Klicke auf den folgenden Link:</p>
             <p><a href="{link}">Passwort zurücksetzen</a></p>
             <p>Der Link ist 1 Stunde gültig. Falls du das nicht warst, ignoriere diese E-Mail.</p>
@@ -118,6 +118,32 @@ public sealed class AccountService(
 
         logger.LogInformation("Passwort für Benutzer {UserId} zurückgesetzt; {Count} Sessions invalidiert.", user.Id, sessions.Count);
         return true;
+    }
+
+    public async Task<ChangePasswordResult> ChangePasswordAsync(int userId, string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (user is null)
+            return ChangePasswordResult.InvalidCurrentPassword;
+
+        // Reine Google-Accounts haben kein Passwort und können hier keins ändern.
+        if (user.PasswordHash is null)
+            return ChangePasswordResult.NoPasswordSet;
+
+        var verification = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+        if (verification == PasswordVerificationResult.Failed)
+        {
+            logger.LogWarning("Passwortänderung für Benutzer {UserId} mit falschem aktuellem Passwort abgelehnt.", userId);
+            return ChangePasswordResult.InvalidCurrentPassword;
+        }
+
+        user.PasswordHash = passwordHasher.HashPassword(user, newPassword);
+        user.SecurityStamp = Guid.NewGuid().ToString();
+        // Aktive Sessions bleiben bestehen; andere Geräte kann der Nutzer separat über die Sitzungen-Seite abmelden.
+        await context.SaveChangesAsync(ct);
+
+        logger.LogInformation("Passwort für Benutzer {UserId} geändert.", userId);
+        return ChangePasswordResult.Success;
     }
 
     private string FrontendBase => appSettings.FrontendBaseUrl.TrimEnd('/');
