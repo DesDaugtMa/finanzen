@@ -13,4 +13,10 @@ internal static class FinanceValidation
 
     public const int TitleMaxLength = 500;
     public const int NoteMaxLength = 2000;
+
+    /// <summary>Fixkosten tragen einen kurzen Namen („Miete“), keine Buchungsbezeichnung.</summary>
+    public const int FixedCostNameMaxLength = 200;
+
+    /// <summary>Obergrenze der Buchungen, die der Zuordnungs-Dialog zur Auswahl anbietet.</summary>
+    public const int AssignableTransactionLimit = 50;
 }

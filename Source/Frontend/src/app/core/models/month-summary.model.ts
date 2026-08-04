@@ -25,6 +25,19 @@ export interface MonthSummary {
   totalBudget: number;
   totalSpentBudgeted: number;
   totalRemaining: number;
+  /** Summe der geplanten Fixkosten des Monats. */
+  fixedCostsPlanned: number;
+  /** Summe der Buchungen, die Fixkosten dieses Monats zugeordnet sind. */
+  fixedCostsBooked: number;
+  /** Die gegen die Einnahmen gerechneten Fixkosten: gebucht wo vorhanden, sonst geplant. */
+  fixedCosts: number;
+  fixedCostCount: number;
+  /** Fixkosten-Positionen ohne zugeordnete Buchung. */
+  fixedCostOpenCount: number;
+  /** Ausgaben des Monats ohne Fixkosten-Zuordnung. */
+  variableExpenses: number;
+  /** Frei verfügbar: `income − fixedCosts − variableExpenses`. */
+  disposable: number;
   transactionCount: number;
   spending: CategorySpending[];
 }

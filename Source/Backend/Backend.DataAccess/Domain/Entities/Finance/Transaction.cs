@@ -28,6 +28,13 @@ public class Transaction
 
     public string? Note { get; set; }
 
+    /// <summary>
+    /// Optional link to the fixed cost this transaction pays. Set means the transaction
+    /// counts as a fixed cost instead of a variable expense.
+    /// </summary>
+    public int? FixedCostId { get; set; }
+    public FixedCost? FixedCost { get; set; }
+
     /// <summary>Optional link to the paired transaction of a transfer between accounts.</summary>
     public int? LinkedTransactionId { get; set; }
     public Transaction? LinkedTransaction { get; set; }

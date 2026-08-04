@@ -29,4 +29,5 @@ public class Account
     public ICollection<Transaction> Transactions { get; set; } = [];
     public ICollection<Budget> Budgets { get; set; } = [];
     public ICollection<Category> Categories { get; set; } = [];
+    public ICollection<FixedCost> FixedCosts { get; set; } = [];
 }

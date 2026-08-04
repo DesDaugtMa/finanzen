@@ -28,6 +28,21 @@ public class TransactionDto
 
     public string? CategoryIcon { get; set; }
 
+    /// <summary>Zugeordnete Fixkosten-Position, sonst null. Gesetzt heißt: keine variable Ausgabe.</summary>
+    public int? FixedCostId { get; set; }
+
+    public string? FixedCostName { get; set; }
+
+    /// <summary>Interner Wert des Fixkosten-Monats; nach außen geht <see cref="FixedCostMonth"/>.</summary>
+    [JsonIgnore]
+    public DateOnly? FixedCostMonthDate { get; set; }
+
+    /// <summary>
+    /// Monat der zugeordneten Fixkosten-Position im Format <c>yyyy-MM</c>, sonst null. Kann vom
+    /// Abrechnungsmonat der Buchung abweichen — etwa bei einer Jahresrechnung.
+    /// </summary>
+    public string? FixedCostMonth => FixedCostMonthDate?.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+
     public DateOnly BookingDate { get; set; }
 
     public DateOnly? PurchaseDate { get; set; }

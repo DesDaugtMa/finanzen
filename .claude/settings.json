@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l \"filter\\\\|chip\\\\|badge\\\\|tag\")",
+      "Bash(xargs grep -A5 \"Bootstrap\")",
+      "Bash(xargs cat)",
+      "Bash(xargs grep -l \"loadWeek\\\\|GetWeeklySchedule\")",
+      "Bash(gh api *)",
+      "Bash(Select-String -Pattern \"modal|dialog\" -List)"
+    ]
+  },
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}

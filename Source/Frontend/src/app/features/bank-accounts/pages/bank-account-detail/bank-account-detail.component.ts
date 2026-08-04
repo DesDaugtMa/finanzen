@@ -22,11 +22,12 @@ import { formatIban } from '../../../../shared/utils/iban.util';
 import { formatMonthLong, isValidMonthKey, toMonthKey } from '../../../../shared/utils/month.util';
 import { AccountOverviewTabComponent } from '../../components/overview-tab/overview-tab.component';
 import { TransactionsTabComponent } from '../../components/transactions-tab/transactions-tab.component';
+import { FixedCostsTabComponent } from '../../components/fixed-costs-tab/fixed-costs-tab.component';
 import { BudgetsTabComponent } from '../../components/budgets-tab/budgets-tab.component';
 import { CategoriesTabComponent } from '../../components/categories-tab/categories-tab.component';
 
 /** Die Bereiche der Detailseite. Der Schlüssel steht so auch in der URL. */
-const TAB_IDS = ['uebersicht', 'transaktionen', 'budgets', 'kategorien'] as const;
+const TAB_IDS = ['uebersicht', 'transaktionen', 'fixkosten', 'budgets', 'kategorien'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /**
@@ -44,6 +45,7 @@ type TabId = (typeof TAB_IDS)[number];
     TabNavComponent,
     AccountOverviewTabComponent,
     TransactionsTabComponent,
+    FixedCostsTabComponent,
     BudgetsTabComponent,
     CategoriesTabComponent,
   ],
@@ -143,6 +145,14 @@ type TabId = (typeof TAB_IDS)[number];
                 [accountId]="item.id"
                 [month]="month()"
                 [currency]="item.currency"
+                [categories]="categories()"
+                (changed)="onDataChanged()"
+              />
+            }
+            @case ('fixkosten') {
+              <app-fixed-costs-tab
+                [accountId]="item.id"
+                [month]="month()"
                 [categories]="categories()"
                 (changed)="onDataChanged()"
               />
@@ -391,6 +401,12 @@ export class BankAccountDetailComponent {
       label: 'Transaktionen',
       icon: 'list-ul',
       badge: this.summary()?.transactionCount ?? null,
+    },
+    {
+      id: 'fixkosten',
+      label: 'Fixkosten',
+      icon: 'pin-angle',
+      badge: this.summary()?.fixedCostCount ?? null,
     },
     { id: 'budgets', label: 'Budgets', icon: 'sliders' },
     { id: 'kategorien', label: 'Kategorien', icon: 'tags', badge: this.categories().length },

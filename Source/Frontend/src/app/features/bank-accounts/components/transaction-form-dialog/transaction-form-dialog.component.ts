@@ -17,6 +17,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Category } from '../../../../core/models/category.model';
+import { FixedCost } from '../../../../core/models/fixed-cost.model';
 import {
   Transaction,
   TransactionPayload,
@@ -145,6 +146,28 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
           }
         </div>
 
+        @if (form.controls.type.value === 'Expense' && fixedCostOptions().length > 0) {
+          <div>
+            <label for="txFixedCost" class="form-label">
+              Fixkosten <span class="form-label__optional">(optional)</span>
+            </label>
+            <select
+              id="txFixedCost"
+              formControlName="fixedCostId"
+              class="form-select"
+              aria-describedby="txFixedCostHint"
+            >
+              <option value="">Keine Fixkosten</option>
+              @for (option of fixedCostOptions(); track option.id) {
+                <option [value]="option.id">{{ option.label }}</option>
+              }
+            </select>
+            <div id="txFixedCostHint" class="form-text">
+              Zugeordnete Buchungen zählen als Fixkosten statt als variable Ausgabe.
+            </div>
+          </div>
+        }
+
         <div>
           <label for="txBookingDate" class="form-label">Buchungsdatum</label>
           <input
@@ -267,6 +290,8 @@ export class TransactionFormDialogComponent implements OnInit {
   /** `null` erfasst eine neue Buchung, sonst wird die übergebene bearbeitet. */
   readonly transaction = input<Transaction | null>(null);
   readonly categories = input.required<Category[]>();
+  /** Fixkosten des angezeigten Monats, denen die Buchung zugeordnet werden kann. */
+  readonly fixedCosts = input<FixedCost[]>([]);
   /** Vorbelegter Abrechnungsmonat — der gerade angezeigte Monat. */
   readonly month = input.required<string>();
   readonly currency = input.required<string>();
@@ -285,6 +310,7 @@ export class TransactionFormDialogComponent implements OnInit {
     amount: ['', [positiveMoneyValidator]],
     title: ['', [Validators.required, Validators.maxLength(500)]],
     categoryId: [''],
+    fixedCostId: [''],
     bookingDate: ['', [Validators.required]],
     purchaseDate: [''],
     accountingMonth: ['', [Validators.required]],
@@ -300,6 +326,29 @@ export class TransactionFormDialogComponent implements OnInit {
 
   private readonly formValue = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
+  });
+
+  /**
+   * Die Fixkosten des angezeigten Monats. Ist die bearbeitete Buchung einer Position
+   * aus einem anderen Monat zugeordnet, kommt diese zusätzlich hinein — sonst fiele
+   * die bestehende Zuordnung beim Speichern still weg.
+   */
+  protected readonly fixedCostOptions = computed<{ id: number; label: string }[]>(() => {
+    const options = this.fixedCosts().map((fixedCost) => ({
+      id: fixedCost.id,
+      label: `${fixedCost.name} · ${formatMoney(fixedCost.amount, fixedCost.currency)}`,
+    }));
+
+    const existing = this.transaction();
+    if (existing?.fixedCostId == null || options.some((o) => o.id === existing.fixedCostId)) {
+      return options;
+    }
+
+    const month = existing.fixedCostMonth ? formatMonthLong(existing.fixedCostMonth) : '';
+    return [
+      { id: existing.fixedCostId, label: `${existing.fixedCostName} · ${month}` },
+      ...options,
+    ];
   });
 
   protected readonly hasDetails = computed(() => {
@@ -343,6 +392,7 @@ export class TransactionFormDialogComponent implements OnInit {
         amount: existing.amount.toFixed(2).replace('.', ','),
         title: existing.title,
         categoryId: existing.categoryId === null ? '' : String(existing.categoryId),
+        fixedCostId: existing.fixedCostId === null ? '' : String(existing.fixedCostId),
         bookingDate: existing.bookingDate,
         purchaseDate: existing.purchaseDate ?? '',
         accountingMonth: existing.accountingMonth,
@@ -404,6 +454,9 @@ export class TransactionFormDialogComponent implements OnInit {
       amount: parseMoneyInput(value.amount) ?? 0,
       title: value.title.trim(),
       categoryId: value.categoryId ? Number(value.categoryId) : null,
+      // Nur Ausgaben können Fixkosten sein; ein Wechsel auf „Einnahme“ blendet das Feld
+      // aus, ohne es zu leeren — die Zuordnung darf dann nicht mitgesendet werden.
+      fixedCostId: value.type === 'Expense' && value.fixedCostId ? Number(value.fixedCostId) : null,
       bookingDate: value.bookingDate,
       purchaseDate: value.purchaseDate || null,
       accountingMonth: value.accountingMonth,

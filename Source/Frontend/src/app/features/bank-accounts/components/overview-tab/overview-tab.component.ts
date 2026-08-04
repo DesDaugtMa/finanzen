@@ -6,6 +6,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { BudgetProgressComponent } from '../../../../shared/components/budget-progress/budget-progress.component';
 import { CategoryBadgeComponent } from '../../../../shared/components/category-badge/category-badge.component';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
+import { formatMoney } from '../../../../shared/utils/money.util';
 import { formatMonthLong } from '../../../../shared/utils/month.util';
 
 /**
@@ -61,6 +62,13 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
           [amount]="data.net"
           [currency]="data.currency"
           [hint]="balanceHint()"
+        />
+        <app-stat-tile
+          label="Frei verfügbar"
+          icon="piggy-bank"
+          [amount]="data.disposable"
+          [currency]="data.currency"
+          [hint]="disposableHint()"
         />
       </div>
 
@@ -256,7 +264,7 @@ export class AccountOverviewTabComponent {
   protected readonly defaultColor = DEFAULT_ACCENT_COLOR;
 
   /** Anzahl der Platzhalter-Kacheln während des Ladens. */
-  protected readonly skeletonSlots = [0, 1, 2];
+  protected readonly skeletonSlots = [0, 1, 2, 3];
 
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
 
@@ -265,5 +273,25 @@ export class AccountOverviewTabComponent {
     if (!data) return '';
 
     return `${data.transactionCount} ${data.transactionCount === 1 ? 'Buchung' : 'Buchungen'} in diesem Monat`;
+  });
+
+  /**
+   * Macht die Rechnung hinter „frei verfügbar“ sichtbar. Ohne hinterlegte Fixkosten
+   * bliebe sonst unklar, warum die Zahl vom Monatssaldo abweicht — oder eben nicht.
+   */
+  protected readonly disposableHint = computed(() => {
+    const data = this.summary();
+    if (!data) return '';
+
+    if (data.fixedCostCount === 0) {
+      return 'Noch keine Fixkosten hinterlegt — im Bereich „Fixkosten“ planbar machen';
+    }
+
+    const fixed = formatMoney(data.fixedCosts, data.currency);
+    const open = data.fixedCostOpenCount;
+
+    return open === 0
+      ? `nach ${fixed} Fixkosten und den variablen Ausgaben`
+      : `nach ${fixed} Fixkosten (davon ${open} noch offen) und den variablen Ausgaben`;
   });
 }

@@ -40,6 +40,13 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
             .HasForeignKey(t => t.CategoryId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // Wird eine Fixkosten-Position gelöscht, bleiben ihre Buchungen erhalten und
+        // gelten danach wieder als variable Ausgaben.
+        builder.HasOne(t => t.FixedCost)
+            .WithMany(f => f.Transactions)
+            .HasForeignKey(t => t.FixedCostId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasOne(t => t.LinkedTransaction)
             .WithMany()
             .HasForeignKey(t => t.LinkedTransactionId)
@@ -50,6 +57,9 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
 
         builder.HasIndex(t => t.AccountingMonth)
             .HasDatabaseName("IX_Transactions_AccountingMonth");
+
+        builder.HasIndex(t => t.FixedCostId)
+            .HasDatabaseName("IX_Transactions_FixedCostId");
 
         builder.HasQueryFilter(t => t.DeletedAt == null);
     }

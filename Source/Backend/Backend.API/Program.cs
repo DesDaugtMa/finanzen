@@ -93,6 +93,7 @@ builder.Services.AddScoped<IAccountAccess, AccountAccess>();
 builder.Services.AddScoped<IBankAccountService, BankAccountService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
+builder.Services.AddScoped<IFixedCostService, FixedCostService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IMonthSummaryService, MonthSummaryService>();
 

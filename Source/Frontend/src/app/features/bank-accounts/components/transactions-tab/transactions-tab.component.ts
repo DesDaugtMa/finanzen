@@ -11,8 +11,10 @@ import {
 } from '@angular/core';
 import { TransactionApiService } from '../../../../core/services/transaction-api.service';
 import { BudgetApiService } from '../../../../core/services/budget-api.service';
+import { FixedCostApiService } from '../../../../core/services/fixed-cost-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { Category } from '../../../../core/models/category.model';
+import { FixedCost } from '../../../../core/models/fixed-cost.model';
 import {
   PagedResult,
   Transaction,
@@ -192,6 +194,7 @@ const DEFAULT_PAGE_SIZE = 25;
         <app-transaction-form-dialog
           [transaction]="state.transaction"
           [categories]="categories()"
+          [fixedCosts]="fixedCosts()"
           [month]="month()"
           [currency]="currency()"
           [saving]="saving()"
@@ -332,6 +335,7 @@ export class TransactionsTabComponent {
 
   private readonly transactionApi = inject(TransactionApiService);
   private readonly budgetApi = inject(BudgetApiService);
+  private readonly fixedCostApi = inject(FixedCostApiService);
   private readonly toastService = inject(ToastService);
 
   protected readonly result = signal<PagedResult<Transaction> | null>(null);
@@ -342,6 +346,9 @@ export class TransactionsTabComponent {
 
   /** Restbudget je Kategorie — nur für den Hinweis im Erfassungsdialog. */
   protected readonly remainingByCategory = signal<ReadonlyMap<number, number>>(new Map());
+
+  /** Fixkosten des Monats — zur Auswahl im Erfassungsdialog. */
+  protected readonly fixedCosts = signal<FixedCost[]>([]);
 
   protected readonly filter = signal<TransactionFilter>({
     month: '',
@@ -390,6 +397,7 @@ export class TransactionsTabComponent {
         this.filter.update((filter) => ({ ...filter, month, page: 1 }));
         this.load();
         this.loadRemainingBudgets();
+        this.loadFixedCosts();
       });
     });
   }
@@ -534,6 +542,7 @@ export class TransactionsTabComponent {
 
     this.load();
     this.loadRemainingBudgets();
+    this.loadFixedCosts();
     this.changed.emit();
   }
 
@@ -553,6 +562,17 @@ export class TransactionsTabComponent {
         this.remainingByCategory.set(remaining);
       },
       error: () => this.remainingByCategory.set(new Map()),
+    });
+  }
+
+  /**
+   * Holt die Fixkosten des Monats für die Auswahl im Dialog. Fehler bleiben still —
+   * ohne die Liste bleibt das Feld verborgen, die Buchung selbst ist davon unberührt.
+   */
+  private loadFixedCosts(): void {
+    this.fixedCostApi.getMonth(this.accountId(), this.month()).subscribe({
+      next: (data) => this.fixedCosts.set(data.items),
+      error: () => this.fixedCosts.set([]),
     });
   }
 }

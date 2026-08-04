@@ -29,6 +29,33 @@ public class MonthSummaryDto
     /// <summary><c>TotalBudget − TotalSpentBudgeted</c>. Negativ bedeutet Überschreitung.</summary>
     public decimal TotalRemaining { get; set; }
 
+    /// <summary>Summe der geplanten Fixkosten des Monats.</summary>
+    public decimal FixedCostsPlanned { get; set; }
+
+    /// <summary>Summe der Buchungen, die Fixkosten-Positionen dieses Monats zugeordnet sind.</summary>
+    public decimal FixedCostsBooked { get; set; }
+
+    /// <summary>
+    /// Die Fixkosten, die gegen die Einnahmen gerechnet werden: je Position die Summe ihrer
+    /// Buchungen, sobald es welche gibt, sonst der geplante Betrag.
+    /// </summary>
+    public decimal FixedCosts { get; set; }
+
+    /// <summary>Anzahl der Fixkosten-Positionen des Monats.</summary>
+    public int FixedCostCount { get; set; }
+
+    /// <summary>Fixkosten-Positionen ohne zugeordnete Buchung.</summary>
+    public int FixedCostOpenCount { get; set; }
+
+    /// <summary>Ausgaben des Monats ohne Fixkosten-Zuordnung.</summary>
+    public decimal VariableExpenses { get; set; }
+
+    /// <summary>
+    /// Frei verfügbares Geld: <c>Income − FixedCosts − VariableExpenses</c>. Negativ bedeutet,
+    /// dass die Ausgaben des Monats die Einnahmen übersteigen.
+    /// </summary>
+    public decimal Disposable { get; set; }
+
     /// <summary>Anzahl der Buchungen im Monat.</summary>
     public int TransactionCount { get; set; }
 

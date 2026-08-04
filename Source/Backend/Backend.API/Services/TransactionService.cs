@@ -54,6 +54,7 @@ public sealed class TransactionService(
     {
         var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
         await EnsureCategoryBelongsToAccountAsync(accountId, request.CategoryId, ct);
+        await EnsureFixedCostIsAssignableAsync(accountId, request, ct);
 
         var transaction = new Transaction
         {
@@ -63,6 +64,7 @@ public sealed class TransactionService(
             Amount = Round(request.Amount),
             Title = NormalizeTitle(request.Title),
             CategoryId = request.CategoryId,
+            FixedCostId = request.FixedCostId,
             BookingDate = request.BookingDate,
             PurchaseDate = request.PurchaseDate,
             AccountingMonth = AccountingMonth.Parse(request.AccountingMonth).ToDateOnly(),
@@ -81,6 +83,7 @@ public sealed class TransactionService(
     {
         await accountAccess.RequireOwnedAsync(userId, accountId, ct);
         await EnsureCategoryBelongsToAccountAsync(accountId, request.CategoryId, ct);
+        await EnsureFixedCostIsAssignableAsync(accountId, request, ct);
 
         var transaction = await FindAsync(accountId, transactionId, ct);
         var counterpart = await LoadCounterpartAsync(transaction, ct);
@@ -94,6 +97,7 @@ public sealed class TransactionService(
         transaction.Amount = Round(request.Amount);
         transaction.Title = NormalizeTitle(request.Title);
         transaction.CategoryId = request.CategoryId;
+        transaction.FixedCostId = request.FixedCostId;
         transaction.BookingDate = request.BookingDate;
         transaction.PurchaseDate = request.PurchaseDate;
         transaction.AccountingMonth = AccountingMonth.Parse(request.AccountingMonth).ToDateOnly();
@@ -344,6 +348,29 @@ public sealed class TransactionService(
         }
     }
 
+    /// <summary>
+    /// Prüft die Zuordnung zu einer Fixkosten-Position: Sie muss zum Konto gehören, und
+    /// nur Ausgaben können Fixkosten sein.
+    /// </summary>
+    private async Task EnsureFixedCostIsAssignableAsync(int accountId, SaveTransactionRequest request, CancellationToken ct)
+    {
+        if (request.FixedCostId is null)
+            return;
+
+        if (request.Type != TransactionType.Expense)
+            throw new BusinessRuleException("Nur Ausgaben können Fixkosten sein.");
+
+        var exists = await context.FixedCosts
+            .AnyAsync(f => f.Id == request.FixedCostId && f.AccountId == accountId, ct);
+
+        if (!exists)
+        {
+            logger.LogInformation(
+                "Fixkosten {FixedCostId} gehören nicht zu Konto {AccountId}.", request.FixedCostId, accountId);
+            throw new NotFoundException("Die Fixkosten-Position");
+        }
+    }
+
     private static Expression<Func<Transaction, TransactionDto>> ProjectToDto =>
         t => new TransactionDto
         {
@@ -357,6 +384,9 @@ public sealed class TransactionService(
             CategoryName = t.Category != null ? t.Category.Name : null,
             CategoryColor = t.Category != null ? t.Category.Color : null,
             CategoryIcon = t.Category != null ? t.Category.Icon : null,
+            FixedCostId = t.FixedCostId,
+            FixedCostName = t.FixedCost != null ? t.FixedCost.Name : null,
+            FixedCostMonthDate = t.FixedCost != null ? (DateOnly?)t.FixedCost.Month : null,
             BookingDate = t.BookingDate,
             PurchaseDate = t.PurchaseDate,
             AccountingMonthDate = t.AccountingMonth,

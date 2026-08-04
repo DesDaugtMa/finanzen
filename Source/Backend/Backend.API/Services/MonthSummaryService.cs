@@ -9,7 +9,8 @@ namespace Backend.Services;
 
 public sealed class MonthSummaryService(
     AppDbContext context,
-    IAccountAccess accountAccess) : IMonthSummaryService
+    IAccountAccess accountAccess,
+    IFixedCostService fixedCostService) : IMonthSummaryService
 {
     private const int MoneyScale = 2;
 
@@ -31,12 +32,20 @@ public sealed class MonthSummaryService(
             {
                 Income = g.Where(t => t.Type == TransactionType.Income).Sum(t => (decimal?)t.Amount) ?? 0m,
                 Expenses = g.Where(t => t.Type == TransactionType.Expense).Sum(t => (decimal?)t.Amount) ?? 0m,
+                // Variable Ausgaben sind alle Ausgaben ohne Fixkosten-Zuordnung — nur sie
+                // dürfen zusätzlich zu den Fixkosten vom frei verfügbaren Geld abgehen.
+                VariableExpenses = g
+                    .Where(t => t.Type == TransactionType.Expense && t.FixedCostId == null)
+                    .Sum(t => (decimal?)t.Amount) ?? 0m,
                 Count = g.Count()
             })
             .FirstOrDefaultAsync(ct);
 
         var income = Round(monthTotals?.Income ?? 0m);
         var expenses = Round(monthTotals?.Expenses ?? 0m);
+        var variableExpenses = Round(monthTotals?.VariableExpenses ?? 0m);
+
+        var fixedCosts = await fixedCostService.GetTotalsAsync(accountId, month, ct);
 
         var currentBalance = await CalculateCurrentBalanceAsync(accountId, account.InitialBalance, ct);
         var budgets = await context.Budgets
@@ -60,6 +69,13 @@ public sealed class MonthSummaryService(
             TotalBudget = totalBudget,
             TotalSpentBudgeted = totalSpentBudgeted,
             TotalRemaining = Round(totalBudget - totalSpentBudgeted),
+            FixedCostsPlanned = fixedCosts.Planned,
+            FixedCostsBooked = fixedCosts.Booked,
+            FixedCosts = fixedCosts.Effective,
+            FixedCostCount = fixedCosts.Count,
+            FixedCostOpenCount = fixedCosts.OpenCount,
+            VariableExpenses = variableExpenses,
+            Disposable = Round(income - fixedCosts.Effective - variableExpenses),
             TransactionCount = monthTotals?.Count ?? 0,
             Spending = spending
         };

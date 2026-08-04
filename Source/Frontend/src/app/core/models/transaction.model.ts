@@ -17,6 +17,11 @@ export interface Transaction {
   categoryName: string | null;
   categoryColor: string | null;
   categoryIcon: string | null;
+  /** Zugeordnete Fixkosten-Position, sonst null. Gesetzt heißt: keine variable Ausgabe. */
+  fixedCostId: number | null;
+  fixedCostName: string | null;
+  /** Monat der zugeordneten Fixkosten-Position (`yyyy-MM`), sonst null. */
+  fixedCostMonth: string | null;
   /** ISO-Datum `yyyy-MM-dd`. */
   bookingDate: string;
   purchaseDate: string | null;
@@ -37,6 +42,8 @@ export interface TransactionPayload {
   amount: number;
   title: string;
   categoryId: number | null;
+  /** Optionale Zuordnung zu einer Fixkosten-Position dieses Kontos. */
+  fixedCostId: number | null;
   bookingDate: string;
   purchaseDate: string | null;
   accountingMonth: string;
