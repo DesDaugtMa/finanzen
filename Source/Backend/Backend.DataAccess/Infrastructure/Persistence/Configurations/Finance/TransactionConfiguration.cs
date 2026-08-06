@@ -47,6 +47,13 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
             .HasForeignKey(t => t.FixedCostId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // Wird ein Schuldeintrag gelöscht, bleiben seine Buchungen erhalten — sie sind
+        // echte Geldbewegungen und verlieren nur die Zuordnung.
+        builder.HasOne(t => t.Debt)
+            .WithMany(d => d.Transactions)
+            .HasForeignKey(t => t.DebtId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasOne(t => t.LinkedTransaction)
             .WithMany()
             .HasForeignKey(t => t.LinkedTransactionId)
@@ -60,6 +67,9 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
 
         builder.HasIndex(t => t.FixedCostId)
             .HasDatabaseName("IX_Transactions_FixedCostId");
+
+        builder.HasIndex(t => t.DebtId)
+            .HasDatabaseName("IX_Transactions_DebtId");
 
         builder.HasQueryFilter(t => t.DeletedAt == null);
     }

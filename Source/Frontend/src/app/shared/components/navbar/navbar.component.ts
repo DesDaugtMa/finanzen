@@ -185,6 +185,14 @@ export class NavbarComponent {
       iconActive: 'house-fill',
       exact: true,
     },
+    {
+      path: '/schuldner',
+      label: 'Schuldner',
+      shortLabel: 'Schuldner',
+      icon: 'people',
+      iconActive: 'people-fill',
+      exact: false,
+    },
     // „Sitzungen“ steht bewusst nicht hier: es ist eine Sicherheitseinstellung,
     // kein täglich genutztes Ziel, und würde in der schmalen Tab-Bar Platz
     // beanspruchen, der den Kernaufgaben gehört. Erreichbar bleibt es über das

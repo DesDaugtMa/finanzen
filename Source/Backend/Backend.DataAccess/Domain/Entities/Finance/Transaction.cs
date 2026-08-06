@@ -35,6 +35,14 @@ public class Transaction
     public int? FixedCostId { get; set; }
     public FixedCost? FixedCost { get; set; }
 
+    /// <summary>
+    /// Optional link to the debt this transaction belongs to. An expense is money lent out,
+    /// an income is a repayment. Purely informational — the transaction keeps counting in the
+    /// account's monthly figures exactly as before.
+    /// </summary>
+    public int? DebtId { get; set; }
+    public Debt? Debt { get; set; }
+
     /// <summary>Optional link to the paired transaction of a transfer between accounts.</summary>
     public int? LinkedTransactionId { get; set; }
     public Transaction? LinkedTransaction { get; set; }

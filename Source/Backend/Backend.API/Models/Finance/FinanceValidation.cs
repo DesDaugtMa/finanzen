@@ -17,6 +17,12 @@ internal static class FinanceValidation
     /// <summary>Fixkosten tragen einen kurzen Namen („Miete“), keine Buchungsbezeichnung.</summary>
     public const int FixedCostNameMaxLength = 200;
 
+    /// <summary>Ein Schuldeintrag trägt den Namen einer Person, keinen Freitext.</summary>
+    public const int DebtPersonNameMaxLength = 200;
+
+    /// <summary>Kurze Bezeichnung des Vorgangs („Urlaub Kroatien“).</summary>
+    public const int DebtTitleMaxLength = 200;
+
     /// <summary>Obergrenze der Buchungen, die der Zuordnungs-Dialog zur Auswahl anbietet.</summary>
     public const int AssignableTransactionLimit = 50;
 }

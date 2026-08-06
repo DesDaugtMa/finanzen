@@ -221,11 +221,13 @@ public sealed class FixedCostService(
         await FindAsync(accountId, fixedCostId, ct);
 
         // Nur Ausgaben ohne bestehende Zuordnung — Einnahmen sind keine Fixkosten, und
-        // eine Buchung gehört zu höchstens einer Position.
+        // eine Buchung gehört zu höchstens einer Position. Verliehenes Geld ist ebenfalls
+        // keine Fixkostenzahlung und bleibt außen vor.
         var query = context.Transactions
             .Where(t => t.AccountId == accountId
                         && t.Type == TransactionType.Expense
-                        && t.FixedCostId == null);
+                        && t.FixedCostId == null
+                        && t.DebtId == null);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -504,6 +506,9 @@ public sealed class FixedCostService(
 
         if (transaction.FixedCostId is not null && transaction.FixedCostId != fixedCostId)
             throw new BusinessRuleException("Diese Buchung ist bereits einer anderen Fixkosten-Position zugeordnet.");
+
+        if (transaction.DebtId is not null)
+            throw new BusinessRuleException("Diese Buchung ist als Verleih hinterlegt und kann keine Fixkosten sein.");
     }
 
     private async Task EnsureCategoryBelongsToAccountAsync(int accountId, int? categoryId, CancellationToken ct)

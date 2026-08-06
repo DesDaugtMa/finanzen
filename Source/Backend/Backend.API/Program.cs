@@ -95,6 +95,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<IFixedCostService, FixedCostService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IMonthSummaryService, MonthSummaryService>();
 
 // --- API ---
