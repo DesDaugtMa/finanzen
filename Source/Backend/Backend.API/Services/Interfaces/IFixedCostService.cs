@@ -5,7 +5,8 @@ namespace Backend.Services.Interfaces;
 
 /// <summary>
 /// Summen der Fixkosten eines Monats. <paramref name="Effective"/> ist der Betrag, der
-/// gegen die Einnahmen gerechnet wird: gebucht, sobald es Buchungen gibt, sonst geplant.
+/// gegen die Einnahmen gerechnet wird: je Position das bereits gezahlte Geld plus die
+/// Restverpflichtung, also <c>max(geplant, gebucht)</c>.
 /// </summary>
 public readonly record struct FixedCostTotals(
     decimal Planned,

@@ -47,6 +47,12 @@ public sealed class MonthSummaryService(
 
         var fixedCosts = await fixedCostService.GetTotalsAsync(accountId, month, ct);
 
+        // Frei verfügbar kennt keine negativen Werte: was über die Einnahmen hinausgeht,
+        // ist kein „negativer Spielraum“, sondern eine Unterdeckung — sie wird getrennt
+        // ausgewiesen, statt die Kennzahl ins Minus laufen zu lassen.
+        var uncapped = Round(income - fixedCosts.Effective - variableExpenses);
+        var disposable = Math.Max(0m, uncapped);
+
         var currentBalance = await CalculateCurrentBalanceAsync(accountId, account.InitialBalance, ct);
         var budgets = await context.Budgets
             .Where(b => b.AccountId == accountId && b.Month == monthStart)
@@ -75,7 +81,8 @@ public sealed class MonthSummaryService(
             FixedCostCount = fixedCosts.Count,
             FixedCostOpenCount = fixedCosts.OpenCount,
             VariableExpenses = variableExpenses,
-            Disposable = Round(income - fixedCosts.Effective - variableExpenses),
+            Disposable = disposable,
+            DisposableShortfall = disposable - uncapped,
             TransactionCount = monthTotals?.Count ?? 0,
             Spending = spending
         };

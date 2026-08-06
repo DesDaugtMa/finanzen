@@ -52,8 +52,9 @@ public class FixedCostDto
     public int TransactionCount { get; set; }
 
     /// <summary>
-    /// Der Betrag, mit dem die Position in die Monatsrechnung eingeht: die Summe der
-    /// zugeordneten Buchungen, sobald es welche gibt, sonst der geplante Betrag.
+    /// Der Betrag, mit dem die Position in die Monatsrechnung eingeht: das bereits gezahlte
+    /// Geld plus die Restverpflichtung — also <c>max(<see cref="Amount"/>,
+    /// <see cref="BookedAmount"/>)</c>. Eine Teilzahlung senkt den Abzug damit nicht.
     /// </summary>
     public decimal EffectiveAmount { get; set; }
 

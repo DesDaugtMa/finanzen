@@ -405,7 +405,7 @@ public sealed class FixedCostService(
                     Note = r.Note,
                     BookedAmount = booked,
                     TransactionCount = r.TransactionCount,
-                    EffectiveAmount = r.TransactionCount == 0 ? planned : booked,
+                    EffectiveAmount = EffectiveAmount(planned, booked),
                     Status = DetermineStatus(r.TransactionCount, planned, booked),
                     Transactions = r.Transactions
                 };
@@ -428,8 +428,17 @@ public sealed class FixedCostService(
         return rows.Select(r => new AmountRow(r.Planned, r.Booked, r.TransactionCount)).ToList();
     }
 
+    /// <summary>
+    /// Der Betrag, mit dem eine Position gegen die Einnahmen zählt: das bereits gezahlte
+    /// Geld plus die Restverpflichtung. Eine Teilzahlung senkt den Abzug also nicht — der
+    /// offene Rest ist weiterhin gebunden. Zusammengefasst: <c>max(geplant, gebucht)</c>,
+    /// womit auch eine Zahlung über Plan vollständig zählt.
+    /// </summary>
+    private static decimal EffectiveAmount(decimal planned, decimal booked)
+        => Math.Max(planned, booked);
+
     private static decimal EffectiveAmount(AmountRow row)
-        => row.TransactionCount == 0 ? row.Planned : row.Booked;
+        => EffectiveAmount(row.Planned, row.Booked);
 
     private static FixedCostStatus DetermineStatus(int transactionCount, decimal planned, decimal booked)
     {

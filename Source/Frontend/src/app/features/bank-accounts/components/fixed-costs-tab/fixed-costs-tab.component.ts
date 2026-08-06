@@ -312,15 +312,15 @@ export class FixedCostsTabComponent {
 
     const total = month.items.length;
     const open = month.openCount;
+    const rule =
+      'Gerechnet wird je Position der bereits gezahlte Betrag plus der offene Rest — ' +
+      'eine Teilzahlung senkt den Abzug also nicht.';
 
     if (open === 0) {
-      return `Alle ${total} ${total === 1 ? 'Position ist' : 'Positionen sind'} gebucht. Gerechnet wird mit den tatsächlichen Buchungen.`;
+      return `Zu allen ${total} ${total === 1 ? 'Position gibt es' : 'Positionen gibt es'} Buchungen. ${rule}`;
     }
 
-    return (
-      `${open} von ${total} ${total === 1 ? 'Position' : 'Positionen'} noch offen. ` +
-      'Offene Positionen zählen mit ihrem geplanten Betrag, gebuchte mit dem tatsächlichen.'
-    );
+    return `${open} von ${total} ${total === 1 ? 'Position' : 'Positionen'} noch ohne Buchung. ${rule}`;
   });
 
   constructor() {

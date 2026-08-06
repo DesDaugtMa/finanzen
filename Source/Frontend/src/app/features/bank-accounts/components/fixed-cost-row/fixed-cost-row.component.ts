@@ -127,7 +127,8 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
         </details>
       } @else {
         <p class="cost-row__hint">
-          Noch keine Buchung zugeordnet — der geplante Betrag zählt gegen das frei verfügbare Geld.
+          Noch keine Buchung zugeordnet — der volle geplante Betrag zählt gegen das frei verfügbare
+          Geld.
         </p>
       }
     </div>

@@ -276,12 +276,17 @@ export class AccountOverviewTabComponent {
   });
 
   /**
-   * Macht die Rechnung hinter „frei verfügbar“ sichtbar. Ohne hinterlegte Fixkosten
-   * bliebe sonst unklar, warum die Zahl vom Monatssaldo abweicht — oder eben nicht.
+   * Macht die Rechnung hinter „frei verfügbar“ sichtbar. Reichen die Einnahmen nicht,
+   * steht die Kennzahl bei 0 € — dann hat die Unterdeckung Vorrang vor der Erklärung,
+   * sonst verschwände sie hinter einer harmlos aussehenden Null.
    */
   protected readonly disposableHint = computed(() => {
     const data = this.summary();
     if (!data) return '';
+
+    if (data.disposableShortfall > 0) {
+      return `${formatMoney(data.disposableShortfall, data.currency)} über den Einnahmen dieses Monats`;
+    }
 
     if (data.fixedCostCount === 0) {
       return 'Noch keine Fixkosten hinterlegt — im Bereich „Fixkosten“ planbar machen';

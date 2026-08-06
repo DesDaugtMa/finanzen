@@ -36,8 +36,8 @@ public class MonthSummaryDto
     public decimal FixedCostsBooked { get; set; }
 
     /// <summary>
-    /// Die Fixkosten, die gegen die Einnahmen gerechnet werden: je Position die Summe ihrer
-    /// Buchungen, sobald es welche gibt, sonst der geplante Betrag.
+    /// Die Fixkosten, die gegen die Einnahmen gerechnet werden: je Position das bereits
+    /// gezahlte Geld plus die Restverpflichtung, also <c>max(geplant, gebucht)</c>.
     /// </summary>
     public decimal FixedCosts { get; set; }
 
@@ -51,10 +51,17 @@ public class MonthSummaryDto
     public decimal VariableExpenses { get; set; }
 
     /// <summary>
-    /// Frei verfügbares Geld: <c>Income − FixedCosts − VariableExpenses</c>. Negativ bedeutet,
-    /// dass die Ausgaben des Monats die Einnahmen übersteigen.
+    /// Frei verfügbares Geld: <c>Income − FixedCosts − VariableExpenses</c>, nach unten bei
+    /// <c>0</c> begrenzt. Es gibt kein negatives verfügbares Geld — was fehlt, steht in
+    /// <see cref="DisposableShortfall"/>.
     /// </summary>
     public decimal Disposable { get; set; }
+
+    /// <summary>
+    /// Der durch die Untergrenze abgeschnittene Betrag: um so viel übersteigen Fixkosten und
+    /// variable Ausgaben die Einnahmen des Monats. <c>0</c>, solange die Einnahmen reichen.
+    /// </summary>
+    public decimal DisposableShortfall { get; set; }
 
     /// <summary>Anzahl der Buchungen im Monat.</summary>
     public int TransactionCount { get; set; }
