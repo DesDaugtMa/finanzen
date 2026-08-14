@@ -22,8 +22,11 @@ public sealed partial class BankAccountService(
 
     public async Task<IReadOnlyList<BankAccountDto>> ListMineAsync(int userId, CancellationToken ct = default)
     {
+        // Nach Kategorie vorsortiert, damit die Übersicht die Gruppen ohne Nachsortieren
+        // in derselben Reihenfolge aufbauen kann wie jede andere Ansicht.
         var accounts = await QueryMine(userId)
-            .OrderBy(a => a.Name)
+            .OrderBy(a => a.Type)
+            .ThenBy(a => a.Name)
             .ThenBy(a => a.Id)
             .Select(ProjectToDto)
             .ToListAsync(ct);
@@ -103,8 +106,13 @@ public sealed partial class BankAccountService(
 
     // --- Intern ---------------------------------------------------------
 
+    /// <summary>
+    /// Alle Konten des Nutzers, unabhängig von der Kontokategorie. Die Übersicht gruppiert
+    /// nach <see cref="Account.Type"/>; ein Filter auf eine einzelne Kategorie würde die
+    /// Vermögens- und Bilanzsummen um genau die Konten verkürzen, die sie enthalten sollen.
+    /// </summary>
     private IQueryable<Account> QueryMine(int userId)
-        => context.Accounts.Where(a => a.UserId == userId && a.Type == AccountType.CheckingAccount);
+        => context.Accounts.Where(a => a.UserId == userId);
 
     private async Task<Account> FindMineAsync(int userId, int accountId, CancellationToken ct)
     {
@@ -128,6 +136,7 @@ public sealed partial class BankAccountService(
         {
             Id = a.Id,
             Name = a.Name,
+            Type = a.Type,
             BankName = a.BankName,
             Iban = a.Iban,
             Color = a.Color,

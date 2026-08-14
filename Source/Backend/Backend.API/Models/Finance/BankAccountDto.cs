@@ -1,11 +1,19 @@
+using Backend.Domain.Enums;
+
 namespace Backend.Models.Finance;
 
-/// <summary>Ein Girokonto des angemeldeten Nutzers inklusive berechnetem Kontostand.</summary>
+/// <summary>Ein Konto des angemeldeten Nutzers inklusive berechnetem Kontostand.</summary>
 public class BankAccountDto
 {
     public int Id { get; set; }
 
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Kontokategorie. Sie gruppiert die Konten in der Übersicht und trennt das
+    /// Zahlungsvermögen (Girokonten) vom Anlagevermögen (Depot, Crypto-Wallet).
+    /// </summary>
+    public AccountType Type { get; set; }
 
     public string? BankName { get; set; }
 

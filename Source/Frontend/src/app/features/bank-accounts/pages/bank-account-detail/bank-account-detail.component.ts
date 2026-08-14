@@ -18,8 +18,10 @@ import { MoneyAmountComponent } from '../../../../shared/components/money-amount
 import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
 import { TabItem, TabNavComponent } from '../../../../shared/components/tab-nav/tab-nav.component';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
+import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/account-type';
 import { formatIban } from '../../../../shared/utils/iban.util';
 import { formatMonthLong, isValidMonthKey, toMonthKey } from '../../../../shared/utils/month.util';
+import { OfflineNoticeComponent } from '../../../../shared/components/offline-notice/offline-notice.component';
 import { AccountOverviewTabComponent } from '../../components/overview-tab/overview-tab.component';
 import { TransactionsTabComponent } from '../../components/transactions-tab/transactions-tab.component';
 import { FixedCostsTabComponent } from '../../components/fixed-costs-tab/fixed-costs-tab.component';
@@ -42,6 +44,7 @@ type TabId = (typeof TAB_IDS)[number];
     RouterLink,
     MoneyAmountComponent,
     MonthPickerComponent,
+    OfflineNoticeComponent,
     TabNavComponent,
     AccountOverviewTabComponent,
     TransactionsTabComponent,
@@ -51,7 +54,8 @@ type TabId = (typeof TAB_IDS)[number];
   ],
   template: `
     <div class="container detail-page">
-      <a routerLink="/" class="detail-back">
+      <!-- Der Monat reist mit zurück: wer aus Mai kommt, will nicht im aktuellen Monat landen. -->
+      <a routerLink="/" [queryParams]="{ monat: month() }" class="detail-back">
         <i class="bi bi-arrow-left" aria-hidden="true"></i>
         <span>Übersicht</span>
       </a>
@@ -75,8 +79,14 @@ type TabId = (typeof TAB_IDS)[number];
           </button>
         </div>
       } @else if (account(); as item) {
-        <!-- Kopfbereich als Markenfläche: Kontostand ist die Leitzahl der Seite
-             und bekommt deshalb den stärksten Auftritt. -->
+        <app-offline-notice
+          class="detail-offline"
+          [stale]="summaryStale()"
+          [savedAt]="summarySavedAt()"
+        />
+
+        <!-- Kopfbereich als Markenfläche: die Bilanz des Monats ist die Leitzahl
+             der Seite und bekommt deshalb den stärksten Auftritt. -->
         <header class="fin-brand-surface detail-hero">
           <div class="detail-hero__top">
             <span
@@ -84,7 +94,7 @@ type TabId = (typeof TAB_IDS)[number];
               [style.background-color]="accentColor()"
               aria-hidden="true"
             >
-              <i class="bi bi-bank2"></i>
+              <i class="bi" [class]="'bi-' + icon()"></i>
             </span>
 
             <div class="detail-hero__ident">
@@ -93,15 +103,52 @@ type TabId = (typeof TAB_IDS)[number];
             </div>
           </div>
 
-          <div class="detail-hero__balance">
-            <span class="detail-hero__label">Kontostand</span>
-            <app-money-amount
-              class="detail-hero__amount"
-              [amount]="balance()"
-              [currency]="item.currency"
-              size="lg"
-            />
+          <!-- Die Bilanz des gewählten Monats führt: sie beantwortet, wie das Konto
+               gerade läuft. Der Kontostand steht als zweite Zahl daneben — er sagt,
+               was da ist, aber nicht, wohin es sich bewegt. -->
+          <div class="detail-hero__figures">
+            <div class="detail-hero__figure">
+              <span class="detail-hero__label">Bilanz {{ monthLabel() }}</span>
+              <app-money-amount
+                class="detail-hero__amount"
+                [amount]="net()"
+                [currency]="item.currency"
+                size="lg"
+              />
+            </div>
+
+            <div class="detail-hero__figure detail-hero__figure--secondary">
+              <span class="detail-hero__label">Kontostand</span>
+              <app-money-amount
+                class="detail-hero__balance"
+                [amount]="balance()"
+                [currency]="item.currency"
+              />
+            </div>
           </div>
+
+          @if (summary(); as data) {
+            <p class="detail-hero__flow">
+              <span class="detail-hero__flow-item">
+                <span class="detail-hero__flow-label">Einnahmen</span>
+                <app-money-amount
+                  size="sm"
+                  tone="income"
+                  [amount]="data.income"
+                  [currency]="item.currency"
+                />
+              </span>
+              <span class="detail-hero__flow-item">
+                <span class="detail-hero__flow-label">Ausgaben</span>
+                <app-money-amount
+                  size="sm"
+                  tone="expense"
+                  [amount]="data.expenses"
+                  [currency]="item.currency"
+                />
+              </span>
+            </p>
+          }
 
           <div class="detail-hero__period">
             <span class="detail-hero__period-label">
@@ -261,8 +308,48 @@ type TabId = (typeof TAB_IDS)[number];
         color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-sm);
       }
-      .detail-hero__balance {
+      .detail-offline {
+        display: block;
+        margin-bottom: var(--fin-space-4);
+      }
+      .detail-hero__figures {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--fin-space-3) var(--fin-space-8);
         margin-top: var(--fin-space-5);
+      }
+      .detail-hero__figure {
+        min-width: 0;
+      }
+      /* Der Kontostand steht auf Mobil in einer eigenen Zeile unter der Bilanz —
+         zwei große Zahlen nebeneinander konkurrieren auf schmalen Displays. */
+      .detail-hero__figure--secondary {
+        flex: 1 1 100%;
+      }
+      @media (min-width: 34rem) {
+        .detail-hero__figure--secondary {
+          flex: 0 0 auto;
+        }
+      }
+      .detail-hero__balance {
+        color: var(--fin-on-brand-text);
+        font-size: var(--fin-text-xl);
+      }
+      .detail-hero__flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--fin-space-2) var(--fin-space-6);
+        margin: var(--fin-space-4) 0 0;
+      }
+      .detail-hero__flow-item {
+        display: inline-flex;
+        align-items: baseline;
+        gap: var(--fin-space-2);
+      }
+      .detail-hero__flow-label {
+        color: var(--fin-on-brand-text-muted);
+        font-size: var(--fin-text-sm);
       }
       .detail-hero__label {
         display: block;
@@ -358,6 +445,12 @@ export class BankAccountDetailComponent {
   protected readonly summaryLoading = signal(true);
   protected readonly summaryError = signal('');
 
+  /** Wann die gezeigten Kennzahlen geholt wurden — null, solange sie frisch vom Server kommen. */
+  protected readonly summarySavedAt = signal<Date | null>(null);
+
+  /** True, wenn die Kennzahlen aus dem Zwischenspeicher stammen statt vom Server. */
+  protected readonly summaryStale = computed(() => this.summarySavedAt() !== null);
+
   protected readonly categories = signal<Category[]>([]);
   protected readonly categoriesLoading = signal(true);
   protected readonly categoriesError = signal('');
@@ -378,17 +471,30 @@ export class BankAccountDetailComponent {
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
   protected readonly accentColor = computed(() => this.account()?.color ?? DEFAULT_ACCENT_COLOR);
 
+  /** Symbol der Kontokategorie — dieselbe Zuordnung wie auf den Karten der Übersicht. */
+  protected readonly icon = computed(() => {
+    const item = this.account();
+    return item ? accountTypeIcon(item.type) : 'bank2';
+  });
+
   /** Der Kontostand kommt aus der Monatsabfrage, solange sie geladen ist — sonst aus dem Konto. */
   protected readonly balance = computed(
     () => this.summary()?.currentBalance ?? this.account()?.currentBalance ?? 0,
   );
+
+  /**
+   * Die Bilanz des gewählten Monats. Solange die Kennzahlen noch laden, steht hier
+   * 0 statt einer alten Zahl aus dem Vormonat — eine falsche Bilanz ist schlimmer
+   * als eine kurz noch leere.
+   */
+  protected readonly net = computed(() => this.summary()?.net ?? 0);
 
   protected readonly subtitle = computed(() => {
     const item = this.account();
     if (!item) return '';
 
     const parts = [item.bankName, item.iban ? formatIban(item.iban) : null].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : 'Girokonto';
+    return parts.length > 0 ? parts.join(' · ') : accountTypeSingular(item.type);
   });
 
   protected readonly tabs = computed<TabItem[]>(() => [
@@ -458,8 +564,9 @@ export class BankAccountDetailComponent {
     this.summaryError.set('');
 
     this.bankAccountApi.getSummary(accountId, month).subscribe({
-      next: (summary) => {
-        this.summary.set(summary);
+      next: (result) => {
+        this.summary.set(result.value);
+        this.summarySavedAt.set(result.savedAt);
         this.summaryLoading.set(false);
       },
       error: (err: Error) => {
@@ -471,7 +578,7 @@ export class BankAccountDetailComponent {
 
   private loadAccount(accountId: number): void {
     if (!this.isValidAccountId(accountId)) {
-      this.error.set('Dieses Girokonto existiert nicht.');
+      this.error.set('Dieses Konto existiert nicht.');
       this.loading.set(false);
       return;
     }
@@ -480,12 +587,12 @@ export class BankAccountDetailComponent {
     this.error.set('');
 
     this.bankAccountApi.getById(accountId).subscribe({
-      next: (account) => {
-        this.account.set(account);
+      next: (result) => {
+        this.account.set(result.value);
         this.loading.set(false);
       },
       error: (err: Error) => {
-        this.error.set(err.message || 'Das Girokonto konnte nicht geladen werden.');
+        this.error.set(err.message || 'Das Konto konnte nicht geladen werden.');
         this.loading.set(false);
       },
     });

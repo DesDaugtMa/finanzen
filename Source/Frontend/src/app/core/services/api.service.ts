@@ -11,6 +11,23 @@ export interface ApiOptions {
     HttpParams | Record<string, string | number | boolean | readonly (string | number | boolean)[]>;
 }
 
+/**
+ * Ein fehlgeschlagener API-Aufruf. Erweitert `Error`, damit vorhandene Aufrufer
+ * unverändert `err.message` anzeigen können, trägt aber zusätzlich, ob der Server
+ * überhaupt erreicht wurde — nur dann ist ein Rückgriff auf zwischengespeicherte
+ * Daten fachlich vertretbar.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly connectionFailed: boolean,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
@@ -49,9 +66,13 @@ export class ApiService {
   private handleError(error: HttpErrorResponse): Observable<never> {
     let message = 'Ein unbekannter Fehler ist aufgetreten.';
 
+    // Status 0 heißt: die Anfrage hat den Server nie erreicht — kein Netz, DNS,
+    // CORS-Preflight. Genau dieser Fall darf offline auf alte Daten zurückfallen.
+    const connectionFailed = error.status === 0;
+
     if (error.error instanceof ErrorEvent) {
       message = `Fehler: ${error.error.message}`;
-    } else if (error.status === 0) {
+    } else if (connectionFailed) {
       message = 'Keine Verbindung zum Server. Bitte überprüfe deine Internetverbindung.';
     } else if (error.error && typeof error.error === 'object' && 'message' in error.error) {
       message = (error.error as { message: string }).message;
@@ -62,7 +83,7 @@ export class ApiService {
       message = extractValidationMessage(error.error) ?? `Serverfehler ${error.status}.`;
     }
 
-    return throwError(() => new Error(message));
+    return throwError(() => new ApiError(message, error.status, connectionFailed));
   }
 }
 

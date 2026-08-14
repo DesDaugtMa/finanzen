@@ -9,13 +9,17 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BankAccount } from '../../../../core/models/bank-account.model';
+import { AccountBalance } from '../../../../core/models/balance.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { maskIban } from '../../../../shared/utils/iban.util';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
+import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/account-type';
+import { formatMonthShort } from '../../../../shared/utils/month.util';
 
 /**
- * Übersichtskarte eines Girokontos. Die gesamte Karte führt zur Detailseite.
+ * Übersichtskarte eines Kontos. Die gesamte Karte führt zur Detailseite und
+ * nimmt den gewählten Monat als Query-Parameter mit, damit man dort denselben
+ * Zeitraum vorfindet wie auf der Übersicht.
  *
  * Das Aktionsmenü ist bewusst selbst gebaut und signalgesteuert — wie das
  * Kontomenü in der Navigation. Damit braucht die App kein Bootstrap-JavaScript,
@@ -47,7 +51,7 @@ import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
           [style.background-color]="accentColor()"
           aria-hidden="true"
         >
-          <i class="bi bi-bank2"></i>
+          <i class="bi" [class]="'bi-' + icon()"></i>
         </span>
 
         <div class="account-card__ident">
@@ -56,7 +60,11 @@ import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
               stretched-link macht die gesamte Karte klickbar, ohne verschachtelte
               interaktive Elemente zu erzeugen (das wäre nicht barrierefrei).
             -->
-            <a class="stretched-link account-card__link" [routerLink]="['/girokonten', item.id]">
+            <a
+              class="stretched-link account-card__link"
+              [routerLink]="['/girokonten', item.accountId]"
+              [queryParams]="{ monat: month() }"
+            >
               {{ item.name }}
             </a>
           </h3>
@@ -96,10 +104,44 @@ import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
         </div>
       </div>
 
-      <div class="account-card__balance">
-        <span class="fin-eyebrow">Kontostand</span>
-        <app-money-amount [amount]="item.currentBalance" [currency]="item.currency" size="lg" />
-      </div>
+      <!-- Bilanz und Kontostand gleichrangig nebeneinander: die eine Zahl sagt,
+           wie der Monat läuft, die andere, was tatsächlich da ist. Beide Fragen
+           stellt man sich beim Blick auf ein Konto gleichzeitig. -->
+      <dl class="account-card__figures">
+        <div class="account-card__figure">
+          <dt class="fin-eyebrow">Bilanz {{ monthLabel() }}</dt>
+          <dd class="account-card__value">
+            <app-money-amount [amount]="net()" [currency]="item.currency" size="lg" />
+          </dd>
+        </div>
+        <div class="account-card__figure">
+          <dt class="fin-eyebrow">Kontostand</dt>
+          <dd class="account-card__value">
+            <app-money-amount [amount]="item.currentBalance" [currency]="item.currency" size="lg" />
+          </dd>
+        </div>
+      </dl>
+
+      <p class="account-card__flow">
+        <span class="account-card__flow-item">
+          <i class="bi bi-arrow-down-left" aria-hidden="true"></i>
+          <app-money-amount
+            size="sm"
+            tone="income"
+            [amount]="item.income"
+            [currency]="item.currency"
+          />
+        </span>
+        <span class="account-card__flow-item">
+          <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+          <app-money-amount
+            size="sm"
+            tone="expense"
+            [amount]="item.expenses"
+            [currency]="item.currency"
+          />
+        </span>
+      </p>
     </article>
   `,
   styles: [
@@ -188,21 +230,47 @@ import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
       .account-card__menu {
         min-width: 11rem;
       }
-      .account-card__balance {
-        margin-top: auto;
+      .account-card__figures {
+        /* Schiebt den Zahlenblock ans untere Ende, damit die Karten im Raster
+           auf einer Linie abschließen, auch wenn Kontonamen unterschiedlich hoch
+           umbrechen. */
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--fin-space-3);
+        margin: auto 0 0;
         padding-top: var(--fin-space-5);
       }
-      .account-card__balance .fin-eyebrow {
-        margin-bottom: var(--fin-space-1);
+      .account-card__figure {
+        min-width: 0;
+      }
+      .account-card__value {
+        margin: var(--fin-space-1) 0 0;
+      }
+      .account-card__flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--fin-space-2) var(--fin-space-4);
+        margin: var(--fin-space-3) 0 0;
+        padding-top: var(--fin-space-3);
+        border-top: 1px solid var(--fin-border-subtle);
+      }
+      .account-card__flow-item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--fin-space-1);
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
       }
     `,
   ],
 })
 export class BankAccountCardComponent {
-  readonly account = input.required<BankAccount>();
+  readonly account = input.required<AccountBalance>();
+  /** Der Monat, auf den sich die Bilanz der Karte bezieht, als `yyyy-MM`. */
+  readonly month = input.required<string>();
 
-  readonly edit = output<BankAccount>();
-  readonly remove = output<BankAccount>();
+  readonly edit = output<AccountBalance>();
+  readonly remove = output<AccountBalance>();
 
   protected readonly menuOpen = signal(false);
 
@@ -210,10 +278,16 @@ export class BankAccountCardComponent {
 
   protected readonly accentColor = computed(() => this.account().color ?? DEFAULT_ACCENT_COLOR);
 
+  protected readonly icon = computed(() => accountTypeIcon(this.account().type));
+
+  protected readonly net = computed(() => this.account().net);
+
+  protected readonly monthLabel = computed(() => formatMonthShort(this.month()));
+
   protected readonly subtitle = computed(() => {
-    const { bankName, iban } = this.account();
+    const { bankName, iban, type } = this.account();
     const parts = [bankName, iban ? maskIban(iban) : null].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : 'Girokonto';
+    return parts.length > 0 ? parts.join(' · ') : accountTypeSingular(type);
   });
 
   protected toggleMenu(): void {
@@ -224,12 +298,12 @@ export class BankAccountCardComponent {
     this.menuOpen.set(false);
   }
 
-  protected emitEdit(account: BankAccount): void {
+  protected emitEdit(account: AccountBalance): void {
     this.closeMenu();
     this.edit.emit(account);
   }
 
-  protected emitRemove(account: BankAccount): void {
+  protected emitRemove(account: AccountBalance): void {
     this.closeMenu();
     this.remove.emit(account);
   }

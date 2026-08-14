@@ -15,7 +15,10 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { BankAccount, BankAccountPayload } from '../../../../core/models/bank-account.model';
+import {
+  BankAccountPayload,
+  EditableBankAccount,
+} from '../../../../core/models/bank-account.model';
 import { ModalDialogComponent } from '../../../../shared/components/modal-dialog/modal-dialog.component';
 import { ColorPickerComponent } from '../../../../shared/components/color-picker/color-picker.component';
 import { ACCENT_COLOR_PRESETS } from '../../../../shared/utils/color-presets';
@@ -155,7 +158,7 @@ function moneyValidator(control: AbstractControl): ValidationErrors | null {
 })
 export class BankAccountFormDialogComponent implements OnInit {
   /** `null` legt ein neues Konto an, sonst wird das übergebene Konto bearbeitet. */
-  readonly account = input<BankAccount | null>(null);
+  readonly account = input<EditableBankAccount | null>(null);
   readonly saving = input(false);
 
   readonly save = output<BankAccountPayload>();

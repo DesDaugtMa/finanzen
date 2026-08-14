@@ -13,8 +13,11 @@ public readonly record struct AccountingMonth(int Year, int Month)
     private const string Format = "yyyy-MM";
 
     /// <summary>Untere Grenze, die versehentliche Tippfehler wie das Jahr 20 abfängt.</summary>
-    private const int MinYear = 1900;
-    private const int MaxYear = 2999;
+    public const int MinYear = 1900;
+    public const int MaxYear = 2999;
+
+    /// <summary>True, wenn das Jahr im unterstützten Bereich liegt.</summary>
+    public static bool IsSupportedYear(int year) => year is >= MinYear and <= MaxYear;
 
     public static AccountingMonth FromDate(DateOnly date) => new(date.Year, date.Month);
 
