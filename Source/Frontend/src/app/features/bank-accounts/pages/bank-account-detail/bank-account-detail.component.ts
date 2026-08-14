@@ -224,10 +224,6 @@ type TabId = (typeof TAB_IDS)[number];
       .detail-hero {
         padding: var(--fin-space-5);
         margin-bottom: var(--fin-space-5);
-        /* Aufgehellte Geldfarben für die dunkle Fläche — sonst reicht der
-           Kontrast eines negativen Saldos nicht. */
-        --fin-expense: #ffb3a1;
-        --fin-income: #9fe6bf;
       }
       @media (min-width: 34rem) {
         .detail-hero {
@@ -249,21 +245,20 @@ type TabId = (typeof TAB_IDS)[number];
         border-radius: var(--fin-radius-md);
         color: #fff;
         font-size: var(--fin-text-lg);
-        /* Feine helle Kante, damit die Kontofarbe auf dunklem Grund nicht
-           verschwimmt. */
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+        /* Feine Kante, damit die Kontofarbe nicht mit der Fläche verschwimmt. */
+        box-shadow: inset 0 0 0 1px var(--fin-on-brand-ring);
       }
       .detail-hero__ident {
         min-width: 0;
       }
       .detail-hero__name {
         margin: 0;
-        color: #fff;
+        color: var(--fin-on-brand-text);
         font-size: var(--fin-text-lg);
       }
       .detail-hero__meta {
-        margin: 0.1rem 0 0;
-        color: rgba(255, 255, 255, 0.7);
+        margin: var(--fin-space-1) 0 0;
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-sm);
       }
       .detail-hero__balance {
@@ -272,14 +267,16 @@ type TabId = (typeof TAB_IDS)[number];
       .detail-hero__label {
         display: block;
         margin-bottom: var(--fin-space-1);
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-2xs);
         font-weight: 650;
         letter-spacing: var(--fin-tracking-wider);
         text-transform: uppercase;
       }
       .detail-hero__amount {
-        color: #fff;
+        /* Der Kontostand trägt die Vorderfarbe der Fläche statt der
+           Vorzeichenfarbe — als Leitzahl der Seite soll er ruhig stehen. */
+        color: var(--fin-on-brand-text);
         font-size: var(--fin-text-3xl);
       }
       .detail-hero__period {
@@ -290,10 +287,10 @@ type TabId = (typeof TAB_IDS)[number];
         gap: var(--fin-space-3);
         margin-top: var(--fin-space-5);
         padding-top: var(--fin-space-4);
-        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        border-top: 1px solid var(--fin-on-brand-line);
       }
       .detail-hero__period-label {
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-sm);
       }
       /* Auf Mobil bekommt die Monatsauswahl eine eigene, volle Zeile unter der
@@ -308,7 +305,7 @@ type TabId = (typeof TAB_IDS)[number];
         }
       }
       .detail-hero__period-label strong {
-        color: #fff;
+        color: var(--fin-on-brand-text);
       }
 
       .detail-tabs {

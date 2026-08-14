@@ -78,16 +78,45 @@
 // -----------------------------------------------------------------------------
 // Markenfläche
 // -----------------------------------------------------------------------------
-// Dunkle Marine-Fläche für Salden und Kopfbereiche. Trägt die Markenfarbe an
-// genau einer Stelle pro Screen — mehr würde die Ruhe zerstören.
+// Markenfläche für Salden und Kopfbereiche. Trägt die Markenfarbe an genau
+// einer Stelle pro Screen — mehr würde die Ruhe zerstören. Ihre Tönung kommt
+// vollständig aus den `--fin-brand-surface-*`-Tokens und schaltet damit mit dem
+// Theme um: dunkles Marine im Dunkeln, helle Marken-/Akzenttönung im Hellen.
+//
+// Die Fläche reicht ihre Vorder-, Linien- und Bedienfarben zusätzlich als
+// `--fin-on-brand-*` an ihre Kinder weiter. Dadurch müssen eingebettete
+// Komponenten (Monatswähler, Geldbetrag) weder das Theme kennen noch von aussen
+// umgeschaltet werden — sie erben schlicht den Kontext ihrer Fläche.
 
 .fin-brand-surface {
   position: relative;
   overflow: hidden;
-  background: var(--fin-gradient-brand);
+  background: var(--fin-brand-surface-bg);
+  border: 1px solid var(--fin-brand-surface-border);
   border-radius: var(--fin-radius-xl);
-  color: #fff;
+  color: var(--fin-brand-surface-text);
   box-shadow: var(--fin-shadow-md);
+
+  --fin-on-brand-text: var(--fin-brand-surface-text);
+  --fin-on-brand-text-muted: var(--fin-brand-surface-text-muted);
+  --fin-on-brand-line: var(--fin-brand-surface-line);
+  --fin-on-brand-ring: var(--fin-brand-surface-ring);
+  --fin-on-brand-focus: var(--fin-brand-surface-focus);
+
+  --fin-on-brand-chip-bg: var(--fin-brand-surface-chip-bg);
+  --fin-on-brand-chip-border: var(--fin-brand-surface-chip-border);
+  --fin-on-brand-chip-text: var(--fin-brand-surface-chip-text);
+  --fin-on-brand-chip-hover-bg: var(--fin-brand-surface-chip-hover-bg);
+  --fin-on-brand-chip-hover-border: var(--fin-brand-surface-chip-hover-border);
+  --fin-on-brand-chip-active-bg: var(--fin-brand-surface-chip-active-bg);
+  --fin-on-brand-chip-muted-bg: var(--fin-brand-surface-chip-muted-bg);
+  --fin-on-brand-chip-muted-border: var(--fin-brand-surface-chip-muted-border);
+  --fin-on-brand-chip-muted-text: var(--fin-brand-surface-chip-muted-text);
+
+  // Geldfarben der Fläche. Custom Properties durchdringen die
+  // View-Encapsulation und erreichen damit eingebettete `app-money-amount`.
+  --fin-income: var(--fin-brand-surface-income);
+  --fin-expense: var(--fin-brand-surface-expense);
 }
 
 // Sehr feines Lichtspiel über der Fläche. Statt eines auffälligen Verlaufs nur
@@ -96,9 +125,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(120% 90% at 88% -10%, rgba(47, 167, 159, 0.3) 0%, transparent 62%),
-    radial-gradient(80% 60% at 8% 108%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+  background: var(--fin-brand-surface-sheen);
   pointer-events: none;
 }
 
@@ -106,9 +133,9 @@
   position: relative;
 }
 
-// Auf der dunklen Fläche muss der Fokusring hell sein, um zu greifen.
+// Der Fokusring muss gegen die Fläche greifen — hell auf dunkel, Akzent auf hell.
 .fin-brand-surface :focus-visible {
-  outline-color: #fff;
+  outline-color: var(--fin-brand-surface-focus);
 }
 
 // -----------------------------------------------------------------------------
@@ -148,9 +175,11 @@
   color: var(--fin-brand-on-tint);
 }
 
+// Plakette auf einer Markenfläche: erbt deren Kontext, damit sie im hellen
+// Theme nicht als weisser Fleck stehen bleibt.
 .fin-emblem--on-brand {
-  background-color: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background-color: var(--fin-on-brand-chip-bg, rgba(255, 255, 255, 0.14));
+  color: var(--fin-on-brand-text, #fff);
 }
 
 .fin-emblem--muted {

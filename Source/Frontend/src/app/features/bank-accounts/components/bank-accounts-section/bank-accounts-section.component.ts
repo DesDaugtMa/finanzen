@@ -159,12 +159,6 @@ type DialogState =
       .accounts-total {
         padding: var(--fin-space-5);
         margin-bottom: var(--fin-space-4);
-        /* Auf der dunklen Markenfläche brauchen die Geldfarben aufgehellte
-           Varianten, sonst reicht der Kontrast eines negativen Saldos nicht.
-           Custom Properties durchdringen die View-Encapsulation und erreichen
-           damit das eingebettete app-money-amount. */
-        --fin-expense: #ffb3a1;
-        --fin-income: #9fe6bf;
       }
       @media (min-width: 34rem) {
         .accounts-total {
@@ -173,7 +167,7 @@ type DialogState =
       }
       .accounts-total__label {
         display: block;
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-2xs);
         font-weight: 650;
         letter-spacing: var(--fin-tracking-wider);
@@ -182,16 +176,16 @@ type DialogState =
       .accounts-total__value {
         display: block;
         margin-top: var(--fin-space-2);
-        /* Auf der dunklen Markenfläche muss der Betrag weiß bleiben — die
-           Vorzeichenfarbe aus app-money-amount würde hier zu wenig Kontrast
-           haben. Das Vorzeichen selbst bleibt erhalten. */
-        color: #fff;
+        /* Die Gesamtsumme trägt die Vorderfarbe der Fläche statt der
+           Vorzeichenfarbe aus app-money-amount: als Leitzahl soll sie ruhig
+           stehen. Das Vorzeichen selbst bleibt erhalten. */
+        color: var(--fin-on-brand-text);
         font-size: var(--fin-text-3xl);
       }
       .accounts-total__hint {
         display: block;
         margin-top: var(--fin-space-1);
-        color: rgba(255, 255, 255, 0.68);
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-sm);
       }
       .accounts-list {

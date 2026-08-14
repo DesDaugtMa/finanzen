@@ -247,6 +247,45 @@
     #1c3b52 100%
   );
   --fin-scrim: rgba(13, 22, 38, 0.42);
+
+  // Markenfläche — bewusst getrennt vom Markenverlauf darüber. Der Verlauf
+  // trägt kleine Plaketten (Logo, Auth-Icon), die in beiden Themes dunkel
+  // bleiben dürfen; eine ganze Kachel darf das nicht: eine dunkle Fläche im
+  // hellen Theme liest sich als hängengebliebenes Dark-Mode-Element. Im Hellen
+  // bleibt sie deshalb eine eigenständige, aber helle Fläche — die Hierarchie
+  // trägt hier die Tönung und die Kante, nicht mehr der Helligkeitssprung.
+  --fin-brand-surface-bg: linear-gradient(
+    150deg,
+    var(--navy-50) 0%,
+    #eaf1f5 56%,
+    var(--teal-50) 100%
+  );
+  --fin-brand-surface-sheen:
+    radial-gradient(120% 90% at 88% -10%, rgba(47, 167, 159, 0.18) 0%, transparent 62%),
+    radial-gradient(80% 60% at 8% 108%, rgba(255, 255, 255, 0.6) 0%, transparent 60%);
+  --fin-brand-surface-border: var(--navy-100);
+  --fin-brand-surface-text: var(--navy-800);
+  // Eigener Ton statt --fin-text-muted: die Kachel ist heller als der
+  // App-Hintergrund, der Beschriftungston darf dafür etwas tiefer sitzen (6.2:1).
+  --fin-brand-surface-text-muted: #4f5c70;
+  --fin-brand-surface-line: rgba(22, 35, 63, 0.12);
+  --fin-brand-surface-ring: rgba(22, 35, 63, 0.16);
+  --fin-brand-surface-focus: var(--fin-accent);
+  --fin-brand-surface-income: var(--money-income-600);
+  --fin-brand-surface-expense: var(--money-expense-600);
+
+  // Bedienelemente auf der Markenfläche (Monatswähler). Im Hellen tragen sie
+  // schlicht das normale Aussehen der App — das ist konsistenter als eine
+  // zweite, nur hier gültige Button-Optik.
+  --fin-brand-surface-chip-bg: rgba(255, 255, 255, 0.76);
+  --fin-brand-surface-chip-border: var(--fin-border-strong);
+  --fin-brand-surface-chip-text: var(--fin-text);
+  --fin-brand-surface-chip-hover-bg: #ffffff;
+  --fin-brand-surface-chip-hover-border: var(--navy-300);
+  --fin-brand-surface-chip-active-bg: var(--navy-100);
+  --fin-brand-surface-chip-muted-bg: rgba(255, 255, 255, 0.44);
+  --fin-brand-surface-chip-muted-border: var(--fin-border);
+  --fin-brand-surface-chip-muted-text: rgba(22, 35, 63, 0.42);
 }
 
 // =============================================================================
@@ -317,4 +356,31 @@
 
   --fin-gradient-brand: linear-gradient(150deg, #16233f 0%, #12253a 55%, #0f2d33 100%);
   --fin-scrim: rgba(4, 8, 16, 0.66);
+
+  // Im Dunkeln behält die Markenfläche ihr bisheriges Erscheinungsbild: dort
+  // war sie nie das Problem, dort trägt der dunkle Verlauf die Hierarchie.
+  --fin-brand-surface-bg: var(--fin-gradient-brand);
+  --fin-brand-surface-sheen:
+    radial-gradient(120% 90% at 88% -10%, rgba(47, 167, 159, 0.3) 0%, transparent 62%),
+    radial-gradient(80% 60% at 8% 108%, rgba(255, 255, 255, 0.08) 0%, transparent 60%);
+  --fin-brand-surface-border: transparent;
+  --fin-brand-surface-text: #ffffff;
+  --fin-brand-surface-text-muted: rgba(255, 255, 255, 0.72);
+  --fin-brand-surface-line: rgba(255, 255, 255, 0.14);
+  --fin-brand-surface-ring: rgba(255, 255, 255, 0.22);
+  --fin-brand-surface-focus: #ffffff;
+  // Aufgehellte Geldfarben: auf dunklem Grund reicht der Kontrast der
+  // Standardtöne für einen negativen Saldo nicht.
+  --fin-brand-surface-income: #9fe6bf;
+  --fin-brand-surface-expense: #ffb3a1;
+
+  --fin-brand-surface-chip-bg: rgba(255, 255, 255, 0.1);
+  --fin-brand-surface-chip-border: rgba(255, 255, 255, 0.24);
+  --fin-brand-surface-chip-text: #ffffff;
+  --fin-brand-surface-chip-hover-bg: rgba(255, 255, 255, 0.18);
+  --fin-brand-surface-chip-hover-border: rgba(255, 255, 255, 0.38);
+  --fin-brand-surface-chip-active-bg: rgba(255, 255, 255, 0.22);
+  --fin-brand-surface-chip-muted-bg: rgba(255, 255, 255, 0.06);
+  --fin-brand-surface-chip-muted-border: rgba(255, 255, 255, 0.14);
+  --fin-brand-surface-chip-muted-text: rgba(255, 255, 255, 0.5);
 }
