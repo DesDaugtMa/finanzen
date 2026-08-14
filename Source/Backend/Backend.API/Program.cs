@@ -99,6 +99,11 @@ builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IMonthSummaryService, MonthSummaryService>();
 builder.Services.AddScoped<IBalanceService, BalanceService>();
 
+// --- DI: Changelog ---
+// Singleton: die Datei ändert sich nur mit einer neuen Auslieferung, der Dienst hält
+// das Ergebnis deshalb bis zur nächsten Dateiänderung im Speicher.
+builder.Services.AddSingleton<IChangelogService, ChangelogService>();
+
 // --- API ---
 builder.Services.AddControllers()
     // Enums als Klartext ("Income" statt 1) — die API bleibt lesbar und das Frontend

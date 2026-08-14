@@ -373,6 +373,18 @@
   color: var(--fin-danger);
 }
 
+// Nebeneintrag: gehört ins Menü, ist aber keine der Hauptaktionen. Kleiner und ruhiger
+// gesetzt — die Trefferfläche bleibt trotzdem die volle Touch-Mindesthöhe.
+.fin-menu__item--meta {
+  color: var(--fin-text-muted);
+  font-size: var(--fin-text-sm);
+  font-weight: 500;
+}
+
+.fin-menu__item--meta:hover {
+  color: var(--fin-text);
+}
+
 .fin-menu__icon {
   width: 1.1rem;
   color: var(--fin-text-subtle);

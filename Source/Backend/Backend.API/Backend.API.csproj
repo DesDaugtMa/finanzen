@@ -42,4 +42,14 @@
     <ProjectReference Include="..\Backend.DataAccess\Backend.DataAccess.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Der Changelog liegt bewusst in der Repository-Wurzel: dort erwartet man ihn, und dort
+      zeigt ihn GitHub an. Für die Anwendung wird er beim Bauen und Veröffentlichen neben
+      die Binärdateien kopiert, damit sie ihn zur Laufzeit ohne Kenntnis der Ordnerstruktur
+      findet — in der Entwicklung wie auf dem Server derselbe Ort.
+    -->
+    <Content Include="..\..\..\CHANGELOG.md" Link="CHANGELOG.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

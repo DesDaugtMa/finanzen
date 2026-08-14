@@ -152,6 +152,9 @@
 
   // Layout
   --fin-container-max: 76rem;
+  // Breite für zusammenhängenden Fließtext (Changelog, Erklärseiten). Schmaler als das
+  // Dashboard, damit Zeilen nicht zu lang zum Lesen werden, aber breiter als ein Formular.
+  --fin-container-reading: 48rem;
   --fin-container-narrow: 34rem;
   --fin-tabbar-height: 3.75rem;
   --fin-topnav-height: 4rem;

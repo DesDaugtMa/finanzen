@@ -82,6 +82,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'changelog',
+    loadComponent: () =>
+      import('./features/changelog/pages/changelog/changelog.component').then(
+        (m) => m.ChangelogComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'admin/einladungen',
     loadComponent: () =>
       import('./features/admin/pages/registration-tokens/registration-tokens.component').then(

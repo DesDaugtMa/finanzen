@@ -35,14 +35,19 @@
         "maxAge": "30d",
         "timeout": "3s"
       }
+    },
+    {
+      "comment": "Der Changelog ist für alle Nutzer derselbe und enthält keine persönlichen Daten — anders als die Finanzdaten darf er deshalb im Service Worker liegen. `freshness` fragt zuerst das Netz; erst wenn es nicht antwortet, springt der Cache ein, sodass die Seite auch ohne Verbindung etwas zu zeigen hat.",
+      "name": "changelog",
+      "urls": ["/api/changelog", "**/api/changelog"],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 2,
+        "maxAge": "90d",
+        "timeout": "3s"
+      }
     }
   ],
   "navigationRequestStrategy": "performance",
-  "navigationUrls": [
-    "/**",
-    "!/**/*.*",
-    "!/**/*__*",
-    "!/**/*__*/**",
-    "!/api/**"
-  ]
+  "navigationUrls": ["/**", "!/**/*.*", "!/**/*__*", "!/**/*__*/**", "!/api/**"]
 }
