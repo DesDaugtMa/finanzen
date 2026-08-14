@@ -5,6 +5,7 @@ import { Observable, tap, BehaviorSubject, switchMap, throwError, filter, take }
 import { SocialAuthService } from '@abacritt/angularx-social-login';
 import { ApiService } from './api.service';
 import { AppConfigService } from './app-config.service';
+import { OfflineCacheService } from './offline-cache.service';
 import {
   AuthResponse,
   LoginRequest,
@@ -24,6 +25,7 @@ export class AuthService {
   private socialAuthService = inject(SocialAuthService);
   private httpBackend = inject(HttpBackend);
   private configService = inject(AppConfigService);
+  private offlineCache = inject(OfflineCacheService);
 
   // HttpClient ohne Interceptors – nur für Refresh/Logout (verhindert Endlosschleifen)
   private rawHttp = new HttpClient(this.httpBackend);
@@ -158,6 +160,9 @@ export class AuthService {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
+    // Offline zwischengespeicherte Kontostände und Bilanzen gehören zum
+    // abgemeldeten Nutzer und dürfen auf dem Gerät nicht zurückbleiben.
+    this.offlineCache.clear();
     this.currentUserSignal.set(null);
   }
 

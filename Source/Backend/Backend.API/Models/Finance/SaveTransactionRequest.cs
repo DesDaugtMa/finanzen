@@ -22,6 +22,12 @@ public class SaveTransactionRequest
     /// <summary>Muss eine Kategorie dieses Kontos sein. <c>null</c> bedeutet „ohne Kategorie".</summary>
     public int? CategoryId { get; set; }
 
+    /// <summary>
+    /// Optionale Zuordnung zu einer Fixkosten-Position dieses Kontos. Gesetzt bedeutet:
+    /// die Buchung zahlt diese Fixkosten und zählt nicht als variable Ausgabe.
+    /// </summary>
+    public int? FixedCostId { get; set; }
+
     [Required]
     public DateOnly BookingDate { get; set; }
 
@@ -33,4 +39,10 @@ public class SaveTransactionRequest
 
     [MaxLength(FinanceValidation.NoteMaxLength)]
     public string? Note { get; set; }
+
+    /// <summary>
+    /// Markiert eine Ausgabe, die die Bank noch nicht abgebucht hat. Nur bei Girokonten
+    /// und nur für Ausgaben zulässig.
+    /// </summary>
+    public bool IsPending { get; set; }
 }

@@ -1,30 +1,38 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
   inject,
+  input,
+  output,
   signal,
 } from '@angular/core';
 import { BankAccountApiService } from '../../../../core/services/bank-account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { BankAccount, BankAccountPayload } from '../../../../core/models/bank-account.model';
+import { BankAccountPayload } from '../../../../core/models/bank-account.model';
+import { AccountBalance, AccountGroupBalance } from '../../../../core/models/balance.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
-import { DEFAULT_CURRENCY } from '../../../../shared/utils/money.util';
+import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
+import { accountTypeIcon, accountTypeLabel } from '../../../../shared/utils/account-type';
+import { formatMonthShort } from '../../../../shared/utils/month.util';
 import { BankAccountCardComponent } from '../bank-account-card/bank-account-card.component';
 import { BankAccountFormDialogComponent } from '../bank-account-form-dialog/bank-account-form-dialog.component';
 
 /** Welcher Dialog gerade offen ist. */
 type DialogState =
   | { kind: 'none' }
-  | { kind: 'form'; account: BankAccount | null }
-  | { kind: 'delete'; account: BankAccount };
+  | { kind: 'form'; account: AccountBalance | null }
+  | { kind: 'delete'; account: AccountBalance };
 
 /**
- * Girokonten-Bereich der Startseite: Gesamtsumme, Kartenraster und die Dialoge
- * zum Anlegen, Bearbeiten und Löschen.
+ * Die Konten der Übersicht, nach Kontokategorie gruppiert.
+ *
+ * Jede Gruppe führt ihre eigene Bilanz und ihr eigenes Vermögen — so ist ohne
+ * Zusammenzählen sichtbar, aus welcher Kategorie der Monat kommt. Die Daten
+ * kommen von außen (Bilanz-Endpunkt); dieser Bereich besitzt nur die Dialoge
+ * zum Anlegen, Bearbeiten und Löschen und meldet Änderungen nach oben.
  */
 @Component({
   selector: 'app-bank-accounts-section',
@@ -34,6 +42,7 @@ type DialogState =
     BankAccountFormDialogComponent,
     ConfirmDialogComponent,
     MoneyAmountComponent,
+    SettledBalanceComponent,
     EmptyStateComponent,
   ],
   template: `
@@ -41,7 +50,7 @@ type DialogState =
       <header class="fin-section-header">
         <div>
           <span class="fin-eyebrow">Deine Konten</span>
-          <h2 id="bankAccountsHeading" class="accounts-title">Girokonten</h2>
+          <h2 id="bankAccountsHeading" class="accounts-title">Kontostände &amp; Bilanz</h2>
         </div>
 
         <button type="button" class="btn btn-primary" (click)="openCreate()">
@@ -56,7 +65,7 @@ type DialogState =
           die Seite springt beim Eintreffen der Daten nicht, und die Wartezeit
           wirkt kürzer, weil Struktur sichtbar ist.
         -->
-        <div class="fin-grid fin-grid--cards" role="status" aria-label="Girokonten werden geladen">
+        <div class="fin-grid fin-grid--cards" role="status" aria-label="Konten werden geladen">
           @for (placeholder of skeletonSlots; track $index) {
             <div class="fin-panel account-skeleton">
               <div class="account-skeleton__head">
@@ -73,15 +82,15 @@ type DialogState =
       } @else if (error()) {
         <div class="alert alert-danger accounts-error" role="alert">
           <span>{{ error() }}</span>
-          <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="reload.emit()">
             Erneut versuchen
           </button>
         </div>
-      } @else if (accounts().length === 0) {
+      } @else if (groups().length === 0) {
         <app-empty-state
           icon="bank2"
-          title="Noch kein Girokonto angelegt"
-          message="Lege dein erstes Girokonto an, um Kontostände und Buchungen im Blick zu behalten."
+          title="Noch kein Konto angelegt"
+          message="Lege dein erstes Girokonto an, um Kontostände, Buchungen und die Bilanz deines Monats im Blick zu behalten."
         >
           <button type="button" class="btn btn-primary btn-lg" (click)="openCreate()">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -89,32 +98,59 @@ type DialogState =
           </button>
         </app-empty-state>
       } @else {
-        <!-- Gesamtsumme als eigene Markenfläche über dem Raster: die wichtigste
-             Zahl der Startseite bekommt den prominentesten Platz. -->
-        <div class="fin-brand-surface accounts-total">
-          <span class="accounts-total__label">Gesamtvermögen</span>
-          <app-money-amount
-            class="accounts-total__value"
-            [amount]="totalBalance()"
-            [currency]="totalCurrency()"
-            size="lg"
-          />
-          <span class="accounts-total__hint">
-            über {{ accounts().length }} {{ accounts().length === 1 ? 'Konto' : 'Konten' }}
-          </span>
-        </div>
+        @for (group of groups(); track group.type) {
+          <section class="account-group" [attr.aria-label]="label(group)">
+            <header class="account-group__head">
+              <span class="fin-emblem fin-emblem--sm fin-emblem--muted" aria-hidden="true">
+                <i class="bi" [class]="'bi-' + icon(group)"></i>
+              </span>
 
-        <ul class="fin-grid fin-grid--cards fin-stagger accounts-list">
-          @for (account of accounts(); track account.id) {
-            <li>
-              <app-bank-account-card
-                [account]="account"
-                (edit)="openEdit($event)"
-                (remove)="openDelete($event)"
-              />
-            </li>
-          }
-        </ul>
+              <h3 class="account-group__title">{{ label(group) }}</h3>
+              <span class="account-group__count">{{ countLabel(group) }}</span>
+
+              <dl class="account-group__figures">
+                <div class="account-group__figure">
+                  <dt class="account-group__label">Bilanz {{ monthLabel() }}</dt>
+                  <dd class="account-group__value">
+                    <app-money-amount size="sm" [amount]="group.net" [currency]="group.currency" />
+                  </dd>
+                </div>
+                <div class="account-group__figure">
+                  <dt class="account-group__label">Vermögen</dt>
+                  <dd class="account-group__value">
+                    <app-money-amount
+                      size="sm"
+                      [amount]="group.balance"
+                      [currency]="group.currency"
+                    />
+                    @if (group.type === 'CheckingAccount') {
+                      <app-settled-balance
+                        class="account-group__settled"
+                        [amount]="group.settledBalance"
+                        [currency]="group.currency"
+                        [pendingCount]="group.pendingCount"
+                        [pendingTotal]="group.pendingTotal"
+                      />
+                    }
+                  </dd>
+                </div>
+              </dl>
+            </header>
+
+            <ul class="fin-grid fin-grid--cards fin-stagger accounts-list">
+              @for (account of group.accounts; track account.accountId) {
+                <li>
+                  <app-bank-account-card
+                    [account]="account"
+                    [month]="month()"
+                    (edit)="openEdit($event)"
+                    (remove)="openDelete($event)"
+                  />
+                </li>
+              }
+            </ul>
+          </section>
+        }
       }
     </section>
 
@@ -128,7 +164,7 @@ type DialogState =
         />
       } @else if (state.kind === 'delete') {
         <app-confirm-dialog
-          title="Girokonto löschen"
+          title="Konto löschen"
           [message]="
             'Soll „' +
             state.account.name +
@@ -156,43 +192,53 @@ type DialogState =
         justify-content: space-between;
         gap: var(--fin-space-3);
       }
-      .accounts-total {
-        padding: var(--fin-space-5);
+      .account-group + .account-group {
+        margin-top: var(--fin-space-8);
+      }
+      .account-group__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--fin-space-2) var(--fin-space-3);
         margin-bottom: var(--fin-space-4);
-        /* Auf der dunklen Markenfläche brauchen die Geldfarben aufgehellte
-           Varianten, sonst reicht der Kontrast eines negativen Saldos nicht.
-           Custom Properties durchdringen die View-Encapsulation und erreichen
-           damit das eingebettete app-money-amount. */
-        --fin-expense: #ffb3a1;
-        --fin-income: #9fe6bf;
+        padding-bottom: var(--fin-space-3);
+        border-bottom: 1px solid var(--fin-border-subtle);
       }
-      @media (min-width: 34rem) {
-        .accounts-total {
-          padding: var(--fin-space-6) var(--fin-space-8);
-        }
+      .account-group__title {
+        margin: 0;
+        font-size: var(--fin-text-md);
       }
-      .accounts-total__label {
-        display: block;
-        color: rgba(255, 255, 255, 0.72);
+      .account-group__count {
+        color: var(--fin-text-muted);
+        font-size: var(--fin-text-sm);
+      }
+      /* Die Kennzahlen rücken ans rechte Ende der Kopfzeile; auf schmalen
+         Displays fallen sie in die nächste Zeile, statt die Überschrift zu quetschen. */
+      .account-group__figures {
+        display: flex;
+        gap: var(--fin-space-5);
+        margin: 0;
+        margin-inline-start: auto;
+      }
+      .account-group__figure {
+        text-align: end;
+      }
+      .account-group__label {
+        margin: 0;
+        color: var(--fin-text-muted);
         font-size: var(--fin-text-2xs);
         font-weight: 650;
-        letter-spacing: var(--fin-tracking-wider);
+        letter-spacing: var(--fin-tracking-wide);
         text-transform: uppercase;
       }
-      .accounts-total__value {
-        display: block;
-        margin-top: var(--fin-space-2);
-        /* Auf der dunklen Markenfläche muss der Betrag weiß bleiben — die
-           Vorzeichenfarbe aus app-money-amount würde hier zu wenig Kontrast
-           haben. Das Vorzeichen selbst bleibt erhalten. */
-        color: #fff;
-        font-size: var(--fin-text-3xl);
+      .account-group__value {
+        margin: 0;
       }
-      .accounts-total__hint {
-        display: block;
-        margin-top: var(--fin-space-1);
-        color: rgba(255, 255, 255, 0.68);
-        font-size: var(--fin-text-sm);
+      /* Die Kennzahlen der Kopfzeile sind rechtsbündig; die Zweitzeile richtet sich
+         mit aus, statt als einzige Zeile linksbündig zu stehen. */
+      .account-group__settled {
+        display: flex;
+        justify-content: flex-end;
       }
       .accounts-list {
         margin: 0;
@@ -219,65 +265,51 @@ type DialogState =
     `,
   ],
 })
-export class BankAccountsSectionComponent implements OnInit {
+export class BankAccountsSectionComponent {
+  /** Die Konten nach Kontokategorie, wie der Bilanz-Endpunkt sie liefert. */
+  readonly groups = input<AccountGroupBalance[]>([]);
+  /** Der Monat, auf den sich alle Bilanzzahlen beziehen, als `yyyy-MM`. */
+  readonly month = input.required<string>();
+  readonly loading = input(false);
+  readonly error = input('');
+
+  /** Ein Konto wurde angelegt, geändert oder gelöscht — die Bilanz muss neu geladen werden. */
+  readonly changed = output<void>();
+  readonly reload = output<void>();
+
   private readonly bankAccountApi = inject(BankAccountApiService);
   private readonly toastService = inject(ToastService);
 
-  protected readonly accounts = signal<BankAccount[]>([]);
-  protected readonly loading = signal(true);
   protected readonly saving = signal(false);
-  protected readonly error = signal('');
   protected readonly dialog = signal<DialogState>({ kind: 'none' });
 
   /** Anzahl der Platzhalter-Karten während des Ladens. */
   protected readonly skeletonSlots = [0, 1, 2];
 
-  /**
-   * Summe aller Kontostände. Über Cent gerechnet, damit sich beim Addieren
-   * keine Gleitkomma-Ungenauigkeiten sichtbar aufsummieren.
-   */
-  protected readonly totalBalance = computed(() => {
-    const cents = this.accounts().reduce(
-      (sum, account) => sum + Math.round(account.currentBalance * 100),
-      0,
-    );
-    return cents / 100;
-  });
+  protected readonly monthLabel = computed(() => formatMonthShort(this.month()));
 
-  /** Solange nur EUR unterstützt wird, ist das die Währung des ersten Kontos. */
-  protected readonly totalCurrency = computed(
-    () => this.accounts()[0]?.currency ?? DEFAULT_CURRENCY,
-  );
-
-  ngOnInit(): void {
-    this.load();
+  protected label(group: AccountGroupBalance): string {
+    return accountTypeLabel(group.type);
   }
 
-  protected load(): void {
-    this.loading.set(true);
-    this.error.set('');
+  protected icon(group: AccountGroupBalance): string {
+    return accountTypeIcon(group.type);
+  }
 
-    this.bankAccountApi.list().subscribe({
-      next: (accounts) => {
-        this.accounts.set(accounts);
-        this.loading.set(false);
-      },
-      error: (err: Error) => {
-        this.error.set(err.message || 'Die Girokonten konnten nicht geladen werden.');
-        this.loading.set(false);
-      },
-    });
+  protected countLabel(group: AccountGroupBalance): string {
+    const count = group.accounts.length;
+    return count === 1 ? '1 Konto' : `${count} Konten`;
   }
 
   protected openCreate(): void {
     this.dialog.set({ kind: 'form', account: null });
   }
 
-  protected openEdit(account: BankAccount): void {
+  protected openEdit(account: AccountBalance): void {
     this.dialog.set({ kind: 'form', account });
   }
 
-  protected openDelete(account: BankAccount): void {
+  protected openDelete(account: AccountBalance): void {
     this.dialog.set({ kind: 'delete', account });
   }
 
@@ -286,49 +318,44 @@ export class BankAccountsSectionComponent implements OnInit {
     this.dialog.set({ kind: 'none' });
   }
 
-  protected submitForm(payload: BankAccountPayload, existing: BankAccount | null): void {
+  protected submitForm(payload: BankAccountPayload, existing: AccountBalance | null): void {
     this.saving.set(true);
 
     const request$ = existing
-      ? this.bankAccountApi.update(existing.id, payload)
+      ? this.bankAccountApi.update(existing.accountId, payload)
       : this.bankAccountApi.create(payload);
 
     request$.subscribe({
-      next: (saved) => {
-        this.saving.set(false);
-        this.dialog.set({ kind: 'none' });
-        this.upsert(saved, existing !== null);
-        this.toastService.success(existing ? 'Girokonto aktualisiert.' : 'Girokonto angelegt.');
-      },
-      error: (err: Error) => {
-        this.saving.set(false);
-        this.toastService.error(err.message || 'Das Girokonto konnte nicht gespeichert werden.');
-      },
-    });
-  }
-
-  protected confirmDelete(account: BankAccount): void {
-    this.saving.set(true);
-
-    this.bankAccountApi.delete(account.id).subscribe({
       next: () => {
         this.saving.set(false);
         this.dialog.set({ kind: 'none' });
-        this.accounts.update((list) => list.filter((a) => a.id !== account.id));
-        this.toastService.success('Girokonto gelöscht.');
+        // Neu laden statt lokal einsortieren: ein geänderter Anfangssaldo verschiebt
+        // Kontostand, Gruppensumme und Gesamtvermögen zugleich — diese Zahlen darf
+        // nur der Server bestimmen, sonst zeigt die Übersicht kurzzeitig Falsches.
+        this.changed.emit();
+        this.toastService.success(existing ? 'Konto aktualisiert.' : 'Girokonto angelegt.');
       },
       error: (err: Error) => {
         this.saving.set(false);
-        this.toastService.error(err.message || 'Das Girokonto konnte nicht gelöscht werden.');
+        this.toastService.error(err.message || 'Das Konto konnte nicht gespeichert werden.');
       },
     });
   }
 
-  /** Fügt ein Konto ein bzw. ersetzt es und hält die alphabetische Sortierung des Backends. */
-  private upsert(saved: BankAccount, isUpdate: boolean): void {
-    this.accounts.update((list) => {
-      const next = isUpdate ? list.map((a) => (a.id === saved.id ? saved : a)) : [...list, saved];
-      return next.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  protected confirmDelete(account: AccountBalance): void {
+    this.saving.set(true);
+
+    this.bankAccountApi.delete(account.accountId).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.dialog.set({ kind: 'none' });
+        this.changed.emit();
+        this.toastService.success('Konto gelöscht.');
+      },
+      error: (err: Error) => {
+        this.saving.set(false);
+        this.toastService.error(err.message || 'Das Konto konnte nicht gelöscht werden.');
+      },
     });
   }
 }

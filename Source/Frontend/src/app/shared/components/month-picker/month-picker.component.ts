@@ -231,25 +231,40 @@ import {
         margin-top: var(--fin-space-2);
       }
 
-      /* Variante für dunkle Markenflächen. Nur die Auslöser-Leiste wird
-         umgefärbt — das aufklappende Panel bleibt eine helle Fläche, weil es
-         über dem Hintergrund schwebt und nicht Teil davon ist. */
+      /* Variante für Markenflächen. Nur die Auslöser-Leiste wird umgefärbt —
+         das aufklappende Panel bleibt eine eigene Fläche, weil es über dem
+         Hintergrund schwebt und nicht Teil davon ist.
+
+         Die Farben kommen aus den --fin-on-brand-*-Variablen, die die
+         umgebende .fin-brand-surface setzt. Dadurch zieht ein Theme-Wechsel
+         automatisch mit und die Komponente muss das Theme nicht kennen. Die
+         Rückfallwerte greifen, falls die Variante einmal ausserhalb einer
+         Markenfläche eingesetzt wird. */
       .month-picker--on-brand .month-nav .btn {
-        --bs-btn-bg: rgba(255, 255, 255, 0.1);
-        --bs-btn-border-color: rgba(255, 255, 255, 0.24);
-        --bs-btn-color: #fff;
-        --bs-btn-hover-bg: rgba(255, 255, 255, 0.18);
-        --bs-btn-hover-border-color: rgba(255, 255, 255, 0.38);
-        --bs-btn-hover-color: #fff;
-        --bs-btn-active-bg: rgba(255, 255, 255, 0.22);
-        --bs-btn-active-border-color: rgba(255, 255, 255, 0.38);
-        --bs-btn-active-color: #fff;
-        --bs-btn-disabled-bg: rgba(255, 255, 255, 0.06);
-        --bs-btn-disabled-border-color: rgba(255, 255, 255, 0.14);
-        --bs-btn-disabled-color: rgba(255, 255, 255, 0.5);
+        --bs-btn-bg: var(--fin-on-brand-chip-bg, rgba(255, 255, 255, 0.1));
+        --bs-btn-border-color: var(--fin-on-brand-chip-border, rgba(255, 255, 255, 0.24));
+        --bs-btn-color: var(--fin-on-brand-chip-text, #fff);
+        --bs-btn-hover-bg: var(--fin-on-brand-chip-hover-bg, rgba(255, 255, 255, 0.18));
+        --bs-btn-hover-border-color: var(
+          --fin-on-brand-chip-hover-border,
+          rgba(255, 255, 255, 0.38)
+        );
+        --bs-btn-hover-color: var(--fin-on-brand-chip-text, #fff);
+        --bs-btn-active-bg: var(--fin-on-brand-chip-active-bg, rgba(255, 255, 255, 0.22));
+        --bs-btn-active-border-color: var(
+          --fin-on-brand-chip-hover-border,
+          rgba(255, 255, 255, 0.38)
+        );
+        --bs-btn-active-color: var(--fin-on-brand-chip-text, #fff);
+        --bs-btn-disabled-bg: var(--fin-on-brand-chip-muted-bg, rgba(255, 255, 255, 0.06));
+        --bs-btn-disabled-border-color: var(
+          --fin-on-brand-chip-muted-border,
+          rgba(255, 255, 255, 0.14)
+        );
+        --bs-btn-disabled-color: var(--fin-on-brand-chip-muted-text, rgba(255, 255, 255, 0.5));
       }
       .month-picker--on-brand .month-nav .btn:focus-visible {
-        outline-color: #fff;
+        outline-color: var(--fin-on-brand-focus, #fff);
       }
     `,
   ],
@@ -260,7 +275,8 @@ export class MonthPickerComponent {
   readonly disabled = input(false);
 
   /**
-   * `on-brand` färbt die Auslöser-Leiste für dunkle Markenflächen um.
+   * `on-brand` färbt die Auslöser-Leiste passend zur umgebenden Markenfläche —
+   * die konkreten Farben erbt sie von dieser, siehe Styles unten.
    *
    * Als Variante der Komponente umgesetzt und nicht als Style von außen: die
    * emulierte View-Encapsulation lässt Elternselektoren nicht in dieses Template

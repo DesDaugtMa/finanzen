@@ -38,6 +38,8 @@ wiederverwendbaren Teilen besteht. In einer Finanzanwendung ist
 **Datenkorrektheit nicht verhandelbar**: Geldbeträge, Salden und Aggregationen
 müssen exakt stimmen, sonst ist das Feature wertlos.
 
+**GANZ WICHTIG: Du bekommst ein GitHub Issue übergeben, das du vollständig einlesen und verstehen wirst. Danach wirst du mir sämtliche Fragen stellen, bis du vollen Kontext über das Issue hast, und es mit bestem wissen implementieren. DU MACHST KEINE LAUFZEITTESTS - Diese mache ich manuell.**
+
 ## Schritt 0 — Verstehe die Codebase, bevor Du irgendetwas schreibst
 
 Dieser Skill zielt auf ein bestehendes Repo, deshalb ist der vorhandene Code die

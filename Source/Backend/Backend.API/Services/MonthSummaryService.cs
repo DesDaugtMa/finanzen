@@ -9,7 +9,8 @@ namespace Backend.Services;
 
 public sealed class MonthSummaryService(
     AppDbContext context,
-    IAccountAccess accountAccess) : IMonthSummaryService
+    IAccountAccess accountAccess,
+    IFixedCostService fixedCostService) : IMonthSummaryService
 {
     private const int MoneyScale = 2;
 
@@ -31,14 +32,32 @@ public sealed class MonthSummaryService(
             {
                 Income = g.Where(t => t.Type == TransactionType.Income).Sum(t => (decimal?)t.Amount) ?? 0m,
                 Expenses = g.Where(t => t.Type == TransactionType.Expense).Sum(t => (decimal?)t.Amount) ?? 0m,
+                // Variable Ausgaben sind alle Ausgaben ohne Fixkosten-Zuordnung — nur sie
+                // dürfen zusätzlich zu den Fixkosten vom frei verfügbaren Geld abgehen.
+                VariableExpenses = g
+                    .Where(t => t.Type == TransactionType.Expense && t.FixedCostId == null)
+                    .Sum(t => (decimal?)t.Amount) ?? 0m,
+                // Die noch offenen Buchungen dieses Monats — Bezugsgröße der Sammel-Aktion,
+                // die genau den angezeigten Monat abhakt.
+                PendingTotal = g.Where(t => t.IsPending).Sum(t => (decimal?)t.Amount) ?? 0m,
+                PendingCount = g.Count(t => t.IsPending),
                 Count = g.Count()
             })
             .FirstOrDefaultAsync(ct);
 
         var income = Round(monthTotals?.Income ?? 0m);
         var expenses = Round(monthTotals?.Expenses ?? 0m);
+        var variableExpenses = Round(monthTotals?.VariableExpenses ?? 0m);
 
-        var currentBalance = await CalculateCurrentBalanceAsync(accountId, account.InitialBalance, ct);
+        var fixedCosts = await fixedCostService.GetTotalsAsync(accountId, month, ct);
+
+        // Frei verfügbar kennt keine negativen Werte: was über die Einnahmen hinausgeht,
+        // ist kein „negativer Spielraum“, sondern eine Unterdeckung — sie wird getrennt
+        // ausgewiesen, statt die Kennzahl ins Minus laufen zu lassen.
+        var uncapped = Round(income - fixedCosts.Effective - variableExpenses);
+        var disposable = Math.Max(0m, uncapped);
+
+        var balance = await CalculateBalanceAsync(accountId, account.InitialBalance, ct);
         var budgets = await context.Budgets
             .Where(b => b.AccountId == accountId && b.Month == monthStart)
             .ToDictionaryAsync(b => b.CategoryId, b => b.Amount, ct);
@@ -56,17 +75,37 @@ public sealed class MonthSummaryService(
             Income = income,
             Expenses = expenses,
             Net = Round(income - expenses),
-            CurrentBalance = currentBalance,
+            CurrentBalance = balance.Current,
+            SettledBalance = balance.Settled,
+            PendingTotal = balance.Pending,
+            PendingCount = balance.PendingCount,
+            PendingMonthTotal = Round(monthTotals?.PendingTotal ?? 0m),
+            PendingMonthCount = monthTotals?.PendingCount ?? 0,
             TotalBudget = totalBudget,
             TotalSpentBudgeted = totalSpentBudgeted,
             TotalRemaining = Round(totalBudget - totalSpentBudgeted),
+            FixedCostsPlanned = fixedCosts.Planned,
+            FixedCostsBooked = fixedCosts.Booked,
+            FixedCosts = fixedCosts.Effective,
+            FixedCostCount = fixedCosts.Count,
+            FixedCostOpenCount = fixedCosts.OpenCount,
+            VariableExpenses = variableExpenses,
+            Disposable = disposable,
+            DisposableShortfall = disposable - uncapped,
             TransactionCount = monthTotals?.Count ?? 0,
             Spending = spending
         };
     }
 
+    /// <summary>
+    /// Der Kontostand in seinen beiden Lesarten. <paramref name="Current"/> rechnet die noch
+    /// offenen Ausgaben bereits ab, <paramref name="Settled"/> lässt sie außen vor — das ist
+    /// der Stand, den die Bank gerade zeigt.
+    /// </summary>
+    private sealed record BalanceTotals(decimal Current, decimal Settled, decimal Pending, int PendingCount);
+
     /// <summary>Monatsübergreifend: Anfangssaldo + alle Einnahmen − alle Ausgaben.</summary>
-    private async Task<decimal> CalculateCurrentBalanceAsync(int accountId, decimal initialBalance, CancellationToken ct)
+    private async Task<BalanceTotals> CalculateBalanceAsync(int accountId, decimal initialBalance, CancellationToken ct)
     {
         var totals = await context.Transactions
             .Where(t => t.AccountId == accountId)
@@ -74,11 +113,16 @@ public sealed class MonthSummaryService(
             .Select(g => new
             {
                 Income = g.Where(t => t.Type == TransactionType.Income).Sum(t => (decimal?)t.Amount) ?? 0m,
-                Expenses = g.Where(t => t.Type == TransactionType.Expense).Sum(t => (decimal?)t.Amount) ?? 0m
+                Expenses = g.Where(t => t.Type == TransactionType.Expense).Sum(t => (decimal?)t.Amount) ?? 0m,
+                Pending = g.Where(t => t.IsPending).Sum(t => (decimal?)t.Amount) ?? 0m,
+                PendingCount = g.Count(t => t.IsPending)
             })
             .FirstOrDefaultAsync(ct);
 
-        return Round(initialBalance + (totals?.Income ?? 0m) - (totals?.Expenses ?? 0m));
+        var current = initialBalance + (totals?.Income ?? 0m) - (totals?.Expenses ?? 0m);
+        var pending = totals?.Pending ?? 0m;
+
+        return new BalanceTotals(Round(current), Round(current + pending), Round(pending), totals?.PendingCount ?? 0);
     }
 
     /// <summary>

@@ -45,6 +45,14 @@ public class TransactionQuery
     [Range(1, int.MaxValue)]
     public int Page { get; set; } = 1;
 
+    /// <summary>
+    /// Eine bestimmte Buchung, die auf jeden Fall sichtbar sein soll — gesetzt beim Sprung
+    /// von einer verknüpften Gegenbuchung hierher. Liegt sie im Ergebnis, bestimmt ihre
+    /// Position die ausgelieferte Seite und <see cref="Page"/> wird übergangen. Sonst
+    /// bleibt die Angabe folgenlos.
+    /// </summary>
+    public int? FocusTransactionId { get; set; }
+
     [Range(1, MaxPageSize)]
     public int PageSize { get; set; } = 25;
 

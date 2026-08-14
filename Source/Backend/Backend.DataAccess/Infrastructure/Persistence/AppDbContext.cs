@@ -18,6 +18,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<TransactionAttachment> TransactionAttachments => Set<TransactionAttachment>();
     public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<FixedCost> FixedCosts => Set<FixedCost>();
+    public DbSet<Debt> Debts => Set<Debt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

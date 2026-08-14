@@ -26,8 +26,8 @@ public sealed class TransactionService(
 
         var totalCount = await filtered.CountAsync(ct);
 
-        var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize, 1, TransactionQuery.MaxPageSize);
+        var page = await ResolvePageAsync(filtered, query, pageSize, ct);
 
         var items = await ApplySorting(filtered, query)
             .Skip((page - 1) * pageSize)
@@ -54,15 +54,19 @@ public sealed class TransactionService(
     {
         var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
         await EnsureCategoryBelongsToAccountAsync(accountId, request.CategoryId, ct);
+        await EnsureFixedCostIsAssignableAsync(accountId, request, ct);
+        EnsurePendingIsAllowed(account, request);
 
         var transaction = new Transaction
         {
+            IsPending = request.IsPending,
             AccountId = accountId,
             Currency = account.Currency,
             Type = request.Type,
             Amount = Round(request.Amount),
             Title = NormalizeTitle(request.Title),
             CategoryId = request.CategoryId,
+            FixedCostId = request.FixedCostId,
             BookingDate = request.BookingDate,
             PurchaseDate = request.PurchaseDate,
             AccountingMonth = AccountingMonth.Parse(request.AccountingMonth).ToDateOnly(),
@@ -79,30 +83,25 @@ public sealed class TransactionService(
 
     public async Task<TransactionDto> UpdateAsync(int userId, int accountId, int transactionId, SaveTransactionRequest request, CancellationToken ct = default)
     {
-        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+        var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
         await EnsureCategoryBelongsToAccountAsync(accountId, request.CategoryId, ct);
+        await EnsureFixedCostIsAssignableAsync(accountId, request, ct);
+        EnsurePendingIsAllowed(account, request);
 
         var transaction = await FindAsync(accountId, transactionId, ct);
-        var counterpart = await LoadCounterpartAsync(transaction, ct);
 
-        // Die Richtung eines Überweisungspaares lässt sich nur über den Überweisungs-Dialog
-        // drehen — sonst entstünden zwei Ausgaben oder zwei Einnahmen.
-        if (counterpart is not null && transaction.Type != request.Type)
-            throw new BusinessRuleException("Die Art einer Überweisung lässt sich nur über den Überweisungs-Dialog ändern.");
+        EnsureLinkStaysValid(transaction, request);
 
+        transaction.IsPending = request.IsPending;
         transaction.Type = request.Type;
         transaction.Amount = Round(request.Amount);
         transaction.Title = NormalizeTitle(request.Title);
         transaction.CategoryId = request.CategoryId;
+        transaction.FixedCostId = request.FixedCostId;
         transaction.BookingDate = request.BookingDate;
         transaction.PurchaseDate = request.PurchaseDate;
         transaction.AccountingMonth = AccountingMonth.Parse(request.AccountingMonth).ToDateOnly();
         transaction.Note = NormalizeOptional(request.Note);
-
-        // Strenge Kopplung: Betrag, Titel und Datumsangaben gelten für beide Seiten,
-        // Kategorie und Notiz bleiben je Konto eigenständig.
-        if (counterpart is not null)
-            SyncSharedFields(transaction, counterpart);
 
         await context.SaveChangesAsync(ct);
 
@@ -118,77 +117,175 @@ public sealed class TransactionService(
         var transaction = await FindAsync(accountId, transactionId, ct);
         var counterpart = await LoadCounterpartAsync(transaction, ct);
 
+        // Beide Seiten sind eigenständige Buchungen: Gelöscht wird nur die gewählte, die
+        // Gegenbuchung verliert lediglich ihre Verknüpfung. Sie mit zu löschen hieße, eine
+        // unabhängig erfasste Buchung eines anderen Kontos ungefragt zu entfernen.
         if (counterpart is not null)
         {
             // Erst die Verweise lösen, damit die Selbstreferenz das Löschen nicht blockiert.
             transaction.LinkedTransactionId = null;
             counterpart.LinkedTransactionId = null;
             await context.SaveChangesAsync(ct);
-
-            context.Transactions.Remove(counterpart);
         }
 
         context.Transactions.Remove(transaction);
         await context.SaveChangesAsync(ct);
 
         logger.LogInformation(
-            "Buchung {TransactionId} in Konto {AccountId} gelöscht (Überweisung: {IsTransfer}).",
+            "Buchung {TransactionId} in Konto {AccountId} gelöscht (Verknüpfung gelöst: {WasLinked}).",
             transactionId, accountId, counterpart is not null);
     }
 
-    public async Task<TransactionDto> CreateTransferAsync(int userId, int accountId, SaveTransferRequest request, CancellationToken ct = default)
+    public async Task<TransactionDto> SettleAsync(int userId, int accountId, int transactionId, CancellationToken ct = default)
     {
-        var (account, counterAccount) = await LoadTransferAccountsAsync(userId, accountId, request, ct);
+        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
 
-        await EnsureCategoryBelongsToAccountAsync(account.Id, request.CategoryId, ct);
-        await EnsureCategoryBelongsToAccountAsync(counterAccount.Id, request.CounterCategoryId, ct);
+        var transaction = await FindAsync(accountId, transactionId, ct);
 
-        var near = BuildTransferLeg(account, request, isCounterpart: false);
-        var far = BuildTransferLeg(counterAccount, request, isCounterpart: true);
-
-        context.Transactions.AddRange(near, far);
-        await context.SaveChangesAsync(ct);
-
-        // Die gegenseitige Verknüpfung braucht die vergebenen IDs, daher ein zweiter Durchgang.
-        near.LinkedTransactionId = far.Id;
-        far.LinkedTransactionId = near.Id;
-        await context.SaveChangesAsync(ct);
-
-        logger.LogInformation(
-            "Überweisung {TransactionId} von Konto {AccountId} nach Konto {CounterAccountId} angelegt.",
-            near.Id, account.Id, counterAccount.Id);
-
-        return await GetDtoAsync(accountId, near.Id, ct);
-    }
-
-    public async Task<TransactionDto> UpdateTransferAsync(int userId, int accountId, int transactionId, SaveTransferRequest request, CancellationToken ct = default)
-    {
-        var (account, counterAccount) = await LoadTransferAccountsAsync(userId, accountId, request, ct);
-
-        var near = await FindAsync(accountId, transactionId, ct);
-        var far = await LoadCounterpartAsync(near, ct)
-            ?? throw new BusinessRuleException("Diese Buchung ist keine Überweisung.");
-
-        await EnsureCategoryBelongsToAccountAsync(account.Id, request.CategoryId, ct);
-        await EnsureCategoryBelongsToAccountAsync(counterAccount.Id, request.CounterCategoryId, ct);
-
-        // Wechselt das Gegenkonto, wandert die Gegenbuchung mit — inklusive ihrer Kategorie,
-        // die sonst auf eine Kategorie des alten Kontos zeigen würde.
-        if (far.AccountId != counterAccount.Id)
+        // Bewusst kein Fehler, wenn die Buchung schon abgebucht ist: das Ergebnis ist genau
+        // das gewünschte, und zwei Klicks kurz hintereinander sollen den Nutzer nicht anfahren.
+        if (transaction.IsPending)
         {
-            far.AccountId = counterAccount.Id;
-            far.Currency = counterAccount.Currency;
+            transaction.IsPending = false;
+            await context.SaveChangesAsync(ct);
+
+            logger.LogInformation(
+                "Buchung {TransactionId} in Konto {AccountId} als abgebucht markiert.", transactionId, accountId);
         }
 
-        ApplyTransferFields(near, request, isCounterpart: false);
-        ApplyTransferFields(far, request, isCounterpart: true);
+        return await GetDtoAsync(accountId, transactionId, ct);
+    }
+
+    public async Task<SettleResultDto> SettleMonthAsync(int userId, int accountId, AccountingMonth month, CancellationToken ct = default)
+    {
+        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        var pending = await QueryOfAccount(accountId)
+            .Where(t => t.IsPending && t.AccountingMonth == month.ToDateOnly())
+            .ToListAsync(ct);
+
+        // Die Summe steht vor dem Umschalten fest — danach findet die Abfrage nichts mehr,
+        // und der Nutzer soll trotzdem erfahren, um wie viel sein Stand „laut Bank" fällt.
+        var settledAmount = Round(pending.Sum(t => t.Amount));
+
+        foreach (var transaction in pending)
+            transaction.IsPending = false;
+
+        if (pending.Count > 0)
+            await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "{Count} offene Buchungen in Konto {AccountId} für Monat {Month} als abgebucht markiert.",
+            pending.Count, accountId, month);
+
+        return new SettleResultDto
+        {
+            Month = month.ToString(),
+            SettledCount = pending.Count,
+            SettledAmount = settledAmount
+        };
+    }
+
+    public async Task<LinkedTransactionDto> GetLinkAsync(int userId, int accountId, int transactionId, CancellationToken ct = default)
+    {
+        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        var transaction = await FindAsync(accountId, transactionId, ct);
+
+        if (transaction.LinkedTransactionId is null)
+            throw new NotFoundException("Die verknüpfte Buchung");
+
+        return await GetLinkedDtoAsync(transaction.LinkedTransactionId.Value, ct);
+    }
+
+    public async Task<IReadOnlyList<LinkedTransactionDto>> ListLinkCandidatesAsync(
+        int userId, int accountId, LinkCandidateQuery query, CancellationToken ct = default)
+    {
+        var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        if (query.CounterAccountId == accountId)
+            throw new BusinessRuleException("Eine Verknüpfung braucht zwei verschiedene Konten.");
+
+        var counterAccount = await accountAccess.RequireOwnedAsync(userId, query.CounterAccountId, ct);
+
+        if (!string.Equals(account.Currency, counterAccount.Currency, StringComparison.OrdinalIgnoreCase))
+            throw new CurrencyMismatchException(account.Currency, counterAccount.Currency);
+
+        var wantedType = Opposite(query.Type);
+        var wantedAmount = Round(query.Amount);
+
+        var candidates = QueryOfAccount(counterAccount.Id)
+            .Where(t => t.LinkedTransactionId == null
+                        && t.Type == wantedType
+                        && t.Amount == wantedAmount);
+
+        if (query.ExcludeTransactionId is { } excluded)
+            candidates = candidates.Where(t => t.Id != excluded);
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var pattern = $"%{query.Search.Trim()}%";
+            candidates = candidates.Where(t => EF.Functions.ILike(t.Title, pattern)
+                                               || (t.Note != null && EF.Functions.ILike(t.Note, pattern)));
+        }
+
+        // Bewusst über alle Monate: Die Gegenbuchung einer Umbuchung landet häufig erst im
+        // Folgemonat auf dem Konto. Die Obergrenze hält die Auswahlliste trotzdem überschaubar.
+        return await candidates
+            .OrderByDescending(t => t.BookingDate)
+            .ThenByDescending(t => t.Id)
+            .Take(FinanceValidation.AssignableTransactionLimit)
+            .Select(ProjectToLinkedDto)
+            .ToListAsync(ct);
+    }
+
+    public async Task<LinkedTransactionDto> LinkAsync(
+        int userId, int accountId, int transactionId, LinkTransactionRequest request, CancellationToken ct = default)
+    {
+        var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        var transaction = await FindAsync(accountId, transactionId, ct);
+
+        var counterpart = await context.Transactions
+            .FirstOrDefaultAsync(t => t.Id == request.CounterTransactionId, ct)
+            ?? throw new NotFoundException("Die zu verknüpfende Buchung");
+
+        var counterAccount = await accountAccess.RequireOwnedAsync(userId, counterpart.AccountId, ct);
+
+        EnsureLinkIsAllowed(transaction, counterpart, account, counterAccount);
+
+        transaction.LinkedTransactionId = counterpart.Id;
+        counterpart.LinkedTransactionId = transaction.Id;
+        await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Buchung {TransactionId} (Konto {AccountId}) mit Buchung {CounterTransactionId} (Konto {CounterAccountId}) verknüpft.",
+            transaction.Id, account.Id, counterpart.Id, counterAccount.Id);
+
+        return await GetLinkedDtoAsync(counterpart.Id, ct);
+    }
+
+    public async Task UnlinkAsync(int userId, int accountId, int transactionId, CancellationToken ct = default)
+    {
+        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        var transaction = await FindAsync(accountId, transactionId, ct);
+        var counterpart = await LoadCounterpartAsync(transaction, ct);
+
+        // Kein Fehler, wenn gar keine Verknüpfung besteht: Das Ergebnis ist genau das
+        // gewünschte, und ein zweiter Klick soll den Nutzer nicht anfahren.
+        if (transaction.LinkedTransactionId is null)
+            return;
+
+        transaction.LinkedTransactionId = null;
+
+        if (counterpart is not null)
+            counterpart.LinkedTransactionId = null;
 
         await context.SaveChangesAsync(ct);
 
         logger.LogInformation(
-            "Überweisung {TransactionId} von Konto {AccountId} aktualisiert.", transactionId, accountId);
-
-        return await GetDtoAsync(accountId, transactionId, ct);
+            "Verknüpfung der Buchung {TransactionId} in Konto {AccountId} gelöst.", transactionId, accountId);
     }
 
     // --- Abfragen -------------------------------------------------------
@@ -241,6 +338,26 @@ public sealed class TransactionService(
         return descending ? ordered.ThenByDescending(t => t.Id) : ordered.ThenBy(t => t.Id);
     }
 
+    /// <summary>
+    /// Bestimmt die auszuliefernde Seite. Ist eine Buchung angefordert, die sichtbar sein
+    /// soll, gewinnt ihre Position — nur so landet ein Sprung von der Gegenbuchung auch
+    /// dann auf der richtigen Seite, wenn die Buchung weit unten in der Liste steht.
+    /// Geladen werden dafür nur die IDs des Monats, nicht die Buchungen selbst.
+    /// </summary>
+    private async Task<int> ResolvePageAsync(
+        IQueryable<Transaction> filtered, TransactionQuery query, int pageSize, CancellationToken ct)
+    {
+        var requestedPage = Math.Max(query.Page, 1);
+
+        if (query.FocusTransactionId is not { } focusId)
+            return requestedPage;
+
+        var orderedIds = await ApplySorting(filtered, query).Select(t => t.Id).ToListAsync(ct);
+        var index = orderedIds.IndexOf(focusId);
+
+        return index < 0 ? requestedPage : (index / pageSize) + 1;
+    }
+
     private async Task<Transaction> FindAsync(int accountId, int transactionId, CancellationToken ct)
     {
         var transaction = await QueryOfAccount(accountId).FirstOrDefaultAsync(t => t.Id == transactionId, ct);
@@ -269,64 +386,71 @@ public sealed class TransactionService(
         return dto is null ? throw new NotFoundException("Die Buchung") : RoundAmount(dto);
     }
 
-    // --- Überweisungen --------------------------------------------------
+    // --- Verknüpfungen --------------------------------------------------
 
-    private async Task<(Account Account, Account CounterAccount)> LoadTransferAccountsAsync(
-        int userId, int accountId, SaveTransferRequest request, CancellationToken ct)
+    /// <summary>
+    /// Prüft die vier Regeln einer Verknüpfung: zwei verschiedene Konten desselben Nutzers,
+    /// entgegengesetzte Richtungen, beide Seiten noch frei, gleiche Währung und gleicher Betrag.
+    /// Zusammen ergeben sie genau das gewünschte Bild — eine Ausgabe auf dem einen Konto
+    /// entspricht der Einnahme auf dem anderen.
+    /// </summary>
+    private static void EnsureLinkIsAllowed(
+        Transaction transaction, Transaction counterpart, Account account, Account counterAccount)
     {
-        if (request.CounterAccountId == accountId)
-            throw new BusinessRuleException("Eine Überweisung braucht zwei verschiedene Konten.");
+        if (transaction.Id == counterpart.Id || account.Id == counterAccount.Id)
+            throw new BusinessRuleException("Eine Verknüpfung braucht zwei Buchungen auf verschiedenen Konten.");
 
-        var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
-        var counterAccount = await accountAccess.RequireOwnedAsync(userId, request.CounterAccountId, ct);
+        if (transaction.LinkedTransactionId is not null)
+            throw new BusinessRuleException("Diese Buchung ist bereits verknüpft. Löse die bestehende Verknüpfung zuerst.");
+
+        if (counterpart.LinkedTransactionId is not null)
+            throw new BusinessRuleException("Die gewählte Buchung ist bereits mit einer anderen Buchung verknüpft.");
+
+        if (transaction.Type == counterpart.Type)
+            throw new BusinessRuleException("Verknüpfen lassen sich nur eine Einnahme und eine Ausgabe.");
 
         if (!string.Equals(account.Currency, counterAccount.Currency, StringComparison.OrdinalIgnoreCase))
             throw new CurrencyMismatchException(account.Currency, counterAccount.Currency);
 
-        return (account, counterAccount);
-    }
-
-    private static Transaction BuildTransferLeg(Account account, SaveTransferRequest request, bool isCounterpart)
-    {
-        var transaction = new Transaction
-        {
-            AccountId = account.Id,
-            Currency = account.Currency,
-            Title = NormalizeTitle(request.Title),
-            Type = TransactionType.Income
-        };
-
-        ApplyTransferFields(transaction, request, isCounterpart);
-        return transaction;
+        if (transaction.Amount != counterpart.Amount)
+            throw new BusinessRuleException("Verknüpfen lassen sich nur Buchungen mit demselben Betrag.");
     }
 
     /// <summary>
-    /// Überträgt die gemeinsamen Felder auf eine Seite der Überweisung. Der Typ ergibt
-    /// sich aus der Richtung: Die abgebende Seite ist eine Ausgabe, die empfangende eine Einnahme.
+    /// Hält eine bestehende Verknüpfung gültig. Beide Seiten sind sonst eigenständig — nur
+    /// Richtung und Betrag tragen die Verknüpfung und dürfen sich nicht hinter ihrem Rücken
+    /// ändern, sonst stünden am Ende zwei Ausgaben oder zwei ungleiche Beträge gekoppelt da.
     /// </summary>
-    private static void ApplyTransferFields(Transaction transaction, SaveTransferRequest request, bool isCounterpart)
+    private static void EnsureLinkStaysValid(Transaction transaction, SaveTransactionRequest request)
     {
-        var outgoingOnNearSide = request.Direction == TransferDirection.Outgoing;
-        var isExpense = isCounterpart ? !outgoingOnNearSide : outgoingOnNearSide;
+        if (transaction.LinkedTransactionId is null)
+            return;
 
-        transaction.Type = isExpense ? TransactionType.Expense : TransactionType.Income;
-        transaction.Amount = Round(request.Amount);
-        transaction.Title = NormalizeTitle(request.Title);
-        transaction.BookingDate = request.BookingDate;
-        transaction.PurchaseDate = request.PurchaseDate;
-        transaction.AccountingMonth = AccountingMonth.Parse(request.AccountingMonth).ToDateOnly();
-        transaction.Note = NormalizeOptional(request.Note);
-        transaction.CategoryId = isCounterpart ? request.CounterCategoryId : request.CategoryId;
+        if (transaction.Type != request.Type)
+            throw new BusinessRuleException(
+                "Die Art einer verknüpften Buchung lässt sich nicht ändern. Löse zuerst die Verknüpfung.");
+
+        if (transaction.Amount != Round(request.Amount))
+            throw new BusinessRuleException(
+                "Der Betrag einer verknüpften Buchung lässt sich nicht ändern. Löse zuerst die Verknüpfung.");
     }
 
-    private static void SyncSharedFields(Transaction source, Transaction target)
+    private async Task<LinkedTransactionDto> GetLinkedDtoAsync(int transactionId, CancellationToken ct)
     {
-        target.Amount = source.Amount;
-        target.Title = source.Title;
-        target.BookingDate = source.BookingDate;
-        target.PurchaseDate = source.PurchaseDate;
-        target.AccountingMonth = source.AccountingMonth;
+        var dto = await context.Transactions
+            .Where(t => t.Id == transactionId)
+            .Select(ProjectToLinkedDto)
+            .FirstOrDefaultAsync(ct);
+
+        if (dto is null)
+            throw new NotFoundException("Die verknüpfte Buchung");
+
+        dto.Amount = Round(dto.Amount);
+        return dto;
     }
+
+    private static TransactionType Opposite(TransactionType type)
+        => type == TransactionType.Expense ? TransactionType.Income : TransactionType.Expense;
 
     // --- Hilfen ---------------------------------------------------------
 
@@ -344,6 +468,47 @@ public sealed class TransactionService(
         }
     }
 
+    /// <summary>
+    /// Prüft die Zuordnung zu einer Fixkosten-Position: Sie muss zum Konto gehören, und
+    /// nur Ausgaben können Fixkosten sein.
+    /// </summary>
+    private async Task EnsureFixedCostIsAssignableAsync(int accountId, SaveTransactionRequest request, CancellationToken ct)
+    {
+        if (request.FixedCostId is null)
+            return;
+
+        if (request.Type != TransactionType.Expense)
+            throw new BusinessRuleException("Nur Ausgaben können Fixkosten sein.");
+
+        var exists = await context.FixedCosts
+            .AnyAsync(f => f.Id == request.FixedCostId && f.AccountId == accountId, ct);
+
+        if (!exists)
+        {
+            logger.LogInformation(
+                "Fixkosten {FixedCostId} gehören nicht zu Konto {AccountId}.", request.FixedCostId, accountId);
+            throw new NotFoundException("Die Fixkosten-Position");
+        }
+    }
+
+    /// <summary>
+    /// Prüft, ob die Buchung offen bleiben darf. „Noch nicht abgebucht" beschreibt eine
+    /// angestoßene, aber noch nicht vollzogene Belastung eines Zahlungskontos — bei einem
+    /// Depot oder Wallet gibt es dieses Zwischenstadium nicht, und eine Einnahme belastet
+    /// das Konto ohnehin nicht.
+    /// </summary>
+    private static void EnsurePendingIsAllowed(Account account, SaveTransactionRequest request)
+    {
+        if (!request.IsPending)
+            return;
+
+        if (account.Type != AccountType.CheckingAccount)
+            throw new BusinessRuleException("Nur Buchungen auf Girokonten können als noch nicht abgebucht markiert werden.");
+
+        if (request.Type != TransactionType.Expense)
+            throw new BusinessRuleException("Nur Ausgaben können als noch nicht abgebucht markiert werden.");
+    }
+
     private static Expression<Func<Transaction, TransactionDto>> ProjectToDto =>
         t => new TransactionDto
         {
@@ -357,15 +522,41 @@ public sealed class TransactionService(
             CategoryName = t.Category != null ? t.Category.Name : null,
             CategoryColor = t.Category != null ? t.Category.Color : null,
             CategoryIcon = t.Category != null ? t.Category.Icon : null,
+            FixedCostId = t.FixedCostId,
+            FixedCostName = t.FixedCost != null ? t.FixedCost.Name : null,
+            FixedCostMonthDate = t.FixedCost != null ? (DateOnly?)t.FixedCost.Month : null,
             BookingDate = t.BookingDate,
             PurchaseDate = t.PurchaseDate,
             AccountingMonthDate = t.AccountingMonth,
             Note = t.Note,
-            IsTransfer = t.LinkedTransactionId != null,
-            CounterAccountId = t.LinkedTransaction != null ? t.LinkedTransaction.AccountId : null,
-            CounterAccountName = t.LinkedTransaction != null ? t.LinkedTransaction.Account.Name : null,
-            CounterCategoryId = t.LinkedTransaction != null ? t.LinkedTransaction.CategoryId : null,
+            IsPending = t.IsPending,
+            IsLinked = t.LinkedTransactionId != null,
+            LinkedTransactionId = t.LinkedTransactionId,
+            LinkedAccountId = t.LinkedTransaction != null ? t.LinkedTransaction.AccountId : null,
+            LinkedAccountName = t.LinkedTransaction != null ? t.LinkedTransaction.Account.Name : null,
             CreatedAt = t.CreatedAt
+        };
+
+    private static Expression<Func<Transaction, LinkedTransactionDto>> ProjectToLinkedDto =>
+        t => new LinkedTransactionDto
+        {
+            Id = t.Id,
+            AccountId = t.AccountId,
+            AccountName = t.Account.Name,
+            Type = t.Type,
+            Amount = t.Amount,
+            Currency = t.Currency,
+            Title = t.Title,
+            CategoryName = t.Category != null ? t.Category.Name : null,
+            CategoryColor = t.Category != null ? t.Category.Color : null,
+            CategoryIcon = t.Category != null ? t.Category.Icon : null,
+            FixedCostName = t.FixedCost != null ? t.FixedCost.Name : null,
+            FixedCostMonthDate = t.FixedCost != null ? (DateOnly?)t.FixedCost.Month : null,
+            BookingDate = t.BookingDate,
+            PurchaseDate = t.PurchaseDate,
+            AccountingMonthDate = t.AccountingMonth,
+            Note = t.Note,
+            IsPending = t.IsPending
         };
 
     private static TransactionDto RoundAmount(TransactionDto dto)

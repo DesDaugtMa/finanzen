@@ -22,9 +22,32 @@ export interface MonthSummary {
   net: number;
   /** Monatsübergreifender Kontostand. */
   currentBalance: number;
+  /** Der Stand „laut Bank“: wie `currentBalance`, aber ohne die offenen Ausgaben. */
+  settledBalance: number;
+  /** Summe aller noch nicht abgebuchten Ausgaben des Kontos, monatsübergreifend. */
+  pendingTotal: number;
+  pendingCount: number;
+  /** Offene Ausgaben, die in diesem Abrechnungsmonat liegen — Bezug der Sammel-Aktion. */
+  pendingMonthTotal: number;
+  pendingMonthCount: number;
   totalBudget: number;
   totalSpentBudgeted: number;
   totalRemaining: number;
+  /** Summe der geplanten Fixkosten des Monats. */
+  fixedCostsPlanned: number;
+  /** Summe der Buchungen, die Fixkosten dieses Monats zugeordnet sind. */
+  fixedCostsBooked: number;
+  /** Die gegen die Einnahmen gerechneten Fixkosten: je Position `max(geplant, gebucht)`. */
+  fixedCosts: number;
+  fixedCostCount: number;
+  /** Fixkosten-Positionen ohne zugeordnete Buchung. */
+  fixedCostOpenCount: number;
+  /** Ausgaben des Monats ohne Fixkosten-Zuordnung. */
+  variableExpenses: number;
+  /** Frei verfügbar: `income − fixedCosts − variableExpenses`, nach unten bei 0 begrenzt. */
+  disposable: number;
+  /** Um so viel übersteigen Fixkosten und variable Ausgaben die Einnahmen. 0, wenn sie reichen. */
+  disposableShortfall: number;
   transactionCount: number;
   spending: CategorySpending[];
 }

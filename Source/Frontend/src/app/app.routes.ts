@@ -60,6 +60,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'schuldner',
+    loadComponent: () =>
+      import('./features/debts/pages/debt-overview/debt-overview.component').then(
+        (m) => m.DebtOverviewComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'konto',
     loadComponent: () =>
       import('./features/account/pages/account/account.component').then((m) => m.AccountComponent),
@@ -70,6 +78,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/account/pages/sessions/sessions.component').then(
         (m) => m.SessionsComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'changelog',
+    loadComponent: () =>
+      import('./features/changelog/pages/changelog/changelog.component').then(
+        (m) => m.ChangelogComponent,
       ),
     canActivate: [authGuard],
   },

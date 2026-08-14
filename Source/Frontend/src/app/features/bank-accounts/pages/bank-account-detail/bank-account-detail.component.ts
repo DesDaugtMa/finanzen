@@ -16,17 +16,21 @@ import { Category } from '../../../../core/models/category.model';
 import { MonthSummary } from '../../../../core/models/month-summary.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
+import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
 import { TabItem, TabNavComponent } from '../../../../shared/components/tab-nav/tab-nav.component';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
+import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/account-type';
 import { formatIban } from '../../../../shared/utils/iban.util';
 import { formatMonthLong, isValidMonthKey, toMonthKey } from '../../../../shared/utils/month.util';
+import { OfflineNoticeComponent } from '../../../../shared/components/offline-notice/offline-notice.component';
 import { AccountOverviewTabComponent } from '../../components/overview-tab/overview-tab.component';
 import { TransactionsTabComponent } from '../../components/transactions-tab/transactions-tab.component';
+import { FixedCostsTabComponent } from '../../components/fixed-costs-tab/fixed-costs-tab.component';
 import { BudgetsTabComponent } from '../../components/budgets-tab/budgets-tab.component';
 import { CategoriesTabComponent } from '../../components/categories-tab/categories-tab.component';
 
 /** Die Bereiche der Detailseite. Der Schlüssel steht so auch in der URL. */
-const TAB_IDS = ['uebersicht', 'transaktionen', 'budgets', 'kategorien'] as const;
+const TAB_IDS = ['uebersicht', 'transaktionen', 'fixkosten', 'budgets', 'kategorien'] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 /**
@@ -41,15 +45,19 @@ type TabId = (typeof TAB_IDS)[number];
     RouterLink,
     MoneyAmountComponent,
     MonthPickerComponent,
+    SettledBalanceComponent,
+    OfflineNoticeComponent,
     TabNavComponent,
     AccountOverviewTabComponent,
     TransactionsTabComponent,
+    FixedCostsTabComponent,
     BudgetsTabComponent,
     CategoriesTabComponent,
   ],
   template: `
     <div class="container detail-page">
-      <a routerLink="/" class="detail-back">
+      <!-- Der Monat reist mit zurück: wer aus Mai kommt, will nicht im aktuellen Monat landen. -->
+      <a routerLink="/" [queryParams]="{ monat: month() }" class="detail-back">
         <i class="bi bi-arrow-left" aria-hidden="true"></i>
         <span>Übersicht</span>
       </a>
@@ -73,8 +81,14 @@ type TabId = (typeof TAB_IDS)[number];
           </button>
         </div>
       } @else if (account(); as item) {
-        <!-- Kopfbereich als Markenfläche: Kontostand ist die Leitzahl der Seite
-             und bekommt deshalb den stärksten Auftritt. -->
+        <app-offline-notice
+          class="detail-offline"
+          [stale]="summaryStale()"
+          [savedAt]="summarySavedAt()"
+        />
+
+        <!-- Kopfbereich als Markenfläche: die Bilanz des Monats ist die Leitzahl
+             der Seite und bekommt deshalb den stärksten Auftritt. -->
         <header class="fin-brand-surface detail-hero">
           <div class="detail-hero__top">
             <span
@@ -82,7 +96,7 @@ type TabId = (typeof TAB_IDS)[number];
               [style.background-color]="accentColor()"
               aria-hidden="true"
             >
-              <i class="bi bi-bank2"></i>
+              <i class="bi" [class]="'bi-' + icon()"></i>
             </span>
 
             <div class="detail-hero__ident">
@@ -91,15 +105,61 @@ type TabId = (typeof TAB_IDS)[number];
             </div>
           </div>
 
-          <div class="detail-hero__balance">
-            <span class="detail-hero__label">Kontostand</span>
-            <app-money-amount
-              class="detail-hero__amount"
-              [amount]="balance()"
-              [currency]="item.currency"
-              size="lg"
-            />
+          <!-- Die Bilanz des gewählten Monats führt: sie beantwortet, wie das Konto
+               gerade läuft. Der Kontostand steht als zweite Zahl daneben — er sagt,
+               was da ist, aber nicht, wohin es sich bewegt. -->
+          <div class="detail-hero__figures">
+            <div class="detail-hero__figure">
+              <span class="detail-hero__label">Bilanz {{ monthLabel() }}</span>
+              <app-money-amount
+                class="detail-hero__amount"
+                [amount]="net()"
+                [currency]="item.currency"
+                size="lg"
+              />
+            </div>
+
+            <div class="detail-hero__figure detail-hero__figure--secondary">
+              <span class="detail-hero__label">Kontostand</span>
+              <app-money-amount
+                class="detail-hero__balance"
+                [amount]="balance()"
+                [currency]="item.currency"
+              />
+              @if (item.type === 'CheckingAccount') {
+                <app-settled-balance
+                  variant="on-brand"
+                  [amount]="settledBalance()"
+                  [currency]="item.currency"
+                  [pendingCount]="summary()?.pendingCount ?? 0"
+                  [pendingTotal]="summary()?.pendingTotal ?? 0"
+                />
+              }
+            </div>
           </div>
+
+          @if (summary(); as data) {
+            <p class="detail-hero__flow">
+              <span class="detail-hero__flow-item">
+                <span class="detail-hero__flow-label">Einnahmen</span>
+                <app-money-amount
+                  size="sm"
+                  tone="income"
+                  [amount]="data.income"
+                  [currency]="item.currency"
+                />
+              </span>
+              <span class="detail-hero__flow-item">
+                <span class="detail-hero__flow-label">Ausgaben</span>
+                <app-money-amount
+                  size="sm"
+                  tone="expense"
+                  [amount]="data.expenses"
+                  [currency]="item.currency"
+                />
+              </span>
+            </p>
+          }
 
           <div class="detail-hero__period">
             <span class="detail-hero__period-label">
@@ -134,6 +194,7 @@ type TabId = (typeof TAB_IDS)[number];
                 [loading]="summaryLoading()"
                 [error]="summaryError()"
                 [month]="month()"
+                [accountType]="item.type"
                 (retry)="loadSummary()"
                 (showTransactions)="selectTab('transaktionen')"
               />
@@ -143,6 +204,19 @@ type TabId = (typeof TAB_IDS)[number];
                 [accountId]="item.id"
                 [month]="month()"
                 [currency]="item.currency"
+                [categories]="categories()"
+                [accountType]="item.type"
+                [pendingCount]="summary()?.pendingMonthCount ?? 0"
+                [pendingTotal]="summary()?.pendingMonthTotal ?? 0"
+                [focusTransactionId]="focusTransactionId()"
+                (changed)="onDataChanged()"
+                (focusHandled)="clearFocusTransaction()"
+              />
+            }
+            @case ('fixkosten') {
+              <app-fixed-costs-tab
+                [accountId]="item.id"
+                [month]="month()"
                 [categories]="categories()"
                 (changed)="onDataChanged()"
               />
@@ -214,10 +288,6 @@ type TabId = (typeof TAB_IDS)[number];
       .detail-hero {
         padding: var(--fin-space-5);
         margin-bottom: var(--fin-space-5);
-        /* Aufgehellte Geldfarben für die dunkle Fläche — sonst reicht der
-           Kontrast eines negativen Saldos nicht. */
-        --fin-expense: #ffb3a1;
-        --fin-income: #9fe6bf;
       }
       @media (min-width: 34rem) {
         .detail-hero {
@@ -239,37 +309,78 @@ type TabId = (typeof TAB_IDS)[number];
         border-radius: var(--fin-radius-md);
         color: #fff;
         font-size: var(--fin-text-lg);
-        /* Feine helle Kante, damit die Kontofarbe auf dunklem Grund nicht
-           verschwimmt. */
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+        /* Feine Kante, damit die Kontofarbe nicht mit der Fläche verschwimmt. */
+        box-shadow: inset 0 0 0 1px var(--fin-on-brand-ring);
       }
       .detail-hero__ident {
         min-width: 0;
       }
       .detail-hero__name {
         margin: 0;
-        color: #fff;
+        color: var(--fin-on-brand-text);
         font-size: var(--fin-text-lg);
       }
       .detail-hero__meta {
-        margin: 0.1rem 0 0;
-        color: rgba(255, 255, 255, 0.7);
+        margin: var(--fin-space-1) 0 0;
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-sm);
       }
-      .detail-hero__balance {
+      .detail-offline {
+        display: block;
+        margin-bottom: var(--fin-space-4);
+      }
+      .detail-hero__figures {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: var(--fin-space-3) var(--fin-space-8);
         margin-top: var(--fin-space-5);
+      }
+      .detail-hero__figure {
+        min-width: 0;
+      }
+      /* Der Kontostand steht auf Mobil in einer eigenen Zeile unter der Bilanz —
+         zwei große Zahlen nebeneinander konkurrieren auf schmalen Displays. */
+      .detail-hero__figure--secondary {
+        flex: 1 1 100%;
+      }
+      @media (min-width: 34rem) {
+        .detail-hero__figure--secondary {
+          flex: 0 0 auto;
+        }
+      }
+      .detail-hero__balance {
+        color: var(--fin-on-brand-text);
+        font-size: var(--fin-text-xl);
+      }
+      .detail-hero__flow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--fin-space-2) var(--fin-space-6);
+        margin: var(--fin-space-4) 0 0;
+      }
+      .detail-hero__flow-item {
+        display: inline-flex;
+        align-items: baseline;
+        gap: var(--fin-space-2);
+      }
+      .detail-hero__flow-label {
+        color: var(--fin-on-brand-text-muted);
+        font-size: var(--fin-text-sm);
       }
       .detail-hero__label {
         display: block;
         margin-bottom: var(--fin-space-1);
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-2xs);
         font-weight: 650;
         letter-spacing: var(--fin-tracking-wider);
         text-transform: uppercase;
       }
       .detail-hero__amount {
-        color: #fff;
+        /* Der Kontostand trägt die Vorderfarbe der Fläche statt der
+           Vorzeichenfarbe — als Leitzahl der Seite soll er ruhig stehen. */
+        color: var(--fin-on-brand-text);
         font-size: var(--fin-text-3xl);
       }
       .detail-hero__period {
@@ -280,10 +391,10 @@ type TabId = (typeof TAB_IDS)[number];
         gap: var(--fin-space-3);
         margin-top: var(--fin-space-5);
         padding-top: var(--fin-space-4);
-        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        border-top: 1px solid var(--fin-on-brand-line);
       }
       .detail-hero__period-label {
-        color: rgba(255, 255, 255, 0.7);
+        color: var(--fin-on-brand-text-muted);
         font-size: var(--fin-text-sm);
       }
       /* Auf Mobil bekommt die Monatsauswahl eine eigene, volle Zeile unter der
@@ -298,7 +409,7 @@ type TabId = (typeof TAB_IDS)[number];
         }
       }
       .detail-hero__period-label strong {
-        color: #fff;
+        color: var(--fin-on-brand-text);
       }
 
       .detail-tabs {
@@ -351,6 +462,12 @@ export class BankAccountDetailComponent {
   protected readonly summaryLoading = signal(true);
   protected readonly summaryError = signal('');
 
+  /** Wann die gezeigten Kennzahlen geholt wurden — null, solange sie frisch vom Server kommen. */
+  protected readonly summarySavedAt = signal<Date | null>(null);
+
+  /** True, wenn die Kennzahlen aus dem Zwischenspeicher stammen statt vom Server. */
+  protected readonly summaryStale = computed(() => this.summarySavedAt() !== null);
+
   protected readonly categories = signal<Category[]>([]);
   protected readonly categoriesLoading = signal(true);
   protected readonly categoriesError = signal('');
@@ -368,20 +485,52 @@ export class BankAccountDetailComponent {
     return TAB_IDS.includes(value as TabId) ? (value as TabId) : 'uebersicht';
   });
 
+  /**
+   * Die Buchung, zu der ein Sprung von der Gegenbuchung führt. Sie steht in der URL,
+   * damit der Sprung ein gewöhnlicher Seitenaufruf bleibt — mit Zurück-Taste, Neuladen
+   * und teilbarem Link, statt eines flüchtigen Zustands im Speicher.
+   */
+  protected readonly focusTransactionId = computed(() => {
+    const value = Number(this.queryParams().get('buchung'));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
+
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
   protected readonly accentColor = computed(() => this.account()?.color ?? DEFAULT_ACCENT_COLOR);
+
+  /** Symbol der Kontokategorie — dieselbe Zuordnung wie auf den Karten der Übersicht. */
+  protected readonly icon = computed(() => {
+    const item = this.account();
+    return item ? accountTypeIcon(item.type) : 'bank2';
+  });
 
   /** Der Kontostand kommt aus der Monatsabfrage, solange sie geladen ist — sonst aus dem Konto. */
   protected readonly balance = computed(
     () => this.summary()?.currentBalance ?? this.account()?.currentBalance ?? 0,
   );
 
+  /**
+   * Der Stand „laut Bank". Ohne geladene Kennzahlen ist unbekannt, was noch offen ist —
+   * dann zeigt die Zeile denselben Wert wie der Kontostand, statt eine erfundene
+   * Differenz zu behaupten.
+   */
+  protected readonly settledBalance = computed(
+    () => this.summary()?.settledBalance ?? this.account()?.currentBalance ?? 0,
+  );
+
+  /**
+   * Die Bilanz des gewählten Monats. Solange die Kennzahlen noch laden, steht hier
+   * 0 statt einer alten Zahl aus dem Vormonat — eine falsche Bilanz ist schlimmer
+   * als eine kurz noch leere.
+   */
+  protected readonly net = computed(() => this.summary()?.net ?? 0);
+
   protected readonly subtitle = computed(() => {
     const item = this.account();
     if (!item) return '';
 
     const parts = [item.bankName, item.iban ? formatIban(item.iban) : null].filter(Boolean);
-    return parts.length > 0 ? parts.join(' · ') : 'Girokonto';
+    return parts.length > 0 ? parts.join(' · ') : accountTypeSingular(item.type);
   });
 
   protected readonly tabs = computed<TabItem[]>(() => [
@@ -391,6 +540,12 @@ export class BankAccountDetailComponent {
       label: 'Transaktionen',
       icon: 'list-ul',
       badge: this.summary()?.transactionCount ?? null,
+    },
+    {
+      id: 'fixkosten',
+      label: 'Fixkosten',
+      icon: 'pin-angle',
+      badge: this.summary()?.fixedCostCount ?? null,
     },
     { id: 'budgets', label: 'Budgets', icon: 'sliders' },
     { id: 'kategorien', label: 'Kategorien', icon: 'tags', badge: this.categories().length },
@@ -422,6 +577,20 @@ export class BankAccountDetailComponent {
     this.updateQueryParams({ tab });
   }
 
+  /**
+   * Nimmt die angesprungene Buchung wieder aus der URL, sobald die Liste sie
+   * hervorgehoben hat. Bliebe sie stehen, würde jedes spätere Neuladen der Seite die
+   * Hervorhebung erneut auslösen — lange nachdem der Sprung vergessen ist.
+   */
+  protected clearFocusTransaction(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { buchung: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
   protected reload(): void {
     this.loadAccount(this.accountId());
     this.loadCategories(this.accountId());
@@ -445,8 +614,9 @@ export class BankAccountDetailComponent {
     this.summaryError.set('');
 
     this.bankAccountApi.getSummary(accountId, month).subscribe({
-      next: (summary) => {
-        this.summary.set(summary);
+      next: (result) => {
+        this.summary.set(result.value);
+        this.summarySavedAt.set(result.savedAt);
         this.summaryLoading.set(false);
       },
       error: (err: Error) => {
@@ -458,7 +628,7 @@ export class BankAccountDetailComponent {
 
   private loadAccount(accountId: number): void {
     if (!this.isValidAccountId(accountId)) {
-      this.error.set('Dieses Girokonto existiert nicht.');
+      this.error.set('Dieses Konto existiert nicht.');
       this.loading.set(false);
       return;
     }
@@ -467,12 +637,12 @@ export class BankAccountDetailComponent {
     this.error.set('');
 
     this.bankAccountApi.getById(accountId).subscribe({
-      next: (account) => {
-        this.account.set(account);
+      next: (result) => {
+        this.account.set(result.value);
         this.loading.set(false);
       },
       error: (err: Error) => {
-        this.error.set(err.message || 'Das Girokonto konnte nicht geladen werden.');
+        this.error.set(err.message || 'Das Konto konnte nicht geladen werden.');
         this.loading.set(false);
       },
     });

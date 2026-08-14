@@ -28,6 +28,21 @@ public class TransactionDto
 
     public string? CategoryIcon { get; set; }
 
+    /// <summary>Zugeordnete Fixkosten-Position, sonst null. Gesetzt heißt: keine variable Ausgabe.</summary>
+    public int? FixedCostId { get; set; }
+
+    public string? FixedCostName { get; set; }
+
+    /// <summary>Interner Wert des Fixkosten-Monats; nach außen geht <see cref="FixedCostMonth"/>.</summary>
+    [JsonIgnore]
+    public DateOnly? FixedCostMonthDate { get; set; }
+
+    /// <summary>
+    /// Monat der zugeordneten Fixkosten-Position im Format <c>yyyy-MM</c>, sonst null. Kann vom
+    /// Abrechnungsmonat der Buchung abweichen — etwa bei einer Jahresrechnung.
+    /// </summary>
+    public string? FixedCostMonth => FixedCostMonthDate?.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+
     public DateOnly BookingDate { get; set; }
 
     public DateOnly? PurchaseDate { get; set; }
@@ -44,16 +59,23 @@ public class TransactionDto
 
     public string? Note { get; set; }
 
-    /// <summary>True, wenn die Buchung Teil einer Überweisung zwischen zwei Konten ist.</summary>
-    public bool IsTransfer { get; set; }
+    /// <summary>
+    /// True, solange die Bank den Betrag noch nicht abgebucht hat. Die Buchung zählt trotzdem
+    /// in Kontostand, Bilanz und frei verfügbarem Geld; nur der Kontostand „laut Bank“ lässt
+    /// sie außen vor.
+    /// </summary>
+    public bool IsPending { get; set; }
 
-    /// <summary>Das andere Konto der Überweisung, sonst null.</summary>
-    public int? CounterAccountId { get; set; }
+    /// <summary>True, wenn diese Buchung mit einer Buchung eines anderen Kontos verknüpft ist.</summary>
+    public bool IsLinked { get; set; }
 
-    public string? CounterAccountName { get; set; }
+    /// <summary>Die verknüpfte Buchung, sonst null. Alle Details dazu liefert der Link-Endpunkt.</summary>
+    public int? LinkedTransactionId { get; set; }
 
-    /// <summary>Kategorie der Gegenbuchung — nötig, um eine Überweisung verlustfrei zu bearbeiten.</summary>
-    public int? CounterCategoryId { get; set; }
+    /// <summary>Das Konto der verknüpften Buchung, sonst null.</summary>
+    public int? LinkedAccountId { get; set; }
+
+    public string? LinkedAccountName { get; set; }
 
     public DateTime CreatedAt { get; set; }
 }

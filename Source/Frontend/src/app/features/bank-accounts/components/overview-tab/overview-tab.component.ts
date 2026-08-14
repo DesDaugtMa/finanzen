@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { AccountType } from '../../../../core/models/balance.model';
 import { MonthSummary } from '../../../../core/models/month-summary.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { StatTileComponent } from '../../../../shared/components/stat-tile/stat-tile.component';
@@ -6,6 +7,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { BudgetProgressComponent } from '../../../../shared/components/budget-progress/budget-progress.component';
 import { CategoryBadgeComponent } from '../../../../shared/components/category-badge/category-badge.component';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
+import { formatMoney } from '../../../../shared/utils/money.util';
 import { formatMonthLong } from '../../../../shared/utils/month.util';
 
 /**
@@ -61,6 +63,23 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
           [amount]="data.net"
           [currency]="data.currency"
           [hint]="balanceHint()"
+        />
+        <app-stat-tile
+          label="Frei verfügbar"
+          icon="piggy-bank"
+          [amount]="data.disposable"
+          [currency]="data.currency"
+          [hint]="disposableHint()"
+        />
+        <!-- Der Kontostand schließt die Reihe ab: die drei Kacheln davor beschreiben
+             den Monat, diese sagt, was insgesamt da ist. Der Stand „laut Bank“ steht
+             als Hinweis darunter, weil er die Nebenfrage beantwortet. -->
+        <app-stat-tile
+          label="Kontostand"
+          icon="wallet2"
+          [amount]="data.currentBalance"
+          [currency]="data.currency"
+          [hint]="settledHint()"
         />
       </div>
 
@@ -249,6 +268,8 @@ export class AccountOverviewTabComponent {
   readonly loading = input(false);
   readonly error = input('');
   readonly month = input.required<string>();
+  /** Bestimmt, ob der Stand „laut Bank“ überhaupt eine eigene Aussage hat. */
+  readonly accountType = input.required<AccountType>();
 
   readonly retry = output<void>();
   readonly showTransactions = output<void>();
@@ -256,14 +277,56 @@ export class AccountOverviewTabComponent {
   protected readonly defaultColor = DEFAULT_ACCENT_COLOR;
 
   /** Anzahl der Platzhalter-Kacheln während des Ladens. */
-  protected readonly skeletonSlots = [0, 1, 2];
+  protected readonly skeletonSlots = [0, 1, 2, 3, 4];
 
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
+
+  /**
+   * Der Stand „laut Bank“ unter dem Kontostand. Gibt es offene Buchungen, sagt der
+   * Hinweis zusätzlich, wie viele — sonst bliebe unerklärt, warum die beiden Zahlen
+   * auseinanderlaufen.
+   */
+  protected readonly settledHint = computed(() => {
+    const data = this.summary();
+    // Nur Girokonten kennen den Zustand „erfasst, aber noch nicht abgebucht“.
+    if (!data || this.accountType() !== 'CheckingAccount') return '';
+
+    const settled = `Laut Bank ${formatMoney(data.settledBalance, data.currency)}`;
+    if (data.pendingCount === 0) return settled;
+
+    const label = data.pendingCount === 1 ? 'offene Buchung' : 'offene Buchungen';
+    return `${settled} — ${data.pendingCount} ${label} über ${formatMoney(data.pendingTotal, data.currency)}`;
+  });
 
   protected readonly balanceHint = computed(() => {
     const data = this.summary();
     if (!data) return '';
 
     return `${data.transactionCount} ${data.transactionCount === 1 ? 'Buchung' : 'Buchungen'} in diesem Monat`;
+  });
+
+  /**
+   * Macht die Rechnung hinter „frei verfügbar“ sichtbar. Reichen die Einnahmen nicht,
+   * steht die Kennzahl bei 0 € — dann hat die Unterdeckung Vorrang vor der Erklärung,
+   * sonst verschwände sie hinter einer harmlos aussehenden Null.
+   */
+  protected readonly disposableHint = computed(() => {
+    const data = this.summary();
+    if (!data) return '';
+
+    if (data.disposableShortfall > 0) {
+      return `${formatMoney(data.disposableShortfall, data.currency)} über den Einnahmen dieses Monats`;
+    }
+
+    if (data.fixedCostCount === 0) {
+      return 'Noch keine Fixkosten hinterlegt — im Bereich „Fixkosten“ planbar machen';
+    }
+
+    const fixed = formatMoney(data.fixedCosts, data.currency);
+    const open = data.fixedCostOpenCount;
+
+    return open === 0
+      ? `nach ${fixed} Fixkosten und den variablen Ausgaben`
+      : `nach ${fixed} Fixkosten (davon ${open} noch offen) und den variablen Ausgaben`;
   });
 }

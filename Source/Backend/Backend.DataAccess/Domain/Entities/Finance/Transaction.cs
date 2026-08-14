@@ -28,6 +28,29 @@ public class Transaction
 
     public string? Note { get; set; }
 
+    /// <summary>
+    /// True, solange die Bank den Betrag noch nicht abgebucht hat. Die Buchung zählt trotzdem
+    /// überall voll mit — Kontostand, Bilanz und frei verfügbares Geld sollen den Stand nach
+    /// der Abbuchung zeigen. Nur der zweite, danebenstehende Kontostand („laut Bank“) rechnet
+    /// diese Beträge wieder heraus. Gilt ausschließlich für Ausgaben auf Girokonten.
+    /// </summary>
+    public bool IsPending { get; set; }
+
+    /// <summary>
+    /// Optional link to the fixed cost this transaction pays. Set means the transaction
+    /// counts as a fixed cost instead of a variable expense.
+    /// </summary>
+    public int? FixedCostId { get; set; }
+    public FixedCost? FixedCost { get; set; }
+
+    /// <summary>
+    /// Optional link to the debt this transaction belongs to. An expense is money lent out,
+    /// an income is a repayment. Purely informational — the transaction keeps counting in the
+    /// account's monthly figures exactly as before.
+    /// </summary>
+    public int? DebtId { get; set; }
+    public Debt? Debt { get; set; }
+
     /// <summary>Optional link to the paired transaction of a transfer between accounts.</summary>
     public int? LinkedTransactionId { get; set; }
     public Transaction? LinkedTransaction { get; set; }

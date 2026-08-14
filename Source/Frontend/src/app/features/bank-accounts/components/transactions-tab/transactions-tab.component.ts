@@ -1,6 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DOCUMENT,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -9,42 +12,54 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { TransactionApiService } from '../../../../core/services/transaction-api.service';
 import { BudgetApiService } from '../../../../core/services/budget-api.service';
+import { FixedCostApiService } from '../../../../core/services/fixed-cost-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { Category } from '../../../../core/models/category.model';
+import { FixedCost } from '../../../../core/models/fixed-cost.model';
 import {
+  LinkedTransaction,
   PagedResult,
   Transaction,
   TransactionFilter,
-  TransactionPayload,
   TransactionSort,
-  TransferPayload,
 } from '../../../../core/models/transaction.model';
+import { AccountType } from '../../../../core/models/balance.model';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { formatMoney } from '../../../../shared/utils/money.util';
 import { formatMonthLong } from '../../../../shared/utils/month.util';
 import { TransactionListComponent } from '../transaction-list/transaction-list.component';
 import {
   TransactionFilterChange,
   TransactionFiltersComponent,
 } from '../transaction-filters/transaction-filters.component';
-import { TransactionFormDialogComponent } from '../transaction-form-dialog/transaction-form-dialog.component';
-import { TransferFormDialogComponent } from '../transfer-form-dialog/transfer-form-dialog.component';
+import {
+  TransactionFormDialogComponent,
+  TransactionFormResult,
+} from '../transaction-form-dialog/transaction-form-dialog.component';
+import { LinkedTransactionDialogComponent } from '../linked-transaction-dialog/linked-transaction-dialog.component';
 
 /** Welcher Dialog gerade offen ist. */
 type DialogState =
   | { kind: 'none' }
   | { kind: 'transaction'; transaction: Transaction | null }
-  | { kind: 'transfer'; transaction: Transaction | null }
-  | { kind: 'delete'; transaction: Transaction };
+  | { kind: 'delete'; transaction: Transaction }
+  | { kind: 'settleMonth' }
+  /** Die Gegenbuchung von `transaction`, aufgerufen über das Kennzeichen in der Liste. */
+  | { kind: 'link'; transaction: Transaction };
 
 const DEFAULT_PAGE_SIZE = 25;
 
+/** Wie lange die angesprungene Buchung hervorgehoben bleibt. */
+const HIGHLIGHT_DURATION_MS = 2600;
+
 /**
  * Buchungen des gewählten Monats: Suche, Filter, Sortierung und Seitenwechsel laufen
- * serverseitig. Erfasst wird über zwei Wege — eine normale Buchung oder eine
- * Überweisung zwischen zwei Konten.
+ * serverseitig. Jede Buchung lässt sich 1-zu-1 mit einer Buchung eines anderen Kontos
+ * verknüpfen — etwa die beiden Seiten einer Umbuchung.
  */
 @Component({
   selector: 'app-transactions-tab',
@@ -55,7 +70,7 @@ const DEFAULT_PAGE_SIZE = 25;
     TransactionListComponent,
     TransactionFiltersComponent,
     TransactionFormDialogComponent,
-    TransferFormDialogComponent,
+    LinkedTransactionDialogComponent,
   ],
   template: `
     <section class="fin-panel" aria-labelledby="transactionsHeading">
@@ -68,19 +83,47 @@ const DEFAULT_PAGE_SIZE = 25;
             <p class="transactions-count" aria-live="polite">{{ resultLabel() }}</p>
           </div>
 
-          <!-- Auf breiten Displays sitzen die Aktionen in der Kopfzeile, mobil
+          <!-- Auf breiten Displays sitzt die Aktion in der Kopfzeile, mobil
                unten in der Aktionsleiste in Daumenreichweite. -->
           <div class="transactions-actions">
-            <button type="button" class="btn btn-outline-secondary" (click)="openTransfer(null)">
-              <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-              <span>Überweisung</span>
-            </button>
             <button type="button" class="btn btn-primary" (click)="openTransaction(null)">
               <i class="bi bi-plus-lg" aria-hidden="true"></i>
               <span>Buchung</span>
             </button>
           </div>
         </header>
+
+        <!--
+          Die Hinweisleiste erscheint nur, wenn dieser Monat offene Buchungen hat.
+          Sie nennt Anzahl und Summe, damit der Sammel-Klick nicht blind erfolgt —
+          und steht über der Liste, weil sie sich auf genau diese Liste bezieht.
+        -->
+        @if (pendingCount() > 0) {
+          <div class="pending-bar" role="status">
+            <i class="bi bi-hourglass-split pending-bar__icon" aria-hidden="true"></i>
+            <p class="pending-bar__text">
+              <strong>{{ pendingLabel() }}</strong>
+              <span class="pending-bar__note">
+                Sie zählen bereits im Kontostand, nicht aber im Stand laut Bank.
+              </span>
+            </p>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm pending-bar__action"
+              [disabled]="settlingMonth()"
+              (click)="openSettleMonth()"
+            >
+              @if (settlingMonth()) {
+                <span
+                  class="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+              }
+              <span>Alle als abgebucht</span>
+            </button>
+          </div>
+        }
 
         <app-transaction-filters
           class="transactions-filters"
@@ -140,9 +183,13 @@ const DEFAULT_PAGE_SIZE = 25;
             [transactions]="transactions()"
             [sort]="filter().sort"
             [direction]="filter().direction"
+            [settling]="settlingId()"
+            [highlighted]="highlightedId()"
             (sortChange)="toggleSort($event)"
-            (edit)="openForEdit($event)"
+            (edit)="openTransaction($event)"
             (remove)="openDelete($event)"
+            (settle)="settleOne($event)"
+            (openLink)="openLink($event)"
           />
 
           @if (totalPages() > 1) {
@@ -177,13 +224,9 @@ const DEFAULT_PAGE_SIZE = 25;
     <!-- Mobile Aktionsleiste: klebt über der Tab-Bar am unteren Rand und bleibt
          damit erreichbar, ohne die Liste zu verdecken. -->
     <div class="action-bar">
-      <button type="button" class="btn btn-outline-secondary" (click)="openTransfer(null)">
-        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-        <span>Überweisung</span>
-      </button>
       <button type="button" class="btn btn-primary" (click)="openTransaction(null)">
         <i class="bi bi-plus-lg" aria-hidden="true"></i>
-        <span>Buchung</span>
+        <span>Buchung erfassen</span>
       </button>
     </div>
 
@@ -191,23 +234,27 @@ const DEFAULT_PAGE_SIZE = 25;
       @if (state.kind === 'transaction') {
         <app-transaction-form-dialog
           [transaction]="state.transaction"
+          [accountId]="accountId()"
           [categories]="categories()"
+          [fixedCosts]="fixedCosts()"
           [month]="month()"
           [currency]="currency()"
+          [accountType]="accountType()"
           [saving]="saving()"
           [remainingByCategory]="remainingByCategory()"
           (save)="submitTransaction($event, state.transaction)"
+          (linkChanged)="onLinkChanged()"
+          (jump)="jumpToLinked($event)"
           (cancelled)="closeDialog()"
         />
-      } @else if (state.kind === 'transfer') {
-        <app-transfer-form-dialog
-          [transaction]="state.transaction"
-          [accountId]="accountId()"
-          [currency]="currency()"
-          [categories]="categories()"
-          [month]="month()"
-          [saving]="saving()"
-          (save)="submitTransfer($event, state.transaction)"
+      } @else if (state.kind === 'link') {
+        <app-linked-transaction-dialog
+          [linked]="linked()"
+          [loading]="linkLoading()"
+          [error]="linkError()"
+          [busy]="saving()"
+          (jump)="jumpToLinked(linked()!)"
+          (unlink)="unlinkFromList(state.transaction)"
           (cancelled)="closeDialog()"
         />
       } @else if (state.kind === 'delete') {
@@ -218,6 +265,15 @@ const DEFAULT_PAGE_SIZE = 25;
           variant="danger"
           [busy]="saving()"
           (confirmed)="confirmDelete(state.transaction)"
+          (cancelled)="closeDialog()"
+        />
+      } @else if (state.kind === 'settleMonth') {
+        <app-confirm-dialog
+          title="Alle als abgebucht markieren"
+          [message]="settleMonthMessage()"
+          confirmLabel="Als abgebucht markieren"
+          [busy]="settlingMonth()"
+          (confirmed)="confirmSettleMonth()"
           (cancelled)="closeDialog()"
         />
       }
@@ -252,6 +308,44 @@ const DEFAULT_PAGE_SIZE = 25;
       .transactions-filters {
         display: block;
         margin-bottom: var(--fin-space-4);
+      }
+
+      /* Die Leiste sitzt zwischen Kopfzeile und Filtern: sie gehört zur Liste,
+         soll sie aber nicht überlagern. Auf Mobil bricht die Schaltfläche in eine
+         eigene Zeile über die volle Breite, statt auf Icon-Breite zu schrumpfen. */
+      .pending-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--fin-space-2) var(--fin-space-3);
+        margin-bottom: var(--fin-space-4);
+        padding: var(--fin-space-3) var(--fin-space-4);
+        border: 1px solid var(--fin-warn);
+        border-radius: var(--fin-radius-md);
+        background-color: var(--fin-warn-tint);
+        color: var(--fin-text-strong);
+      }
+      .pending-bar__icon {
+        flex-shrink: 0;
+        color: var(--fin-warn);
+      }
+      .pending-bar__text {
+        flex: 1 1 12rem;
+        margin: 0;
+        font-size: var(--fin-text-sm);
+        line-height: var(--fin-leading-snug);
+      }
+      .pending-bar__note {
+        display: block;
+        color: var(--fin-text-muted);
+      }
+      .pending-bar__action {
+        flex: 1 1 100%;
+      }
+      @media (min-width: 34rem) {
+        .pending-bar__action {
+          flex: 0 0 auto;
+        }
       }
       .transactions-error {
         display: flex;
@@ -326,13 +420,31 @@ export class TransactionsTabComponent {
   readonly month = input.required<string>();
   readonly currency = input.required<string>();
   readonly categories = input.required<Category[]>();
+  /** Entscheidet, ob eine Buchung überhaupt „noch nicht abgebucht“ sein kann. */
+  readonly accountType = input.required<AccountType>();
+  /** Noch nicht abgebuchte Buchungen dieses Monats — Bezug der Hinweisleiste. */
+  readonly pendingCount = input(0);
+  readonly pendingTotal = input(0);
+
+  /**
+   * Die Buchung, zu der ein Sprung von ihrer Gegenbuchung geführt hat. Sie wird auf
+   * jeden Fall angezeigt — Filter werden dafür zurückgesetzt, und der Server liefert
+   * die Seite, auf der sie steht.
+   */
+  readonly focusTransactionId = input<number | null>(null);
 
   /** Meldet dem Rahmen, dass die Kennzahlen neu geladen werden müssen. */
   readonly changed = output<void>();
+  /** Der Sprung ist angekommen — die Angabe darf aus der URL verschwinden. */
+  readonly focusHandled = output<void>();
 
   private readonly transactionApi = inject(TransactionApiService);
   private readonly budgetApi = inject(BudgetApiService);
+  private readonly fixedCostApi = inject(FixedCostApiService);
   private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   protected readonly result = signal<PagedResult<Transaction> | null>(null);
   protected readonly loading = signal(true);
@@ -340,8 +452,23 @@ export class TransactionsTabComponent {
   protected readonly saving = signal(false);
   protected readonly dialog = signal<DialogState>({ kind: 'none' });
 
+  /** Die Buchung, deren Abhaken gerade läuft — null, solange nichts läuft. */
+  protected readonly settlingId = signal<number | null>(null);
+  protected readonly settlingMonth = signal(false);
+
+  /** Die angesprungene Buchung, solange die Hervorhebung läuft. */
+  protected readonly highlightedId = signal<number | null>(null);
+
+  /** Die Gegenbuchung für das Popup aus der Liste heraus. */
+  protected readonly linked = signal<LinkedTransaction | null>(null);
+  protected readonly linkLoading = signal(false);
+  protected readonly linkError = signal('');
+
   /** Restbudget je Kategorie — nur für den Hinweis im Erfassungsdialog. */
   protected readonly remainingByCategory = signal<ReadonlyMap<number, number>>(new Map());
+
+  /** Fixkosten des Monats — zur Auswahl im Erfassungsdialog. */
+  protected readonly fixedCosts = signal<FixedCost[]>([]);
 
   protected readonly filter = signal<TransactionFilter>({
     month: '',
@@ -372,6 +499,23 @@ export class TransactionsTabComponent {
     );
   });
 
+  protected readonly pendingLabel = computed(() => {
+    const count = this.pendingCount();
+    const label = count === 1 ? 'offene Buchung' : 'offene Buchungen';
+
+    return `${count} ${label} · ${formatMoney(this.pendingTotal(), this.currency())}`;
+  });
+
+  protected readonly settleMonthMessage = computed(() => {
+    const count = this.pendingCount();
+    const label = count === 1 ? 'Buchung' : 'Buchungen';
+
+    return `Sollen alle ${count} noch offenen ${label} im ${this.monthLabel()} als abgebucht markiert werden? Der Kontostand laut Bank sinkt dadurch um ${formatMoney(
+      this.pendingTotal(),
+      this.currency(),
+    )}.`;
+  });
+
   protected readonly resultLabel = computed(() => {
     const result = this.result();
     if (!result) return '';
@@ -390,18 +534,43 @@ export class TransactionsTabComponent {
         this.filter.update((filter) => ({ ...filter, month, page: 1 }));
         this.load();
         this.loadRemainingBudgets();
+        this.loadFixedCosts();
+      });
+    });
+
+    // Ein Sprung von der Gegenbuchung setzt die Filter zurück: Bliebe ein Filter
+    // stehen, könnte er genau die Buchung ausblenden, für die der Sprung gedacht war.
+    effect(() => {
+      const focusId = this.focusTransactionId();
+      if (focusId === null) return;
+
+      untracked(() => {
+        this.filter.update((filter) => ({
+          ...filter,
+          search: '',
+          type: null,
+          categoryIds: [],
+          includeUncategorized: false,
+          page: 1,
+        }));
+        this.load(focusId);
       });
     });
   }
 
-  protected load(): void {
+  protected load(focusTransactionId: number | null = null): void {
     this.loading.set(true);
     this.error.set('');
 
-    this.transactionApi.list(this.accountId(), this.filter()).subscribe({
+    this.transactionApi.list(this.accountId(), this.filter(), focusTransactionId).subscribe({
       next: (result) => {
+        // Der Server kann eine andere Seite liefern, wenn die gesuchte Buchung
+        // woanders steht — die Seitenanzeige muss dem folgen.
+        this.filter.update((filter) => ({ ...filter, page: result.page }));
         this.result.set(result);
         this.loading.set(false);
+
+        if (focusTransactionId !== null) this.highlight(focusTransactionId);
       },
       error: (err: Error) => {
         this.error.set(err.message || 'Die Buchungen konnten nicht geladen werden.');
@@ -452,65 +621,145 @@ export class TransactionsTabComponent {
     this.dialog.set({ kind: 'transaction', transaction });
   }
 
-  protected openTransfer(transaction: Transaction | null): void {
-    this.dialog.set({ kind: 'transfer', transaction });
-  }
+  /**
+   * Öffnet die Gegenbuchung. Sie liegt auf einem anderen Konto und ist deshalb in der
+   * Liste nicht enthalten — die Details werden erst beim Öffnen geholt, damit die
+   * Monatsliste sie nicht für jede Zeile mitschleppen muss.
+   */
+  protected openLink(transaction: Transaction): void {
+    this.dialog.set({ kind: 'link', transaction });
+    this.linked.set(null);
+    this.linkError.set('');
+    this.linkLoading.set(true);
 
-  /** Überweisungen führen in ihren eigenen Dialog, weil beide Seiten zusammengehören. */
-  protected openForEdit(transaction: Transaction): void {
-    if (transaction.isTransfer) {
-      this.openTransfer(transaction);
-      return;
-    }
-
-    this.openTransaction(transaction);
+    this.transactionApi.getLink(this.accountId(), transaction.id).subscribe({
+      next: (item) => {
+        this.linked.set(item);
+        this.linkLoading.set(false);
+      },
+      error: (err: Error) => {
+        this.linkError.set(err.message || 'Die verknüpfte Buchung konnte nicht geladen werden.');
+        this.linkLoading.set(false);
+      },
+    });
   }
 
   protected openDelete(transaction: Transaction): void {
     this.dialog.set({ kind: 'delete', transaction });
   }
 
+  protected openSettleMonth(): void {
+    this.dialog.set({ kind: 'settleMonth' });
+  }
+
   protected closeDialog(): void {
-    if (this.saving()) return;
+    if (this.saving() || this.settlingMonth()) return;
     this.dialog.set({ kind: 'none' });
+  }
+
+  /**
+   * Hakt eine einzelne Buchung ab. Die Liste wird danach neu geholt statt lokal
+   * umgeschrieben: dieselbe Aktion verschiebt auch den Stand „laut Bank" im Kopf
+   * der Seite, und diese Zahlen darf nur der Server bestimmen.
+   */
+  protected settleOne(transaction: Transaction): void {
+    if (this.settlingId() !== null) return;
+
+    this.settlingId.set(transaction.id);
+
+    this.transactionApi.settle(this.accountId(), transaction.id).subscribe({
+      next: () => {
+        this.settlingId.set(null);
+        this.toastService.success(`„${transaction.title}“ ist als abgebucht markiert.`);
+        this.load();
+        this.changed.emit();
+      },
+      error: (err: Error) => {
+        this.settlingId.set(null);
+        this.toastService.error(err.message || 'Die Buchung konnte nicht markiert werden.');
+      },
+    });
+  }
+
+  protected confirmSettleMonth(): void {
+    this.settlingMonth.set(true);
+
+    this.transactionApi.settleMonth(this.accountId(), this.month()).subscribe({
+      next: (result) => {
+        this.settlingMonth.set(false);
+        this.dialog.set({ kind: 'none' });
+        this.toastService.success(
+          result.settledCount === 1
+            ? '1 Buchung als abgebucht markiert.'
+            : `${result.settledCount} Buchungen als abgebucht markiert.`,
+        );
+
+        this.load();
+        this.changed.emit();
+      },
+      error: (err: Error) => {
+        this.settlingMonth.set(false);
+        this.toastService.error(err.message || 'Die Buchungen konnten nicht markiert werden.');
+      },
+    });
   }
 
   protected deleteMessage(transaction: Transaction): string {
     const base = `Soll die Buchung „${transaction.title}“ endgültig gelöscht werden?`;
 
-    return transaction.isTransfer
-      ? `${base} Die zugehörige Gegenbuchung auf „${transaction.counterAccountName}“ wird ebenfalls gelöscht.`
+    return transaction.isLinked
+      ? `${base} Die verknüpfte Buchung auf „${transaction.linkedAccountName}“ bleibt bestehen und verliert nur ihre Verknüpfung.`
       : base;
   }
 
-  protected submitTransaction(payload: TransactionPayload, existing: Transaction | null): void {
+  /** Wechselt zum Konto der verknüpften Buchung und hebt sie dort hervor. */
+  protected jumpToLinked(item: LinkedTransaction): void {
+    this.dialog.set({ kind: 'none' });
+
+    this.router.navigate(['/girokonten', item.accountId], {
+      queryParams: { monat: item.accountingMonth, tab: 'transaktionen', buchung: item.id },
+    });
+  }
+
+  /** Eine Verknüpfung, die im Erfassungsdialog gesetzt oder gelöst wurde. */
+  protected onLinkChanged(): void {
+    this.load();
+    this.changed.emit();
+  }
+
+  protected unlinkFromList(transaction: Transaction): void {
     this.saving.set(true);
 
-    const request$ = existing
-      ? this.transactionApi.update(this.accountId(), existing.id, payload)
-      : this.transactionApi.create(this.accountId(), payload);
-
-    request$.subscribe({
-      next: () => this.finish(existing ? 'Buchung aktualisiert.' : 'Buchung erfasst.'),
+    this.transactionApi.unlink(this.accountId(), transaction.id).subscribe({
+      next: () => this.finish('Verknüpfung gelöst.'),
       error: (err: Error) => {
         this.saving.set(false);
-        this.toastService.error(err.message || 'Die Buchung konnte nicht gespeichert werden.');
+        this.toastService.error(err.message || 'Die Verknüpfung konnte nicht gelöst werden.');
       },
     });
   }
 
-  protected submitTransfer(payload: TransferPayload, existing: Transaction | null): void {
+  protected submitTransaction(result: TransactionFormResult, existing: Transaction | null): void {
     this.saving.set(true);
 
     const request$ = existing
-      ? this.transactionApi.updateTransfer(this.accountId(), existing.id, payload)
-      : this.transactionApi.createTransfer(this.accountId(), payload);
+      ? this.transactionApi.update(this.accountId(), existing.id, result.payload)
+      : this.transactionApi.create(this.accountId(), result.payload);
 
     request$.subscribe({
-      next: () => this.finish(existing ? 'Überweisung aktualisiert.' : 'Überweisung erfasst.'),
+      next: (saved) => {
+        // Beim Anlegen gibt es die Buchung erst jetzt — die vorgemerkte Verknüpfung
+        // lässt sich deshalb erst im Anschluss setzen.
+        if (result.linkTo !== null) {
+          this.linkAfterCreate(saved.id, result.linkTo);
+          return;
+        }
+
+        this.finish(existing ? 'Buchung aktualisiert.' : 'Buchung erfasst.');
+      },
       error: (err: Error) => {
         this.saving.set(false);
-        this.toastService.error(err.message || 'Die Überweisung konnte nicht gespeichert werden.');
+        this.toastService.error(err.message || 'Die Buchung konnte nicht gespeichert werden.');
       },
     });
   }
@@ -534,7 +783,48 @@ export class TransactionsTabComponent {
 
     this.load();
     this.loadRemainingBudgets();
+    this.loadFixedCosts();
     this.changed.emit();
+  }
+
+  /**
+   * Setzt die vorgemerkte Verknüpfung nach dem Anlegen. Schlägt sie fehl, ist die
+   * Buchung trotzdem gespeichert — das wird auch so gemeldet, statt einen Fehlschlag
+   * zu behaupten, der die erfasste Buchung in Frage stellen würde.
+   */
+  private linkAfterCreate(transactionId: number, counterTransactionId: number): void {
+    this.transactionApi.link(this.accountId(), transactionId, counterTransactionId).subscribe({
+      next: () => this.finish('Buchung erfasst und verknüpft.'),
+      error: (err: Error) => {
+        this.finish('Buchung erfasst.');
+        this.toastService.error(
+          err.message || 'Die Buchung wurde erfasst, ließ sich aber nicht verknüpfen.',
+        );
+      },
+    });
+  }
+
+  /**
+   * Hebt die angesprungene Buchung hervor und rollt sie ins Bild. Die Hervorhebung
+   * endet nach kurzer Zeit von selbst: Sie beantwortet die Frage „wo bin ich gelandet“
+   * und wäre danach nur noch eine Markierung ohne Bedeutung.
+   */
+  private highlight(transactionId: number): void {
+    this.highlightedId.set(transactionId);
+    this.focusHandled.emit();
+
+    afterNextRender(
+      () => {
+        this.document
+          .getElementById(`tx-${transactionId}`)
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      },
+      { injector: this.injector },
+    );
+
+    setTimeout(() => {
+      if (this.highlightedId() === transactionId) this.highlightedId.set(null);
+    }, HIGHLIGHT_DURATION_MS);
   }
 
   /**
@@ -553,6 +843,17 @@ export class TransactionsTabComponent {
         this.remainingByCategory.set(remaining);
       },
       error: () => this.remainingByCategory.set(new Map()),
+    });
+  }
+
+  /**
+   * Holt die Fixkosten des Monats für die Auswahl im Dialog. Fehler bleiben still —
+   * ohne die Liste bleibt das Feld verborgen, die Buchung selbst ist davon unberührt.
+   */
+  private loadFixedCosts(): void {
+    this.fixedCostApi.getMonth(this.accountId(), this.month()).subscribe({
+      next: (data) => this.fixedCosts.set(data.items),
+      error: () => this.fixedCosts.set([]),
     });
   }
 }

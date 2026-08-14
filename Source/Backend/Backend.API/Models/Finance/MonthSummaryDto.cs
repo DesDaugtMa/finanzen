@@ -20,6 +20,27 @@ public class MonthSummaryDto
     /// <summary>Monatsübergreifender Kontostand: Anfangssaldo + alle Einnahmen − alle Ausgaben.</summary>
     public decimal CurrentBalance { get; set; }
 
+    /// <summary>
+    /// Der Kontostand „laut Bank": wie <see cref="CurrentBalance"/>, aber ohne die noch nicht
+    /// abgebuchten Ausgaben. Immer <c>CurrentBalance + PendingTotal</c>.
+    /// </summary>
+    public decimal SettledBalance { get; set; }
+
+    /// <summary>Summe aller noch nicht abgebuchten Ausgaben des Kontos, monatsübergreifend.</summary>
+    public decimal PendingTotal { get; set; }
+
+    /// <summary>Anzahl aller noch nicht abgebuchten Buchungen des Kontos, monatsübergreifend.</summary>
+    public int PendingCount { get; set; }
+
+    /// <summary>
+    /// Summe der noch nicht abgebuchten Ausgaben, die in <em>diesem</em> Abrechnungsmonat liegen.
+    /// Bezugsgröße der Sammel-Aktion, die genau diesen Monat abhakt.
+    /// </summary>
+    public decimal PendingMonthTotal { get; set; }
+
+    /// <summary>Anzahl der noch nicht abgebuchten Buchungen dieses Abrechnungsmonats.</summary>
+    public int PendingMonthCount { get; set; }
+
     /// <summary>Summe der im Monat gesetzten Kategoriebudgets.</summary>
     public decimal TotalBudget { get; set; }
 
@@ -28,6 +49,40 @@ public class MonthSummaryDto
 
     /// <summary><c>TotalBudget − TotalSpentBudgeted</c>. Negativ bedeutet Überschreitung.</summary>
     public decimal TotalRemaining { get; set; }
+
+    /// <summary>Summe der geplanten Fixkosten des Monats.</summary>
+    public decimal FixedCostsPlanned { get; set; }
+
+    /// <summary>Summe der Buchungen, die Fixkosten-Positionen dieses Monats zugeordnet sind.</summary>
+    public decimal FixedCostsBooked { get; set; }
+
+    /// <summary>
+    /// Die Fixkosten, die gegen die Einnahmen gerechnet werden: je Position das bereits
+    /// gezahlte Geld plus die Restverpflichtung, also <c>max(geplant, gebucht)</c>.
+    /// </summary>
+    public decimal FixedCosts { get; set; }
+
+    /// <summary>Anzahl der Fixkosten-Positionen des Monats.</summary>
+    public int FixedCostCount { get; set; }
+
+    /// <summary>Fixkosten-Positionen ohne zugeordnete Buchung.</summary>
+    public int FixedCostOpenCount { get; set; }
+
+    /// <summary>Ausgaben des Monats ohne Fixkosten-Zuordnung.</summary>
+    public decimal VariableExpenses { get; set; }
+
+    /// <summary>
+    /// Frei verfügbares Geld: <c>Income − FixedCosts − VariableExpenses</c>, nach unten bei
+    /// <c>0</c> begrenzt. Es gibt kein negatives verfügbares Geld — was fehlt, steht in
+    /// <see cref="DisposableShortfall"/>.
+    /// </summary>
+    public decimal Disposable { get; set; }
+
+    /// <summary>
+    /// Der durch die Untergrenze abgeschnittene Betrag: um so viel übersteigen Fixkosten und
+    /// variable Ausgaben die Einnahmen des Monats. <c>0</c>, solange die Einnahmen reichen.
+    /// </summary>
+    public decimal DisposableShortfall { get; set; }
 
     /// <summary>Anzahl der Buchungen im Monat.</summary>
     public int TransactionCount { get; set; }

@@ -11,6 +11,7 @@ public class AppSettings
     public JwtSettings Jwt { get; set; } = new();
     public GoogleAuthSettings GoogleAuth { get; set; } = new();
     public SmtpSettings Smtp { get; set; } = new();
+    public ChangelogSettings Changelog { get; set; } = new();
 }
 
 public class AppConnectionStrings
@@ -25,6 +26,15 @@ public class JwtSettings
     public string Audience { get; set; } = "finanzen-app";
     public int ExpiryMinutes { get; set; } = 15;
     public int RefreshTokenExpiryDays { get; set; } = 30;
+}
+
+public class ChangelogSettings
+{
+    /// <summary>
+    /// Pfad zur Changelog-Datei. Relative Angaben werden gegen das Anwendungsverzeichnis
+    /// aufgelöst — dorthin kopiert der Build die <c>CHANGELOG.md</c> aus der Repository-Wurzel.
+    /// </summary>
+    public string FilePath { get; set; } = "CHANGELOG.md";
 }
 
 public class GoogleAuthSettings

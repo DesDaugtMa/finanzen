@@ -1,12 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
+import { OfflineCacheService, Sourced } from './offline-cache.service';
 import { BankAccount, BankAccountPayload } from '../models/bank-account.model';
 import { MonthSummary } from '../models/month-summary.model';
 
 @Injectable({ providedIn: 'root' })
 export class BankAccountApiService {
   private api = inject(ApiService);
+  private cache = inject(OfflineCacheService);
 
   private readonly resource = 'bankaccounts';
 
@@ -14,8 +16,15 @@ export class BankAccountApiService {
     return this.api.get<BankAccount[]>(this.resource);
   }
 
-  getById(id: number): Observable<BankAccount> {
-    return this.api.get<BankAccount>(`${this.resource}/${id}`);
+  /**
+   * Stammdaten eines Kontos. Über den Offline-Zwischenspeicher, damit die
+   * Detailseite auch ohne Netz Name, Farbe und Kontostand zeigen kann.
+   */
+  getById(id: number): Observable<Sourced<BankAccount>> {
+    return this.cache.withFallback(
+      `account.${id}`,
+      this.api.get<BankAccount>(`${this.resource}/${id}`),
+    );
   }
 
   create(payload: BankAccountPayload): Observable<BankAccount> {
@@ -30,8 +39,11 @@ export class BankAccountApiService {
     return this.api.delete<void>(`${this.resource}/${id}`);
   }
 
-  /** Kennzahlen des Kontos für einen Abrechnungsmonat (`yyyy-MM`). */
-  getSummary(id: number, month: string): Observable<MonthSummary> {
-    return this.api.get<MonthSummary>(`${this.resource}/${id}/summary`, { params: { month } });
+  /** Kennzahlen des Kontos für einen Abrechnungsmonat (`yyyy-MM`), mit Offline-Rückfall. */
+  getSummary(id: number, month: string): Observable<Sourced<MonthSummary>> {
+    return this.cache.withFallback(
+      `summary.${id}.${month}`,
+      this.api.get<MonthSummary>(`${this.resource}/${id}/summary`, { params: { month } }),
+    );
   }
 }

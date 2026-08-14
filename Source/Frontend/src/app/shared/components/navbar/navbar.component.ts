@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ChangelogApiService } from '../../../core/services/changelog-api.service';
 import { ThemeSwitchComponent } from '../theme-switch/theme-switch.component';
 
 interface NavTarget {
@@ -124,6 +125,23 @@ interface NavTarget {
 
               <div class="fin-menu__separator" role="none"></div>
 
+              <!--
+                Der Changelog ist kein tägliches Ziel und gehört deshalb nicht in die
+                Hauptnavigation. Als kleine Zeile im Kontomenü ist er dennoch von jeder
+                Seite aus erreichbar — und trägt die Version gleich mit.
+              -->
+              <a
+                class="fin-menu__item fin-menu__item--meta"
+                role="menuitem"
+                routerLink="/changelog"
+                (click)="closeMenu()"
+              >
+                <i class="bi bi-journal-text fin-menu__icon" aria-hidden="true"></i>
+                <span>{{ changelogLabel() }}</span>
+              </a>
+
+              <div class="fin-menu__separator" role="none"></div>
+
               <button
                 type="button"
                 class="fin-menu__item fin-menu__item--danger"
@@ -168,6 +186,8 @@ interface NavTarget {
 export class NavbarComponent {
   protected readonly authService = inject(AuthService);
 
+  private readonly changelogApi = inject(ChangelogApiService);
+
   private readonly document = inject(DOCUMENT);
   private readonly host = inject(ElementRef<HTMLElement>);
 
@@ -184,6 +204,14 @@ export class NavbarComponent {
       icon: 'house',
       iconActive: 'house-fill',
       exact: true,
+    },
+    {
+      path: '/schuldner',
+      label: 'Schuldner',
+      shortLabel: 'Schuldner',
+      icon: 'people',
+      iconActive: 'people-fill',
+      exact: false,
     },
     // „Sitzungen“ steht bewusst nicht hier: es ist eine Sicherheitseinstellung,
     // kein täglich genutztes Ziel, und würde in der schmalen Tab-Bar Platz
@@ -256,7 +284,21 @@ export class NavbarComponent {
     return (localPart.slice(0, 2) || '??').toUpperCase();
   });
 
+  /**
+   * Beschriftung des Changelog-Links. Die Version steht davor, weil sie die eigentliche
+   * Auskunft ist („welchen Stand habe ich?“); ist sie noch nicht bekannt, bleibt der Link
+   * ohne sie bestehen, statt eine Ladeanzeige im Menü zu zeigen.
+   */
+  protected readonly changelogLabel = computed(() => {
+    const version = this.changelogApi.currentVersion();
+    return version ? `v${version} — Changelog` : 'Changelog';
+  });
+
   protected toggleMenu(): void {
+    // Erst beim Öffnen holen: die Version wird nur hier gebraucht und soll den
+    // Seitenaufbau nicht mit einer zusätzlichen Anfrage belasten.
+    if (!this.menuOpen()) this.changelogApi.ensureVersionLoaded();
+
     this.menuOpen.update((open) => !open);
   }
 
