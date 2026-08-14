@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { AccountType } from '../../../../core/models/balance.model';
 import { MonthSummary } from '../../../../core/models/month-summary.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { StatTileComponent } from '../../../../shared/components/stat-tile/stat-tile.component';
@@ -69,6 +70,16 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
           [amount]="data.disposable"
           [currency]="data.currency"
           [hint]="disposableHint()"
+        />
+        <!-- Der Kontostand schließt die Reihe ab: die drei Kacheln davor beschreiben
+             den Monat, diese sagt, was insgesamt da ist. Der Stand „laut Bank“ steht
+             als Hinweis darunter, weil er die Nebenfrage beantwortet. -->
+        <app-stat-tile
+          label="Kontostand"
+          icon="wallet2"
+          [amount]="data.currentBalance"
+          [currency]="data.currency"
+          [hint]="settledHint()"
         />
       </div>
 
@@ -257,6 +268,8 @@ export class AccountOverviewTabComponent {
   readonly loading = input(false);
   readonly error = input('');
   readonly month = input.required<string>();
+  /** Bestimmt, ob der Stand „laut Bank“ überhaupt eine eigene Aussage hat. */
+  readonly accountType = input.required<AccountType>();
 
   readonly retry = output<void>();
   readonly showTransactions = output<void>();
@@ -264,9 +277,26 @@ export class AccountOverviewTabComponent {
   protected readonly defaultColor = DEFAULT_ACCENT_COLOR;
 
   /** Anzahl der Platzhalter-Kacheln während des Ladens. */
-  protected readonly skeletonSlots = [0, 1, 2, 3];
+  protected readonly skeletonSlots = [0, 1, 2, 3, 4];
 
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
+
+  /**
+   * Der Stand „laut Bank“ unter dem Kontostand. Gibt es offene Buchungen, sagt der
+   * Hinweis zusätzlich, wie viele — sonst bliebe unerklärt, warum die beiden Zahlen
+   * auseinanderlaufen.
+   */
+  protected readonly settledHint = computed(() => {
+    const data = this.summary();
+    // Nur Girokonten kennen den Zustand „erfasst, aber noch nicht abgebucht“.
+    if (!data || this.accountType() !== 'CheckingAccount') return '';
+
+    const settled = `Laut Bank ${formatMoney(data.settledBalance, data.currency)}`;
+    if (data.pendingCount === 0) return settled;
+
+    const label = data.pendingCount === 1 ? 'offene Buchung' : 'offene Buchungen';
+    return `${settled} — ${data.pendingCount} ${label} über ${formatMoney(data.pendingTotal, data.currency)}`;
+  });
 
   protected readonly balanceHint = computed(() => {
     const data = this.summary();

@@ -55,9 +55,11 @@ public sealed class TransactionService(
         var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
         await EnsureCategoryBelongsToAccountAsync(accountId, request.CategoryId, ct);
         await EnsureFixedCostIsAssignableAsync(accountId, request, ct);
+        EnsurePendingIsAllowed(account, request);
 
         var transaction = new Transaction
         {
+            IsPending = request.IsPending,
             AccountId = accountId,
             Currency = account.Currency,
             Type = request.Type,
@@ -81,9 +83,10 @@ public sealed class TransactionService(
 
     public async Task<TransactionDto> UpdateAsync(int userId, int accountId, int transactionId, SaveTransactionRequest request, CancellationToken ct = default)
     {
-        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+        var account = await accountAccess.RequireOwnedAsync(userId, accountId, ct);
         await EnsureCategoryBelongsToAccountAsync(accountId, request.CategoryId, ct);
         await EnsureFixedCostIsAssignableAsync(accountId, request, ct);
+        EnsurePendingIsAllowed(account, request);
 
         var transaction = await FindAsync(accountId, transactionId, ct);
         var counterpart = await LoadCounterpartAsync(transaction, ct);
@@ -93,6 +96,12 @@ public sealed class TransactionService(
         if (counterpart is not null && transaction.Type != request.Type)
             throw new BusinessRuleException("Die Art einer Überweisung lässt sich nur über den Überweisungs-Dialog ändern.");
 
+        // Eine Umbuchung verschiebt Geld zwischen zwei eigenen Konten. Wäre nur eine Seite
+        // offen, stünden die beiden Kontostände „laut Bank" in Summe falsch.
+        if (counterpart is not null && request.IsPending)
+            throw new BusinessRuleException("Eine Überweisung lässt sich nicht als noch nicht abgebucht markieren.");
+
+        transaction.IsPending = request.IsPending;
         transaction.Type = request.Type;
         transaction.Amount = Round(request.Amount);
         transaction.Title = NormalizeTitle(request.Title);
@@ -138,6 +147,56 @@ public sealed class TransactionService(
         logger.LogInformation(
             "Buchung {TransactionId} in Konto {AccountId} gelöscht (Überweisung: {IsTransfer}).",
             transactionId, accountId, counterpart is not null);
+    }
+
+    public async Task<TransactionDto> SettleAsync(int userId, int accountId, int transactionId, CancellationToken ct = default)
+    {
+        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        var transaction = await FindAsync(accountId, transactionId, ct);
+
+        // Bewusst kein Fehler, wenn die Buchung schon abgebucht ist: das Ergebnis ist genau
+        // das gewünschte, und zwei Klicks kurz hintereinander sollen den Nutzer nicht anfahren.
+        if (transaction.IsPending)
+        {
+            transaction.IsPending = false;
+            await context.SaveChangesAsync(ct);
+
+            logger.LogInformation(
+                "Buchung {TransactionId} in Konto {AccountId} als abgebucht markiert.", transactionId, accountId);
+        }
+
+        return await GetDtoAsync(accountId, transactionId, ct);
+    }
+
+    public async Task<SettleResultDto> SettleMonthAsync(int userId, int accountId, AccountingMonth month, CancellationToken ct = default)
+    {
+        await accountAccess.RequireOwnedAsync(userId, accountId, ct);
+
+        var pending = await QueryOfAccount(accountId)
+            .Where(t => t.IsPending && t.AccountingMonth == month.ToDateOnly())
+            .ToListAsync(ct);
+
+        // Die Summe steht vor dem Umschalten fest — danach findet die Abfrage nichts mehr,
+        // und der Nutzer soll trotzdem erfahren, um wie viel sein Stand „laut Bank" fällt.
+        var settledAmount = Round(pending.Sum(t => t.Amount));
+
+        foreach (var transaction in pending)
+            transaction.IsPending = false;
+
+        if (pending.Count > 0)
+            await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "{Count} offene Buchungen in Konto {AccountId} für Monat {Month} als abgebucht markiert.",
+            pending.Count, accountId, month);
+
+        return new SettleResultDto
+        {
+            Month = month.ToString(),
+            SettledCount = pending.Count,
+            SettledAmount = settledAmount
+        };
     }
 
     public async Task<TransactionDto> CreateTransferAsync(int userId, int accountId, SaveTransferRequest request, CancellationToken ct = default)
@@ -313,6 +372,9 @@ public sealed class TransactionService(
         var outgoingOnNearSide = request.Direction == TransferDirection.Outgoing;
         var isExpense = isCounterpart ? !outgoingOnNearSide : outgoingOnNearSide;
 
+        // Umbuchungen sind nie „noch nicht abgebucht": beide Seiten gehören zu eigenen Konten,
+        // eine halb offene Umbuchung würde die Summe der Kontostände verfälschen.
+        transaction.IsPending = false;
         transaction.Type = isExpense ? TransactionType.Expense : TransactionType.Income;
         transaction.Amount = Round(request.Amount);
         transaction.Title = NormalizeTitle(request.Title);
@@ -371,6 +433,24 @@ public sealed class TransactionService(
         }
     }
 
+    /// <summary>
+    /// Prüft, ob die Buchung offen bleiben darf. „Noch nicht abgebucht" beschreibt eine
+    /// angestoßene, aber noch nicht vollzogene Belastung eines Zahlungskontos — bei einem
+    /// Depot oder Wallet gibt es dieses Zwischenstadium nicht, und eine Einnahme belastet
+    /// das Konto ohnehin nicht.
+    /// </summary>
+    private static void EnsurePendingIsAllowed(Account account, SaveTransactionRequest request)
+    {
+        if (!request.IsPending)
+            return;
+
+        if (account.Type != AccountType.CheckingAccount)
+            throw new BusinessRuleException("Nur Buchungen auf Girokonten können als noch nicht abgebucht markiert werden.");
+
+        if (request.Type != TransactionType.Expense)
+            throw new BusinessRuleException("Nur Ausgaben können als noch nicht abgebucht markiert werden.");
+    }
+
     private static Expression<Func<Transaction, TransactionDto>> ProjectToDto =>
         t => new TransactionDto
         {
@@ -391,6 +471,7 @@ public sealed class TransactionService(
             PurchaseDate = t.PurchaseDate,
             AccountingMonthDate = t.AccountingMonth,
             Note = t.Note,
+            IsPending = t.IsPending,
             IsTransfer = t.LinkedTransactionId != null,
             CounterAccountId = t.LinkedTransaction != null ? t.LinkedTransaction.AccountId : null,
             CounterAccountName = t.LinkedTransaction != null ? t.LinkedTransaction.Account.Name : null,

@@ -11,6 +11,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { AccountBalance } from '../../../../core/models/balance.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
+import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
 import { maskIban } from '../../../../shared/utils/iban.util';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
 import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/account-type';
@@ -28,7 +29,7 @@ import { formatMonthShort } from '../../../../shared/utils/month.util';
 @Component({
   selector: 'app-bank-account-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MoneyAmountComponent],
+  imports: [RouterLink, MoneyAmountComponent, SettledBalanceComponent],
   host: {
     '(document:click)': 'onDocumentClick($event)',
     '(document:keydown.escape)': 'closeMenu()',
@@ -118,6 +119,16 @@ import { formatMonthShort } from '../../../../shared/utils/month.util';
           <dt class="fin-eyebrow">Kontostand</dt>
           <dd class="account-card__value">
             <app-money-amount [amount]="item.currentBalance" [currency]="item.currency" size="lg" />
+            <!-- Nur Girokonten kennen den Zustand „erfasst, aber noch nicht abgebucht".
+                 Bei Depot oder Wallet wäre die Zeile eine reine Wiederholung. -->
+            @if (item.type === 'CheckingAccount') {
+              <app-settled-balance
+                [amount]="item.settledBalance"
+                [currency]="item.currency"
+                [pendingCount]="item.pendingCount"
+                [pendingTotal]="item.pendingTotal"
+              />
+            }
           </dd>
         </div>
       </dl>

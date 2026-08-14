@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { MonthBalance } from '../../../../core/models/balance.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
+import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
 import { formatMoneyAbsolute } from '../../../../shared/utils/money.util';
 import { addMonths, formatMonthLong } from '../../../../shared/utils/month.util';
 
@@ -16,7 +17,7 @@ import { addMonths, formatMonthLong } from '../../../../shared/utils/month.util'
 @Component({
   selector: 'app-balance-hero',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MoneyAmountComponent, MonthPickerComponent],
+  imports: [MoneyAmountComponent, MonthPickerComponent, SettledBalanceComponent],
   template: `
     <section class="fin-brand-surface hero" aria-labelledby="monthBalanceHeading">
       <div class="hero__top">
@@ -83,6 +84,13 @@ import { addMonths, formatMonthLong } from '../../../../shared/utils/month.util'
             <dt class="hero__split-label">Vermögen</dt>
             <dd class="hero__split-value">
               <app-money-amount [amount]="data.netWorth" [currency]="data.currency" />
+              <app-settled-balance
+                variant="on-brand"
+                [amount]="data.settledNetWorth"
+                [currency]="data.currency"
+                [pendingCount]="data.pendingCount"
+                [pendingTotal]="data.pendingTotal"
+              />
             </dd>
           </div>
         </dl>

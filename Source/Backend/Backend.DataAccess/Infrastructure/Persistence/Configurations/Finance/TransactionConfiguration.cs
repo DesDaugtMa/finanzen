@@ -30,6 +30,12 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
         builder.Property(t => t.Note)
             .HasMaxLength(2000);
 
+        // Bestandsbuchungen sind allesamt längst abgebucht — der Standardwert macht die
+        // Migration für sie zu einem reinen Spaltenzuwachs ohne Datenkorrektur.
+        builder.Property(t => t.IsPending)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.HasOne(t => t.Account)
             .WithMany(a => a.Transactions)
             .HasForeignKey(t => t.AccountId)
@@ -70,6 +76,12 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
 
         builder.HasIndex(t => t.DebtId)
             .HasDatabaseName("IX_Transactions_DebtId");
+
+        // Offene Buchungen sind die Ausnahme; ein Teilindex trägt nur diese wenigen Zeilen
+        // und beantwortet trotzdem jede Frage nach dem Kontostand „laut Bank“.
+        builder.HasIndex(t => new { t.AccountId, t.IsPending })
+            .HasDatabaseName("IX_Transactions_AccountId_IsPending")
+            .HasFilter("\"IsPending\"");
 
         builder.HasQueryFilter(t => t.DeletedAt == null);
     }

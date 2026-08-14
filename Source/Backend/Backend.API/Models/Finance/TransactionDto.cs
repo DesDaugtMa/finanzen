@@ -59,6 +59,13 @@ public class TransactionDto
 
     public string? Note { get; set; }
 
+    /// <summary>
+    /// True, solange die Bank den Betrag noch nicht abgebucht hat. Die Buchung zählt trotzdem
+    /// in Kontostand, Bilanz und frei verfügbarem Geld; nur der Kontostand „laut Bank“ lässt
+    /// sie außen vor.
+    /// </summary>
+    public bool IsPending { get; set; }
+
     /// <summary>True, wenn die Buchung Teil einer Überweisung zwischen zwei Konten ist.</summary>
     public bool IsTransfer { get; set; }
 

@@ -5,6 +5,7 @@ import {
   PagedResult,
   Transaction,
   TransactionFilter,
+  SettleResult,
   TransactionPayload,
   TransferPayload,
 } from '../models/transaction.model';
@@ -39,6 +40,18 @@ export class TransactionApiService {
   /** Löscht die Buchung endgültig; bei einer Überweisung auch die Gegenbuchung. */
   delete(accountId: number, transactionId: number): Observable<void> {
     return this.api.delete<void>(`${this.resource(accountId)}/${transactionId}`);
+  }
+
+  /** Markiert eine noch nicht abgebuchte Buchung als abgebucht. */
+  settle(accountId: number, transactionId: number): Observable<Transaction> {
+    return this.api.post<Transaction>(`${this.resource(accountId)}/${transactionId}/settle`, null);
+  }
+
+  /** Markiert alle noch offenen Buchungen eines Abrechnungsmonats als abgebucht. */
+  settleMonth(accountId: number, month: string): Observable<SettleResult> {
+    return this.api.post<SettleResult>(`${this.resource(accountId)}/settle`, null, {
+      params: { month },
+    });
   }
 
   createTransfer(accountId: number, payload: TransferPayload): Observable<Transaction> {

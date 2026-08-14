@@ -16,6 +16,11 @@ export interface AccountBalance {
   initialBalance: number;
   /** Anfangssaldo + alle Einnahmen − alle Ausgaben, monatsübergreifend. */
   currentBalance: number;
+  /** Der Stand „laut Bank“: wie `currentBalance`, aber ohne die offenen Ausgaben. */
+  settledBalance: number;
+  /** Summe der noch nicht abgebuchten Ausgaben dieses Kontos. */
+  pendingTotal: number;
+  pendingCount: number;
   /** Einnahmen des Monats auf diesem Konto, ohne Umbuchungen. */
   income: number;
   /** Ausgaben des Monats, ohne Umbuchungen, als positiver Wert. */
@@ -34,6 +39,10 @@ export interface AccountGroupBalance {
   net: number;
   /** Summe der aktuellen Kontostände dieser Kategorie. */
   balance: number;
+  /** Summe der Stände „laut Bank“ dieser Kategorie, ohne die offenen Ausgaben. */
+  settledBalance: number;
+  pendingTotal: number;
+  pendingCount: number;
   accounts: AccountBalance[];
 }
 
@@ -58,6 +67,11 @@ export interface MonthBalance {
   previousNet: number;
   /** Aktuelles Gesamtvermögen über alle Kontokategorien. */
   netWorth: number;
+  /** Das Gesamtvermögen „laut Bank“, ohne die noch nicht abgebuchten Ausgaben. */
+  settledNetWorth: number;
+  /** Summe aller noch nicht abgebuchten Ausgaben über alle Konten. */
+  pendingTotal: number;
+  pendingCount: number;
   transactionCount: number;
   /** Kategorien in fester Reihenfolge; Kategorien ohne Konto fehlen. */
   groups: AccountGroupBalance[];

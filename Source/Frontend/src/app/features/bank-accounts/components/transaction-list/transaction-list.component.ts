@@ -67,6 +67,12 @@ interface SortableColumn {
                         {{ item.counterAccountName }}
                       </span>
                     }
+                    @if (item.isPending) {
+                      <span class="fin-chip fin-chip--warn">
+                        <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                        Noch nicht abgebucht
+                      </span>
+                    }
                     @if (item.note) {
                       <i
                         class="bi bi-chat-left-text text-muted"
@@ -85,6 +91,8 @@ interface SortableColumn {
                 </td>
                 <td class="text-end">
                   <app-money-amount
+                    class="tx-amount"
+                    [class.tx-amount--pending]="item.isPending"
                     [amount]="item.amount"
                     [currency]="item.currency"
                     [tone]="item.type === 'Income' ? 'income' : 'expense'"
@@ -92,6 +100,18 @@ interface SortableColumn {
                 </td>
                 <td>
                   <div class="transaction-actions">
+                    @if (item.isPending) {
+                      <button
+                        type="button"
+                        class="btn fin-btn-icon row-settle"
+                        [attr.aria-label]="'Buchung ' + item.title + ' als abgebucht markieren'"
+                        [attr.title]="'Als abgebucht markieren'"
+                        [disabled]="settling() === item.id"
+                        (click)="settle.emit(item)"
+                      >
+                        <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                      </button>
+                    }
                     <button
                       type="button"
                       class="btn fin-btn-icon"
@@ -137,7 +157,8 @@ interface SortableColumn {
             <p class="tx-row__title">{{ item.title }}</p>
 
             <app-money-amount
-              class="tx-row__amount"
+              class="tx-row__amount tx-amount"
+              [class.tx-amount--pending]="item.isPending"
               [amount]="item.amount"
               [currency]="item.currency"
               [tone]="item.type === 'Income' ? 'income' : 'expense'"
@@ -153,9 +174,26 @@ interface SortableColumn {
                   {{ item.counterAccountName }}
                 </span>
               }
+              @if (item.isPending) {
+                <span class="fin-chip fin-chip--warn">
+                  <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                  Noch nicht abgebucht
+                </span>
+              }
             </p>
 
             <div class="tx-row__actions">
+              @if (item.isPending) {
+                <button
+                  type="button"
+                  class="btn fin-btn-icon row-settle"
+                  [attr.aria-label]="'Buchung ' + item.title + ' als abgebucht markieren'"
+                  [disabled]="settling() === item.id"
+                  (click)="settle.emit(item)"
+                >
+                  <i class="bi bi-check2-circle" aria-hidden="true"></i>
+                </button>
+              }
               <button
                 type="button"
                 class="btn fin-btn-icon"
@@ -248,6 +286,27 @@ interface SortableColumn {
       .row-remove:hover {
         background-color: var(--fin-danger-tint);
         color: var(--fin-danger);
+      }
+      .row-settle:hover:not(:disabled) {
+        background-color: var(--fin-success-tint);
+        color: var(--fin-success);
+      }
+
+      /* -------------------------------------------------------------------
+         Noch nicht abgebucht
+         ------------------------------------------------------------------- */
+
+      /*
+        Der Betrag steht zurückgenommen und gestrichelt unterstrichen: er zählt
+        bereits voll im Kontostand mit, ist aber noch nicht vollzogen. Die
+        Deckkraft allein wäre zu wenig — sie ist keine verlässliche Information
+        und fällt bei hohem Kontrastbedarf weg. Die eindeutige Aussage trägt
+        deshalb das Kennzeichen mit Text daneben, nicht diese Gestaltung.
+      */
+      .tx-amount--pending {
+        opacity: 0.72;
+        text-decoration: underline dashed currentColor;
+        text-underline-offset: 0.3em;
       }
 
       /* -------------------------------------------------------------------
@@ -360,9 +419,14 @@ export class TransactionListComponent {
   readonly sort = input.required<TransactionSort>();
   readonly direction = input.required<SortDirection>();
 
+  /** Die Buchung, deren Abhaken gerade läuft — verhindert einen zweiten Klick. */
+  readonly settling = input<number | null>(null);
+
   readonly sortChange = output<TransactionSort>();
   readonly edit = output<Transaction>();
   readonly remove = output<Transaction>();
+  /** Diese Buchung soll als abgebucht markiert werden. */
+  readonly settle = output<Transaction>();
 
   protected readonly columns: readonly SortableColumn[] = [
     { key: 'BookingDate', label: 'Datum' },

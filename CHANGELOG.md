@@ -5,6 +5,8 @@ Die erste Version von Finanzen ist da. Du behältst ab jetzt an einem Ort im Bli
 **Features:**
 - Du kannst deine Girokonten anlegen und siehst für jedes davon jederzeit den aktuellen Kontostand.
 - Du erfasst Einnahmen und Ausgaben in wenigen Sekunden und ordnest sie eigenen Kategorien mit Farbe und Symbol zu.
+- Du markierst eine Ausgabe als „noch nicht abgebucht", wenn du sie gerade erst bezahlt hast, und hakst sie später mit einem Klick ab — auch alle offenen eines Monats auf einmal.
+- Unter jedem Kontostand siehst du zusätzlich den Stand „laut Bank", also ohne die Buchungen, die deine Bank noch nicht abgezogen hat.
 - Du setzt pro Kategorie und Monat ein Budget und siehst auf einen Blick, wie viel davon noch übrig ist.
 - Du planst deine monatlichen Fixkosten, hakst sie mit der passenden Buchung ab und übernimmst sie mit einem Klick in den nächsten Monat.
 - Du buchst Geld zwischen deinen eigenen Konten um, ohne dass es als Einnahme oder Ausgabe zählt.

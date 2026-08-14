@@ -16,6 +16,7 @@ import { Category } from '../../../../core/models/category.model';
 import { MonthSummary } from '../../../../core/models/month-summary.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
+import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
 import { TabItem, TabNavComponent } from '../../../../shared/components/tab-nav/tab-nav.component';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
 import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/account-type';
@@ -44,6 +45,7 @@ type TabId = (typeof TAB_IDS)[number];
     RouterLink,
     MoneyAmountComponent,
     MonthPickerComponent,
+    SettledBalanceComponent,
     OfflineNoticeComponent,
     TabNavComponent,
     AccountOverviewTabComponent,
@@ -124,6 +126,15 @@ type TabId = (typeof TAB_IDS)[number];
                 [amount]="balance()"
                 [currency]="item.currency"
               />
+              @if (item.type === 'CheckingAccount') {
+                <app-settled-balance
+                  variant="on-brand"
+                  [amount]="settledBalance()"
+                  [currency]="item.currency"
+                  [pendingCount]="summary()?.pendingCount ?? 0"
+                  [pendingTotal]="summary()?.pendingTotal ?? 0"
+                />
+              }
             </div>
           </div>
 
@@ -183,6 +194,7 @@ type TabId = (typeof TAB_IDS)[number];
                 [loading]="summaryLoading()"
                 [error]="summaryError()"
                 [month]="month()"
+                [accountType]="item.type"
                 (retry)="loadSummary()"
                 (showTransactions)="selectTab('transaktionen')"
               />
@@ -193,6 +205,9 @@ type TabId = (typeof TAB_IDS)[number];
                 [month]="month()"
                 [currency]="item.currency"
                 [categories]="categories()"
+                [accountType]="item.type"
+                [pendingCount]="summary()?.pendingMonthCount ?? 0"
+                [pendingTotal]="summary()?.pendingMonthTotal ?? 0"
                 (changed)="onDataChanged()"
               />
             }
@@ -480,6 +495,15 @@ export class BankAccountDetailComponent {
   /** Der Kontostand kommt aus der Monatsabfrage, solange sie geladen ist — sonst aus dem Konto. */
   protected readonly balance = computed(
     () => this.summary()?.currentBalance ?? this.account()?.currentBalance ?? 0,
+  );
+
+  /**
+   * Der Stand „laut Bank". Ohne geladene Kennzahlen ist unbekannt, was noch offen ist —
+   * dann zeigt die Zeile denselben Wert wie der Kontostand, statt eine erfundene
+   * Differenz zu behaupten.
+   */
+  protected readonly settledBalance = computed(
+    () => this.summary()?.settledBalance ?? this.account()?.currentBalance ?? 0,
   );
 
   /**

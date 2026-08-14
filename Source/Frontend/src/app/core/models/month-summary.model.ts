@@ -22,6 +22,14 @@ export interface MonthSummary {
   net: number;
   /** Monatsübergreifender Kontostand. */
   currentBalance: number;
+  /** Der Stand „laut Bank“: wie `currentBalance`, aber ohne die offenen Ausgaben. */
+  settledBalance: number;
+  /** Summe aller noch nicht abgebuchten Ausgaben des Kontos, monatsübergreifend. */
+  pendingTotal: number;
+  pendingCount: number;
+  /** Offene Ausgaben, die in diesem Abrechnungsmonat liegen — Bezug der Sammel-Aktion. */
+  pendingMonthTotal: number;
+  pendingMonthCount: number;
   totalBudget: number;
   totalSpentBudgeted: number;
   totalRemaining: number;

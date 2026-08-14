@@ -42,6 +42,18 @@ public sealed class TransactionsController(
         return NoContent();
     }
 
+    /// <summary>Markiert eine noch nicht abgebuchte Buchung als abgebucht.</summary>
+    [HttpPost("{transactionId:int}/settle")]
+    public async Task<ActionResult<TransactionDto>> Settle(int accountId, int transactionId, CancellationToken ct)
+        => Ok(await transactionService.SettleAsync(UserId, accountId, transactionId, ct));
+
+    /// <summary>Markiert alle noch offenen Buchungen eines Abrechnungsmonats als abgebucht.</summary>
+    /// <param name="month">Monat im Format <c>yyyy-MM</c>, z. B. <c>2026-07</c>.</param>
+    [HttpPost("settle")]
+    public async Task<ActionResult<SettleResultDto>> SettleMonth(
+        int accountId, [FromQuery] string month, CancellationToken ct)
+        => Ok(await transactionService.SettleMonthAsync(UserId, accountId, ParseMonth(month), ct));
+
     /// <summary>Legt eine Überweisung als gekoppeltes Buchungspaar an.</summary>
     [HttpPost("transfers")]
     public async Task<ActionResult<TransactionDto>> CreateTransfer(int accountId, [FromBody] SaveTransferRequest request, CancellationToken ct)

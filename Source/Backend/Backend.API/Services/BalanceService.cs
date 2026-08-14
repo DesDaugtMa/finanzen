@@ -70,6 +70,9 @@ public sealed class BalanceService(
             TransferVolume = Round(transferVolume),
             PreviousNet = Round(previousNet),
             NetWorth = Round(entries.Sum(e => e.CurrentBalance)),
+            SettledNetWorth = Round(entries.Sum(e => e.SettledBalance)),
+            PendingTotal = Round(entries.Sum(e => e.PendingTotal)),
+            PendingCount = entries.Sum(e => e.PendingCount),
             TransactionCount = entries.Sum(e => e.TransactionCount),
             Groups = groups
         };
@@ -104,7 +107,9 @@ public sealed class BalanceService(
         string? Color,
         string Currency,
         decimal InitialBalance,
-        decimal CurrentBalance);
+        decimal CurrentBalance,
+        decimal PendingTotal,
+        int PendingCount);
 
     /// <summary>Summen eines Kontos in einem Monat, ohne Umbuchungen zwischen eigenen Konten.</summary>
     private sealed record MonthTotals(decimal Income, decimal Expenses, int TransactionCount)
@@ -116,6 +121,10 @@ public sealed class BalanceService(
     /// Alle Konten des Nutzers mit ihrem monatsübergreifenden Kontostand. Umbuchungen
     /// zählen hier bewusst mit: sie verschieben Geld zwischen den Konten und verändern
     /// damit sehr wohl den einzelnen Kontostand.
+    ///
+    /// Noch nicht abgebuchte Ausgaben zählen ebenfalls voll mit — der Kontostand soll den
+    /// Stand nach der Abbuchung zeigen. Ihre Summe wird zusätzlich mitgeführt, damit sich
+    /// daraus der zweite Stand „laut Bank" ohne weitere Abfrage ergibt.
     /// </summary>
     private async Task<List<AccountRow>> LoadAccountsAsync(int userId, CancellationToken ct)
         => await accountAccess.QueryOwned(userId)
@@ -133,7 +142,9 @@ public sealed class BalanceService(
                 a.InitialBalance,
                 a.InitialBalance
                     + a.Transactions.Where(t => t.Type == TransactionType.Income).Sum(t => t.Amount)
-                    - a.Transactions.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount)))
+                    - a.Transactions.Where(t => t.Type == TransactionType.Expense).Sum(t => t.Amount),
+                a.Transactions.Where(t => t.IsPending).Sum(t => t.Amount),
+                a.Transactions.Count(t => t.IsPending)))
             .ToListAsync(ct);
 
     private async Task<Dictionary<int, MonthTotals>> LoadMonthTotalsPerAccountAsync(
@@ -206,6 +217,11 @@ public sealed class BalanceService(
             Currency = account.Currency,
             InitialBalance = Round(account.InitialBalance),
             CurrentBalance = Round(account.CurrentBalance),
+            // Die offenen Ausgaben sind im Kontostand schon abgezogen; für den Stand „laut
+            // Bank" kommen sie deshalb wieder drauf.
+            SettledBalance = Round(account.CurrentBalance + account.PendingTotal),
+            PendingTotal = Round(account.PendingTotal),
+            PendingCount = account.PendingCount,
             Income = Round(month.Income),
             Expenses = Round(month.Expenses),
             Net = Round(month.Income - month.Expenses),
@@ -226,6 +242,9 @@ public sealed class BalanceService(
                 Expenses = Round(g.Accounts.Sum(a => a.Expenses)),
                 Net = Round(g.Accounts.Sum(a => a.Net)),
                 Balance = Round(g.Accounts.Sum(a => a.CurrentBalance)),
+                SettledBalance = Round(g.Accounts.Sum(a => a.SettledBalance)),
+                PendingTotal = Round(g.Accounts.Sum(a => a.PendingTotal)),
+                PendingCount = g.Accounts.Sum(a => a.PendingCount),
                 Accounts = g.Accounts
             })
             .ToList();

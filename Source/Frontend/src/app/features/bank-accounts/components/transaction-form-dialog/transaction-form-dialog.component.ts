@@ -16,6 +16,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { AccountType } from '../../../../core/models/balance.model';
 import { Category } from '../../../../core/models/category.model';
 import { FixedCost } from '../../../../core/models/fixed-cost.model';
 import {
@@ -168,6 +169,29 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
           </div>
         }
 
+        <!--
+          Die Angabe steht direkt unter Betrag und Bezeichnung, weil sie meist beim
+          Erfassen fällt: gerade bezahlt, Bank hat noch nicht abgebucht. Sie ändert
+          nichts an den Zahlen des Monats — nur der Stand „laut Bank“ lässt die
+          Buchung außen vor, bis sie abgehakt ist.
+        -->
+        @if (canBePending()) {
+          <div class="form-check pending-check">
+            <input
+              type="checkbox"
+              id="txPending"
+              formControlName="isPending"
+              class="form-check-input"
+              aria-describedby="txPendingHint"
+            />
+            <label for="txPending" class="form-check-label">Noch nicht abgebucht</label>
+            <div id="txPendingHint" class="form-text">
+              Zählt sofort im Kontostand und im frei verfügbaren Geld — nur der Stand laut Bank
+              lässt sie aus, bis du sie als abgebucht markierst.
+            </div>
+          </div>
+        }
+
         <div>
           <label for="txBookingDate" class="form-label">Buchungsdatum</label>
           <input
@@ -273,6 +297,11 @@ function positiveMoneyValidator(control: AbstractControl): ValidationErrors | nu
         width: auto;
         padding: 0;
       }
+      /* Der Hinweistext beginnt bündig unter der Beschriftung, nicht unter dem
+         Kästchen — sonst liest er sich als eigener Absatz statt als Erläuterung. */
+      .pending-check .form-text {
+        margin-top: var(--fin-space-1);
+      }
       .budget-warning {
         display: flex;
         align-items: flex-start;
@@ -295,6 +324,8 @@ export class TransactionFormDialogComponent implements OnInit {
   /** Vorbelegter Abrechnungsmonat — der gerade angezeigte Monat. */
   readonly month = input.required<string>();
   readonly currency = input.required<string>();
+  /** Nur auf Girokonten gibt es den Zustand „erfasst, aber noch nicht abgebucht“. */
+  readonly accountType = input.required<AccountType>();
   readonly saving = input(false);
   /** Restbudget je Kategorie, um vor einer Überschreitung zu warnen. */
   readonly remainingByCategory = input<ReadonlyMap<number, number>>(new Map());
@@ -315,6 +346,7 @@ export class TransactionFormDialogComponent implements OnInit {
     purchaseDate: [''],
     accountingMonth: ['', [Validators.required]],
     note: [''],
+    isPending: [false],
   });
 
   protected readonly isEditMode = computed(() => this.transaction() !== null);
@@ -323,6 +355,18 @@ export class TransactionFormDialogComponent implements OnInit {
   protected readonly lockedType = computed(() => this.transaction()?.isTransfer === true);
 
   protected readonly suggestedMonthLabel = computed(() => formatMonthLong(this.month()));
+
+  /**
+   * Offen sein kann nur eine Ausgabe auf einem Girokonto. Bei einer Überweisung ist das
+   * Feld ebenfalls aus: die Gegenbuchung liegt auf einem eigenen Konto und würde sonst
+   * einseitig offen bleiben.
+   */
+  protected readonly canBePending = computed(
+    () =>
+      this.accountType() === 'CheckingAccount' &&
+      this.formValue().type === 'Expense' &&
+      !this.lockedType(),
+  );
 
   private readonly formValue = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
@@ -397,6 +441,7 @@ export class TransactionFormDialogComponent implements OnInit {
         purchaseDate: existing.purchaseDate ?? '',
         accountingMonth: existing.accountingMonth,
         note: existing.note ?? '',
+        isPending: existing.isPending,
       });
       return;
     }
@@ -461,6 +506,9 @@ export class TransactionFormDialogComponent implements OnInit {
       purchaseDate: value.purchaseDate || null,
       accountingMonth: value.accountingMonth,
       note: value.note.trim() || null,
+      // Wie beim Fixkosten-Feld: Wer auf „Einnahme“ umschaltet, blendet die Angabe nur
+      // aus, ohne sie zu leeren — mitgesendet werden darf sie dann nicht.
+      isPending: this.canBePending() && value.isPending,
     });
   }
 }

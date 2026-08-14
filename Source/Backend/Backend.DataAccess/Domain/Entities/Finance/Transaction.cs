@@ -29,6 +29,14 @@ public class Transaction
     public string? Note { get; set; }
 
     /// <summary>
+    /// True, solange die Bank den Betrag noch nicht abgebucht hat. Die Buchung zählt trotzdem
+    /// überall voll mit — Kontostand, Bilanz und frei verfügbares Geld sollen den Stand nach
+    /// der Abbuchung zeigen. Nur der zweite, danebenstehende Kontostand („laut Bank“) rechnet
+    /// diese Beträge wieder heraus. Gilt ausschließlich für Ausgaben auf Girokonten.
+    /// </summary>
+    public bool IsPending { get; set; }
+
+    /// <summary>
     /// Optional link to the fixed cost this transaction pays. Set means the transaction
     /// counts as a fixed cost instead of a variable expense.
     /// </summary>

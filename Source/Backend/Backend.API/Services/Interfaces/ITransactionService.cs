@@ -1,4 +1,5 @@
 using Backend.Models.Finance;
+using Backend.ValueObjects;
 
 namespace Backend.Services.Interfaces;
 
@@ -18,6 +19,15 @@ public interface ITransactionService
 
     /// <summary>Löscht die Buchung endgültig; bei einer Überweisung auch die Gegenbuchung.</summary>
     Task DeleteAsync(int userId, int accountId, int transactionId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Markiert eine noch nicht abgebuchte Buchung als abgebucht. Ist sie es bereits,
+    /// bleibt der Aufruf folgenlos und liefert den unveränderten Stand.
+    /// </summary>
+    Task<TransactionDto> SettleAsync(int userId, int accountId, int transactionId, CancellationToken ct = default);
+
+    /// <summary>Markiert alle noch offenen Buchungen eines Abrechnungsmonats als abgebucht.</summary>
+    Task<SettleResultDto> SettleMonthAsync(int userId, int accountId, AccountingMonth month, CancellationToken ct = default);
 
     Task<TransactionDto> CreateTransferAsync(int userId, int accountId, SaveTransferRequest request, CancellationToken ct = default);
 

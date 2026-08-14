@@ -28,6 +28,12 @@ export interface Transaction {
   /** Abrechnungsmonat im Format `yyyy-MM`. */
   accountingMonth: string;
   note: string | null;
+  /**
+   * True, solange die Bank den Betrag noch nicht abgebucht hat. Die Buchung zählt
+   * trotzdem voll in Kontostand, Bilanz und frei verfügbarem Geld; nur der
+   * Kontostand „laut Bank“ lässt sie außen vor.
+   */
+  isPending: boolean;
   isTransfer: boolean;
   counterAccountId: number | null;
   counterAccountName: string | null;
@@ -48,6 +54,17 @@ export interface TransactionPayload {
   purchaseDate: string | null;
   accountingMonth: string;
   note: string | null;
+  /** Nur für Ausgaben auf Girokonten zulässig; der Server weist alles andere ab. */
+  isPending: boolean;
+}
+
+/** Ergebnis der Sammel-Aktion „alle offenen Buchungen als abgebucht markieren“. */
+export interface SettleResult {
+  /** Der bearbeitete Abrechnungsmonat im Format `yyyy-MM`. */
+  month: string;
+  settledCount: number;
+  /** Summe der abgehakten Beträge — genau um so viel sinkt der Kontostand „laut Bank“. */
+  settledAmount: number;
 }
 
 /** Nutzdaten einer Überweisung zwischen zwei Konten. */

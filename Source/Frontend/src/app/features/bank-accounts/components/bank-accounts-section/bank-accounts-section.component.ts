@@ -14,6 +14,7 @@ import { AccountBalance, AccountGroupBalance } from '../../../../core/models/bal
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
 import { accountTypeIcon, accountTypeLabel } from '../../../../shared/utils/account-type';
 import { formatMonthShort } from '../../../../shared/utils/month.util';
 import { BankAccountCardComponent } from '../bank-account-card/bank-account-card.component';
@@ -41,6 +42,7 @@ type DialogState =
     BankAccountFormDialogComponent,
     ConfirmDialogComponent,
     MoneyAmountComponent,
+    SettledBalanceComponent,
     EmptyStateComponent,
   ],
   template: `
@@ -121,6 +123,15 @@ type DialogState =
                       [amount]="group.balance"
                       [currency]="group.currency"
                     />
+                    @if (group.type === 'CheckingAccount') {
+                      <app-settled-balance
+                        class="account-group__settled"
+                        [amount]="group.settledBalance"
+                        [currency]="group.currency"
+                        [pendingCount]="group.pendingCount"
+                        [pendingTotal]="group.pendingTotal"
+                      />
+                    }
                   </dd>
                 </div>
               </dl>
@@ -222,6 +233,12 @@ type DialogState =
       }
       .account-group__value {
         margin: 0;
+      }
+      /* Die Kennzahlen der Kopfzeile sind rechtsbündig; die Zweitzeile richtet sich
+         mit aus, statt als einzige Zeile linksbündig zu stehen. */
+      .account-group__settled {
+        display: flex;
+        justify-content: flex-end;
       }
       .accounts-list {
         margin: 0;

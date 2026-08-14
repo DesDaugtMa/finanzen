@@ -39,4 +39,10 @@ public class SaveTransactionRequest
 
     [MaxLength(FinanceValidation.NoteMaxLength)]
     public string? Note { get; set; }
+
+    /// <summary>
+    /// Markiert eine Ausgabe, die die Bank noch nicht abgebucht hat. Nur bei Girokonten
+    /// und nur für Ausgaben zulässig; Überweisungen sind ausgenommen.
+    /// </summary>
+    public bool IsPending { get; set; }
 }

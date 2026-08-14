@@ -39,6 +39,18 @@ public class OverallMonthBalanceDto
     /// <summary>Aktuelles Gesamtvermögen: Summe der Kontostände aller Kontokategorien.</summary>
     public decimal NetWorth { get; set; }
 
+    /// <summary>
+    /// Das Gesamtvermögen ohne die noch nicht abgebuchten Ausgaben — also der Stand, den
+    /// die Banken gerade anzeigen. Immer <c>NetWorth + PendingTotal</c>.
+    /// </summary>
+    public decimal SettledNetWorth { get; set; }
+
+    /// <summary>Summe aller noch nicht abgebuchten Ausgaben über alle Konten, monatsübergreifend.</summary>
+    public decimal PendingTotal { get; set; }
+
+    /// <summary>Anzahl der noch nicht abgebuchten Buchungen über alle Konten.</summary>
+    public int PendingCount { get; set; }
+
     /// <summary>Anzahl der berücksichtigten Buchungen, ohne Umbuchungen.</summary>
     public int TransactionCount { get; set; }
 
@@ -62,6 +74,15 @@ public class AccountGroupBalanceDto
 
     /// <summary>Summe der aktuellen Kontostände dieser Kategorie.</summary>
     public decimal Balance { get; set; }
+
+    /// <summary>Summe der Kontostände „laut Bank" dieser Kategorie, ohne die offenen Ausgaben.</summary>
+    public decimal SettledBalance { get; set; }
+
+    /// <summary>Summe der noch nicht abgebuchten Ausgaben dieser Kategorie.</summary>
+    public decimal PendingTotal { get; set; }
+
+    /// <summary>Anzahl der noch nicht abgebuchten Buchungen dieser Kategorie.</summary>
+    public int PendingCount { get; set; }
 
     public IReadOnlyList<AccountBalanceDto> Accounts { get; set; } = [];
 }
@@ -90,6 +111,18 @@ public class AccountBalanceDto
 
     /// <summary>Anfangssaldo + alle Einnahmen − alle Ausgaben, monatsübergreifend.</summary>
     public decimal CurrentBalance { get; set; }
+
+    /// <summary>
+    /// Der Kontostand „laut Bank": wie <see cref="CurrentBalance"/>, aber ohne die noch
+    /// nicht abgebuchten Ausgaben. Immer <c>CurrentBalance + PendingTotal</c>.
+    /// </summary>
+    public decimal SettledBalance { get; set; }
+
+    /// <summary>Summe der noch nicht abgebuchten Ausgaben dieses Kontos, monatsübergreifend.</summary>
+    public decimal PendingTotal { get; set; }
+
+    /// <summary>Anzahl der noch nicht abgebuchten Buchungen dieses Kontos.</summary>
+    public int PendingCount { get; set; }
 
     /// <summary>Einnahmen des Monats auf diesem Konto, ohne Umbuchungen.</summary>
     public decimal Income { get; set; }

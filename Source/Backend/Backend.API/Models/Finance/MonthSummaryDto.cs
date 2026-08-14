@@ -20,6 +20,27 @@ public class MonthSummaryDto
     /// <summary>Monatsübergreifender Kontostand: Anfangssaldo + alle Einnahmen − alle Ausgaben.</summary>
     public decimal CurrentBalance { get; set; }
 
+    /// <summary>
+    /// Der Kontostand „laut Bank": wie <see cref="CurrentBalance"/>, aber ohne die noch nicht
+    /// abgebuchten Ausgaben. Immer <c>CurrentBalance + PendingTotal</c>.
+    /// </summary>
+    public decimal SettledBalance { get; set; }
+
+    /// <summary>Summe aller noch nicht abgebuchten Ausgaben des Kontos, monatsübergreifend.</summary>
+    public decimal PendingTotal { get; set; }
+
+    /// <summary>Anzahl aller noch nicht abgebuchten Buchungen des Kontos, monatsübergreifend.</summary>
+    public int PendingCount { get; set; }
+
+    /// <summary>
+    /// Summe der noch nicht abgebuchten Ausgaben, die in <em>diesem</em> Abrechnungsmonat liegen.
+    /// Bezugsgröße der Sammel-Aktion, die genau diesen Monat abhakt.
+    /// </summary>
+    public decimal PendingMonthTotal { get; set; }
+
+    /// <summary>Anzahl der noch nicht abgebuchten Buchungen dieses Abrechnungsmonats.</summary>
+    public int PendingMonthCount { get; set; }
+
     /// <summary>Summe der im Monat gesetzten Kategoriebudgets.</summary>
     public decimal TotalBudget { get; set; }
 
