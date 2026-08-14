@@ -9,7 +9,8 @@ Die erste Version von Finanzen ist da. Du behältst ab jetzt an einem Ort im Bli
 - Unter jedem Kontostand siehst du zusätzlich den Stand „laut Bank", also ohne die Buchungen, die deine Bank noch nicht abgezogen hat.
 - Du setzt pro Kategorie und Monat ein Budget und siehst auf einen Blick, wie viel davon noch übrig ist.
 - Du planst deine monatlichen Fixkosten, hakst sie mit der passenden Buchung ab und übernimmst sie mit einem Klick in den nächsten Monat.
-- Du buchst Geld zwischen deinen eigenen Konten um, ohne dass es als Einnahme oder Ausgabe zählt.
+- Du verknüpfst zwei Buchungen, die zusammengehören — etwa eine Ausgabe auf dem einen und die dazugehörige Einnahme auf dem anderen Konto —, und sie zählen dann nicht mehr als Einnahme oder Ausgabe.
+- Du siehst zu einer verknüpften Buchung mit einem Klick alle Angaben der Gegenbuchung und springst von dort direkt zu ihr auf das andere Konto.
 - Du siehst in der Monatsübersicht, wie sich Einnahmen, Ausgaben und dein Ergebnis über den Monat entwickeln.
 - Du führst eine Liste, wem du Geld geliehen hast, und siehst, wie viel davon noch offen ist.
 - Du meldest dich mit E-Mail und Passwort oder direkt mit deinem Google-Konto an — neue Mitglieder kommen per Einladung dazu.

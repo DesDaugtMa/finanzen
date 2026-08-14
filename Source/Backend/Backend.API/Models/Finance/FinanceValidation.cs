@@ -23,6 +23,9 @@ internal static class FinanceValidation
     /// <summary>Kurze Bezeichnung des Vorgangs („Urlaub Kroatien“).</summary>
     public const int DebtTitleMaxLength = 200;
 
-    /// <summary>Obergrenze der Buchungen, die der Zuordnungs-Dialog zur Auswahl anbietet.</summary>
+    /// <summary>
+    /// Obergrenze der Buchungen, die ein Auswahl-Dialog anbietet — beim Zuordnen zu
+    /// Fixkosten ebenso wie beim Verknüpfen zweier Buchungen.
+    /// </summary>
     public const int AssignableTransactionLimit = 50;
 }

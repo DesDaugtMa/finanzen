@@ -2,15 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import {
+  LinkCandidateQuery,
+  LinkedTransaction,
   PagedResult,
   Transaction,
   TransactionFilter,
   SettleResult,
   TransactionPayload,
-  TransferPayload,
 } from '../models/transaction.model';
 
-/** Buchungen eines Kontos inklusive der Überweisungen zwischen zwei Konten. */
+/** Buchungen eines Kontos samt ihrer Verknüpfung mit einer Buchung eines anderen Kontos. */
 @Injectable({ providedIn: 'root' })
 export class TransactionApiService {
   private readonly api = inject(ApiService);
@@ -19,10 +20,19 @@ export class TransactionApiService {
     return `bankaccounts/${accountId}/transactions`;
   }
 
-  list(accountId: number, filter: TransactionFilter): Observable<PagedResult<Transaction>> {
-    return this.api.get<PagedResult<Transaction>>(this.resource(accountId), {
-      params: buildParams(filter),
-    });
+  /**
+   * Buchungen eines Monats. Ist `focusTransactionId` gesetzt, liefert der Server die
+   * Seite, auf der diese Buchung steht — sonst die angeforderte.
+   */
+  list(
+    accountId: number,
+    filter: TransactionFilter,
+    focusTransactionId: number | null = null,
+  ): Observable<PagedResult<Transaction>> {
+    const params = buildParams(filter);
+    if (focusTransactionId !== null) params['focusTransactionId'] = focusTransactionId;
+
+    return this.api.get<PagedResult<Transaction>>(this.resource(accountId), { params });
   }
 
   create(accountId: number, payload: TransactionPayload): Observable<Transaction> {
@@ -37,7 +47,10 @@ export class TransactionApiService {
     return this.api.put<Transaction>(`${this.resource(accountId)}/${transactionId}`, payload);
   }
 
-  /** Löscht die Buchung endgültig; bei einer Überweisung auch die Gegenbuchung. */
+  /**
+   * Löscht die Buchung endgültig. Eine verknüpfte Gegenbuchung bleibt bestehen und
+   * verliert nur ihre Verknüpfung.
+   */
   delete(accountId: number, transactionId: number): Observable<void> {
     return this.api.delete<void>(`${this.resource(accountId)}/${transactionId}`);
   }
@@ -54,19 +67,43 @@ export class TransactionApiService {
     });
   }
 
-  createTransfer(accountId: number, payload: TransferPayload): Observable<Transaction> {
-    return this.api.post<Transaction>(`${this.resource(accountId)}/transfers`, payload);
+  /** Die verknüpfte Buchung des anderen Kontos mit allen Details für das Popup. */
+  getLink(accountId: number, transactionId: number): Observable<LinkedTransaction> {
+    return this.api.get<LinkedTransaction>(`${this.resource(accountId)}/${transactionId}/link`);
   }
 
-  updateTransfer(
+  /** Buchungen eines anderen Kontos, die als Gegenstück in Frage kommen. */
+  linkCandidates(accountId: number, query: LinkCandidateQuery): Observable<LinkedTransaction[]> {
+    const params: Record<string, string | number> = {
+      counterAccountId: query.counterAccountId,
+      type: query.type,
+      amount: query.amount,
+    };
+
+    const search = query.search.trim();
+    if (search) params['search'] = search;
+    if (query.excludeTransactionId !== null)
+      params['excludeTransactionId'] = query.excludeTransactionId;
+
+    return this.api.get<LinkedTransaction[]>(`${this.resource(accountId)}/link-candidates`, {
+      params,
+    });
+  }
+
+  /** Verknüpft die Buchung 1-zu-1 mit einer Buchung eines anderen Kontos. */
+  link(
     accountId: number,
     transactionId: number,
-    payload: TransferPayload,
-  ): Observable<Transaction> {
-    return this.api.put<Transaction>(
-      `${this.resource(accountId)}/transfers/${transactionId}`,
-      payload,
-    );
+    counterTransactionId: number,
+  ): Observable<LinkedTransaction> {
+    return this.api.post<LinkedTransaction>(`${this.resource(accountId)}/${transactionId}/link`, {
+      counterTransactionId,
+    });
+  }
+
+  /** Löst die Verknüpfung; beide Buchungen bleiben erhalten. */
+  unlink(accountId: number, transactionId: number): Observable<void> {
+    return this.api.delete<void>(`${this.resource(accountId)}/${transactionId}/link`);
   }
 }
 

@@ -56,16 +56,21 @@ interface SortableColumn {
           </thead>
           <tbody>
             @for (item of transactions(); track item.id) {
-              <tr>
+              <tr [attr.id]="rowId(item)" [class.tx-highlight]="highlighted() === item.id">
                 <td class="text-nowrap">{{ formatDate(item.bookingDate) }}</td>
                 <td>
                   <span class="transaction-title">
                     <span class="fin-break-all">{{ item.title }}</span>
-                    @if (item.isTransfer) {
-                      <span class="fin-chip">
-                        <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-                        {{ item.counterAccountName }}
-                      </span>
+                    @if (item.isLinked) {
+                      <button
+                        type="button"
+                        class="fin-chip link-chip"
+                        [attr.aria-label]="linkLabel(item)"
+                        (click)="openLink.emit(item)"
+                      >
+                        <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                        {{ item.linkedAccountName }}
+                      </button>
                     }
                     @if (item.isPending) {
                       <span class="fin-chip fin-chip--warn">
@@ -144,7 +149,11 @@ interface SortableColumn {
       -->
       <ul class="tx-list">
         @for (item of transactions(); track item.id) {
-          <li class="tx-row">
+          <li
+            class="tx-row"
+            [attr.id]="rowId(item)"
+            [class.tx-highlight]="highlighted() === item.id"
+          >
             <span class="tx-row__lead" aria-hidden="true">
               <app-category-badge
                 [showLabel]="false"
@@ -168,11 +177,16 @@ interface SortableColumn {
               <span>{{ formatDate(item.bookingDate) }}</span>
               <span class="fin-dot"></span>
               <span>{{ item.categoryName ?? 'Ohne Kategorie' }}</span>
-              @if (item.isTransfer) {
-                <span class="fin-chip">
-                  <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
-                  {{ item.counterAccountName }}
-                </span>
+              @if (item.isLinked) {
+                <button
+                  type="button"
+                  class="fin-chip link-chip"
+                  [attr.aria-label]="linkLabel(item)"
+                  (click)="openLink.emit(item)"
+                >
+                  <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                  {{ item.linkedAccountName }}
+                </button>
               }
               @if (item.isPending) {
                 <span class="fin-chip fin-chip--warn">
@@ -290,6 +304,68 @@ interface SortableColumn {
       .row-settle:hover:not(:disabled) {
         background-color: var(--fin-success-tint);
         color: var(--fin-success);
+      }
+
+      /* -------------------------------------------------------------------
+         Verknüpfung
+         ------------------------------------------------------------------- */
+
+      /*
+        Das Kennzeichen der Verknüpfung ist zugleich der Weg zur Gegenbuchung. Es
+        bleibt optisch ein Chip, wird aber als echte Schaltfläche ausgezeichnet —
+        anders wäre es mit der Tastatur nicht erreichbar und für Screenreader kein
+        Bedienelement.
+      */
+      /* Nur die Schriftfamilie wird geerbt — Größe und Stärke kommen aus .fin-chip
+         und würden von einem pauschalen "font: inherit" überschrieben. */
+      .link-chip {
+        font-family: inherit;
+        cursor: pointer;
+        transition:
+          border-color var(--fin-duration-fast) var(--fin-ease-out),
+          color var(--fin-duration-fast) var(--fin-ease-out);
+      }
+      .link-chip:hover {
+        border-color: var(--fin-accent);
+        color: var(--fin-accent);
+      }
+      .link-chip:focus-visible {
+        outline: 2px solid var(--fin-accent);
+        outline-offset: 2px;
+      }
+
+      /*
+        Die angesprungene Zeile wird kurz hervorgehoben. Der Streifen links steht neben
+        der Hinterlegung, damit die Zeile auch dann auffindbar bleibt, wenn Farben
+        schwach oder gar nicht unterschieden werden.
+
+        In der Tabelle trägt die Hinterlegung die Zelle, nicht die Zeile: Bootstrap
+        setzt die Hintergrundfarbe auf den Zellen, ein Hintergrund an der Zeile
+        bliebe davon verdeckt.
+      */
+      .tx-highlight td,
+      li.tx-highlight {
+        animation: tx-highlight-fade 2.4s var(--fin-ease-out) forwards;
+      }
+      .tx-highlight td:first-child,
+      li.tx-highlight {
+        box-shadow: inset 3px 0 0 0 var(--fin-accent);
+      }
+      @keyframes tx-highlight-fade {
+        0%,
+        60% {
+          background-color: var(--fin-accent-tint);
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .tx-highlight td,
+        li.tx-highlight {
+          animation: none;
+          background-color: var(--fin-accent-tint);
+        }
       }
 
       /* -------------------------------------------------------------------
@@ -422,11 +498,16 @@ export class TransactionListComponent {
   /** Die Buchung, deren Abhaken gerade läuft — verhindert einen zweiten Klick. */
   readonly settling = input<number | null>(null);
 
+  /** Die angesprungene Buchung — sie wird kurz hervorgehoben. */
+  readonly highlighted = input<number | null>(null);
+
   readonly sortChange = output<TransactionSort>();
   readonly edit = output<Transaction>();
   readonly remove = output<Transaction>();
   /** Diese Buchung soll als abgebucht markiert werden. */
   readonly settle = output<Transaction>();
+  /** Die verknüpfte Gegenbuchung dieser Buchung soll gezeigt werden. */
+  readonly openLink = output<Transaction>();
 
   protected readonly columns: readonly SortableColumn[] = [
     { key: 'BookingDate', label: 'Datum' },
@@ -436,6 +517,18 @@ export class TransactionListComponent {
   ];
 
   protected readonly formatDate = formatDate;
+
+  /**
+   * Anker für den Sprung von der Gegenbuchung hierher. Die ID trägt bewusst die
+   * Buchungsnummer, damit der Aufrufer die Zeile ohne Umweg über die Liste findet.
+   */
+  protected rowId(item: Transaction): string {
+    return `tx-${item.id}`;
+  }
+
+  protected linkLabel(item: Transaction): string {
+    return `Verknüpfte Buchung auf ${item.linkedAccountName} anzeigen`;
+  }
 
   protected ariaSort(key: TransactionSort): 'ascending' | 'descending' | 'none' {
     if (this.sort() !== key) return 'none';

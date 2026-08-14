@@ -66,16 +66,16 @@ public class TransactionDto
     /// </summary>
     public bool IsPending { get; set; }
 
-    /// <summary>True, wenn die Buchung Teil einer Überweisung zwischen zwei Konten ist.</summary>
-    public bool IsTransfer { get; set; }
+    /// <summary>True, wenn diese Buchung mit einer Buchung eines anderen Kontos verknüpft ist.</summary>
+    public bool IsLinked { get; set; }
 
-    /// <summary>Das andere Konto der Überweisung, sonst null.</summary>
-    public int? CounterAccountId { get; set; }
+    /// <summary>Die verknüpfte Buchung, sonst null. Alle Details dazu liefert der Link-Endpunkt.</summary>
+    public int? LinkedTransactionId { get; set; }
 
-    public string? CounterAccountName { get; set; }
+    /// <summary>Das Konto der verknüpften Buchung, sonst null.</summary>
+    public int? LinkedAccountId { get; set; }
 
-    /// <summary>Kategorie der Gegenbuchung — nötig, um eine Überweisung verlustfrei zu bearbeiten.</summary>
-    public int? CounterCategoryId { get; set; }
+    public string? LinkedAccountName { get; set; }
 
     public DateTime CreatedAt { get; set; }
 }

@@ -208,7 +208,9 @@ type TabId = (typeof TAB_IDS)[number];
                 [accountType]="item.type"
                 [pendingCount]="summary()?.pendingMonthCount ?? 0"
                 [pendingTotal]="summary()?.pendingMonthTotal ?? 0"
+                [focusTransactionId]="focusTransactionId()"
                 (changed)="onDataChanged()"
+                (focusHandled)="clearFocusTransaction()"
               />
             }
             @case ('fixkosten') {
@@ -483,6 +485,16 @@ export class BankAccountDetailComponent {
     return TAB_IDS.includes(value as TabId) ? (value as TabId) : 'uebersicht';
   });
 
+  /**
+   * Die Buchung, zu der ein Sprung von der Gegenbuchung führt. Sie steht in der URL,
+   * damit der Sprung ein gewöhnlicher Seitenaufruf bleibt — mit Zurück-Taste, Neuladen
+   * und teilbarem Link, statt eines flüchtigen Zustands im Speicher.
+   */
+  protected readonly focusTransactionId = computed(() => {
+    const value = Number(this.queryParams().get('buchung'));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
+
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
   protected readonly accentColor = computed(() => this.account()?.color ?? DEFAULT_ACCENT_COLOR);
 
@@ -563,6 +575,20 @@ export class BankAccountDetailComponent {
 
   protected selectTab(tab: string): void {
     this.updateQueryParams({ tab });
+  }
+
+  /**
+   * Nimmt die angesprungene Buchung wieder aus der URL, sobald die Liste sie
+   * hervorgehoben hat. Bliebe sie stehen, würde jedes spätere Neuladen der Seite die
+   * Hervorhebung erneut auslösen — lange nachdem der Sprung vergessen ist.
+   */
+  protected clearFocusTransaction(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { buchung: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   protected reload(): void {

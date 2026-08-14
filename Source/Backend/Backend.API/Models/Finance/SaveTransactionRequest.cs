@@ -42,7 +42,7 @@ public class SaveTransactionRequest
 
     /// <summary>
     /// Markiert eine Ausgabe, die die Bank noch nicht abgebucht hat. Nur bei Girokonten
-    /// und nur für Ausgaben zulässig; Überweisungen sind ausgenommen.
+    /// und nur für Ausgaben zulässig.
     /// </summary>
     public bool IsPending { get; set; }
 }
