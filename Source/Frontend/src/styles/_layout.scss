@@ -59,6 +59,15 @@
   min-height: 100dvh;
 }
 
+// Ab Desktop steht die Seitenleiste fest am linken Rand. Das Gerüst rückt um
+// ihre Breite ein, statt sie in den Fluss zu nehmen: so scrollt der Inhalt
+// unabhängig und die Navigation bleibt stehen.
+@media (min-width: 62rem) {
+  .fin-shell--with-sidebar {
+    padding-left: var(--fin-sidebar-width);
+  }
+}
+
 .fin-main {
   flex: 1 1 auto;
   padding-top: var(--fin-space-5);
@@ -70,7 +79,12 @@
 @media (min-width: 48rem) {
   .fin-main {
     padding-top: var(--fin-space-8);
-    // Ab Tablet liegt die Navigation oben — unten ist keine Leiste im Weg.
+  }
+}
+
+@media (min-width: 62rem) {
+  .fin-main {
+    // Ab Desktop steht die Navigation links — unten ist keine Leiste im Weg.
     padding-bottom: var(--fin-space-12);
   }
 }
@@ -189,7 +203,7 @@
   box-shadow: var(--fin-shadow-lg);
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 62rem) {
   // Auf grossen Screens hat die Aktion ihren Platz im Seitenkopf.
   .fin-fab {
     display: none;

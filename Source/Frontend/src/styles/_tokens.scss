@@ -161,6 +161,9 @@
   --fin-container-narrow: 34rem;
   --fin-tabbar-height: 3.75rem;
   --fin-topnav-height: 4rem;
+  // Breite der Seitenleiste ab Desktop. Genug für Symbol und ausgeschriebene
+  // Beschriftung, ohne dem Inhalt spürbar Platz zu nehmen.
+  --fin-sidebar-width: 15.5rem;
   // Höhe der mobilen Tab-Bar inkl. iOS-Home-Indicator. Seiten reservieren damit
   // unten Platz, sodass nie Inhalt unter der Leiste verschwindet.
   --fin-tabbar-total: calc(var(--fin-tabbar-height) + env(safe-area-inset-bottom, 0px));

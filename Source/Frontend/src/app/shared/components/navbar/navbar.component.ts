@@ -3,7 +3,6 @@ import {
   Component,
   DOCUMENT,
   DestroyRef,
-  ElementRef,
   computed,
   inject,
   signal,
@@ -11,7 +10,7 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ChangelogApiService } from '../../../core/services/changelog-api.service';
-import { ThemeSwitchComponent } from '../theme-switch/theme-switch.component';
+import { LogoutButtonComponent } from '../logout-button/logout-button.component';
 
 interface NavTarget {
   path: string;
@@ -28,139 +27,96 @@ interface NavTarget {
 /**
  * Hauptnavigation der Anwendung in zwei Ausprägungen.
  *
- * - **Mobil** (< 48rem): schlanke Kopfzeile mit Marke und Kontomenü, dazu eine
+ * - **Mobil** (< 62rem): schlanke Kopfzeile, die nur die Marke trägt, dazu eine
  *   Tab-Bar am unteren Rand. Der untere Bildschirmrand ist die Daumenzone; eine
  *   Navigation oben ist einhändig auf großen Telefonen kaum erreichbar.
- * - **Ab Tablet** (≥ 48rem): eine waagerechte Leiste oben. Hier gibt es keine
- *   Daumenzone, dafür Breite — und der Inhalt soll die volle Höhe bekommen.
+ * - **Ab Desktop** (≥ 62rem): eine stehende Seitenleiste links. Bildschirme sind
+ *   breiter als hoch — senkrecht ist Platz für beliebig viele Ziele mit
+ *   ausgeschriebener Beschriftung, und der Inhalt bekommt die volle Höhe.
  *
  * Beide Ausprägungen zeigen dieselben Ziele in derselben Reihenfolge, damit das
- * mentale Modell beim Gerätewechsel erhalten bleibt.
+ * mentale Modell beim Gerätewechsel erhalten bleibt. Ein Kontomenü gibt es nicht
+ * mehr: Erscheinungsbild, Sitzungen, Abmelden und die Version leben auf der
+ * Profilseite — auf schmalen Displays der einzige, auf breiten der zweite Weg
+ * neben der Seitenleiste.
  */
 @Component({
   selector: 'app-navbar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, ThemeSwitchComponent],
-  host: {
-    '(document:click)': 'onDocumentClick($event)',
-    '(document:keydown.escape)': 'closeMenu()',
-  },
+  imports: [RouterLink, RouterLinkActive, LogoutButtonComponent],
   template: `
+    <!-- Kopfzeile, nur auf schmalen Displays sichtbar. -->
     <header class="fin-topbar" [class.fin-topbar--scrolled]="scrolled()">
       <div class="container fin-topbar__inner">
         <a class="fin-brand" routerLink="/" aria-label="Finanzen — zur Übersicht">
           <span class="fin-brand__mark" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
           <span>Finanzen</span>
         </a>
-
-        <!-- Ziele ab Tablet. Auf Mobil übernimmt das die untere Tab-Bar. -->
-        <ul class="fin-topnav">
-          @for (target of visibleTargets(); track target.path) {
-            <li>
-              <a
-                class="fin-topnav__link"
-                [routerLink]="target.path"
-                routerLinkActive="fin-active"
-                [routerLinkActiveOptions]="{ exact: target.exact }"
-              >
-                <i class="bi bi-{{ target.icon }}" aria-hidden="true"></i>
-                <span>{{ target.label }}</span>
-              </a>
-            </li>
-          }
-        </ul>
-
-        <div class="position-relative">
-          <button
-            type="button"
-            class="fin-avatar-button"
-            [attr.aria-expanded]="menuOpen()"
-            aria-haspopup="menu"
-            aria-label="Kontomenü"
-            (click)="toggleMenu()"
-          >
-            <span aria-hidden="true">{{ initials() }}</span>
-          </button>
-
-          @if (menuOpen()) {
-            <div class="fin-menu" role="menu">
-              <div class="fin-menu__header">
-                <span class="fin-menu__name">Angemeldet</span>
-                <span class="fin-menu__mail">{{ authService.currentUser()?.email }}</span>
-              </div>
-
-              <a class="fin-menu__item" role="menuitem" routerLink="/konto" (click)="closeMenu()">
-                <i class="bi bi-person fin-menu__icon" aria-hidden="true"></i>
-                <span>Mein Profil</span>
-              </a>
-
-              <a
-                class="fin-menu__item"
-                role="menuitem"
-                routerLink="/konto/sitzungen"
-                (click)="closeMenu()"
-              >
-                <i class="bi bi-shield-check fin-menu__icon" aria-hidden="true"></i>
-                <span>Aktive Sitzungen</span>
-              </a>
-
-              @if (authService.isAdmin()) {
-                <a
-                  class="fin-menu__item"
-                  role="menuitem"
-                  routerLink="/admin/einladungen"
-                  (click)="closeMenu()"
-                >
-                  <i class="bi bi-person-plus fin-menu__icon" aria-hidden="true"></i>
-                  <span>Einladungen</span>
-                </a>
-              }
-
-              <div class="fin-menu__separator" role="none"></div>
-
-              <div class="d-flex align-items-center justify-content-between gap-2 px-3 py-2">
-                <span class="fin-menu__name">Ansicht</span>
-                <app-theme-switch [compact]="true" />
-              </div>
-
-              <div class="fin-menu__separator" role="none"></div>
-
-              <!--
-                Der Changelog ist kein tägliches Ziel und gehört deshalb nicht in die
-                Hauptnavigation. Als kleine Zeile im Kontomenü ist er dennoch von jeder
-                Seite aus erreichbar — und trägt die Version gleich mit.
-              -->
-              <a
-                class="fin-menu__item fin-menu__item--meta"
-                role="menuitem"
-                routerLink="/changelog"
-                (click)="closeMenu()"
-              >
-                <i class="bi bi-journal-text fin-menu__icon" aria-hidden="true"></i>
-                <span>{{ changelogLabel() }}</span>
-              </a>
-
-              <div class="fin-menu__separator" role="none"></div>
-
-              <button
-                type="button"
-                class="fin-menu__item fin-menu__item--danger"
-                role="menuitem"
-                (click)="logout()"
-              >
-                <i class="bi bi-box-arrow-right fin-menu__icon" aria-hidden="true"></i>
-                <span>Abmelden</span>
-              </button>
-            </div>
-          }
-        </div>
       </div>
     </header>
+
+    <!-- Seitenleiste, erst ab Desktop sichtbar. -->
+    <nav class="fin-sidebar" aria-label="Hauptnavigation">
+      <a class="fin-brand fin-sidebar__brand" routerLink="/" aria-label="Finanzen — zur Übersicht">
+        <span class="fin-brand__mark" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+        <span>Finanzen</span>
+      </a>
+
+      <ul class="fin-sidebar__list">
+        @for (target of mainTargets(); track target.path) {
+          <li>
+            <a
+              class="fin-sidebar__link"
+              [routerLink]="target.path"
+              routerLinkActive="fin-active"
+              [routerLinkActiveOptions]="{ exact: target.exact }"
+              #link="routerLinkActive"
+              [attr.aria-current]="link.isActive ? 'page' : null"
+            >
+              <i
+                class="bi fin-sidebar__icon"
+                [class]="'bi-' + (link.isActive ? target.iconActive : target.icon)"
+                aria-hidden="true"
+              ></i>
+              <span class="fin-sidebar__label">{{ target.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+
+      <div class="fin-sidebar__footer">
+        <a
+          class="fin-sidebar__link fin-sidebar__profile"
+          routerLink="/konto"
+          routerLinkActive="fin-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          #profileLink="routerLinkActive"
+          [attr.aria-current]="profileLink.isActive ? 'page' : null"
+        >
+          <span class="fin-sidebar__avatar" aria-hidden="true">{{ initials() }}</span>
+          <span class="fin-sidebar__profile-text">
+            <span class="fin-sidebar__label">Profil</span>
+            <span class="fin-sidebar__profile-mail">{{ authService.currentUser()?.email }}</span>
+          </span>
+        </a>
+
+        <app-logout-button variant="nav" />
+
+        <!--
+          Der Changelog ist kein tägliches Ziel und gehört deshalb nicht zwischen
+          die Hauptziele. Als kleine Zeile ganz unten ist er dennoch von jeder
+          Seite aus erreichbar — und trägt die Version gleich mit.
+        -->
+        <a class="fin-sidebar__link fin-sidebar__meta" routerLink="/changelog">
+          {{ changelogLabel() }}
+        </a>
+      </div>
+    </nav>
 
     <!-- Tab-Bar am unteren Rand, nur auf schmalen Displays sichtbar. -->
     <nav class="fin-tabbar" aria-label="Hauptnavigation">
       <ul class="fin-tabbar__list">
-        @for (target of visibleTargets(); track target.path) {
+        @for (target of tabTargets(); track target.path) {
           <li class="fin-tabbar__item">
             <a
               class="fin-tabbar__link"
@@ -189,9 +145,6 @@ export class NavbarComponent {
   private readonly changelogApi = inject(ChangelogApiService);
 
   private readonly document = inject(DOCUMENT);
-  private readonly host = inject(ElementRef<HTMLElement>);
-
-  protected readonly menuOpen = signal(false);
 
   /** Trennlinie der Kopfzeile erscheint erst, wenn tatsächlich gescrollt wurde. */
   protected readonly scrolled = signal(false);
@@ -214,9 +167,7 @@ export class NavbarComponent {
       exact: false,
     },
     // „Sitzungen“ steht bewusst nicht hier: es ist eine Sicherheitseinstellung,
-    // kein täglich genutztes Ziel, und würde in der schmalen Tab-Bar Platz
-    // beanspruchen, der den Kernaufgaben gehört. Erreichbar bleibt es über das
-    // Kontomenü und die Profilseite.
+    // kein täglich genutztes Ziel. Erreichbar bleibt es über die Profilseite.
     {
       path: '/admin/einladungen',
       label: 'Einladungen',
@@ -236,8 +187,19 @@ export class NavbarComponent {
     },
   ];
 
-  protected readonly visibleTargets = computed(() =>
+  private readonly visibleTargets = computed(() =>
     this.targets.filter((target) => !target.adminOnly || this.authService.isAdmin()),
+  );
+
+  /** Die Tab-Bar zeigt alle Ziele nebeneinander, Profil eingeschlossen. */
+  protected readonly tabTargets = this.visibleTargets;
+
+  /**
+   * In der Seitenleiste steht das Profil nicht bei den täglichen Zielen, sondern
+   * unten im Fußbereich — mit Initialen und E-Mail statt bloßem Symbol.
+   */
+  protected readonly mainTargets = computed(() =>
+    this.visibleTargets().filter((target) => target.path !== '/konto'),
   );
 
   /**
@@ -251,6 +213,11 @@ export class NavbarComponent {
    * gedrosselt; unveränderte Werte schreibt das Signal ohnehin nicht durch.
    */
   constructor() {
+    // Die Version steht dauerhaft in der Seitenleiste und wird deshalb einmal
+    // beim Aufbau geholt. Der Dienst liest offline aus dem Zwischenspeicher und
+    // lässt den Link im Fehlerfall schlicht ohne Version stehen.
+    this.changelogApi.ensureVersionLoaded();
+
     const view = this.document.defaultView;
     if (!view) return;
 
@@ -287,34 +254,10 @@ export class NavbarComponent {
   /**
    * Beschriftung des Changelog-Links. Die Version steht davor, weil sie die eigentliche
    * Auskunft ist („welchen Stand habe ich?“); ist sie noch nicht bekannt, bleibt der Link
-   * ohne sie bestehen, statt eine Ladeanzeige im Menü zu zeigen.
+   * ohne sie bestehen, statt eine Ladeanzeige in der Navigation zu zeigen.
    */
   protected readonly changelogLabel = computed(() => {
     const version = this.changelogApi.currentVersion();
     return version ? `v${version} — Changelog` : 'Changelog';
   });
-
-  protected toggleMenu(): void {
-    // Erst beim Öffnen holen: die Version wird nur hier gebraucht und soll den
-    // Seitenaufbau nicht mit einer zusätzlichen Anfrage belasten.
-    if (!this.menuOpen()) this.changelogApi.ensureVersionLoaded();
-
-    this.menuOpen.update((open) => !open);
-  }
-
-  protected closeMenu(): void {
-    this.menuOpen.set(false);
-  }
-
-  protected logout(): void {
-    this.closeMenu();
-    this.authService.logout();
-  }
-
-  protected onDocumentClick(event: MouseEvent): void {
-    if (!this.menuOpen()) return;
-    if (this.host.nativeElement.contains(event.target as Node)) return;
-
-    this.closeMenu();
-  }
 }

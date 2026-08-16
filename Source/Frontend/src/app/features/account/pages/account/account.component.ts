@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   ReactiveFormsModule,
   FormBuilder,
@@ -9,14 +9,22 @@ import {
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { AccountApiService } from '../../../../core/services/account-api.service';
+import { ChangelogApiService } from '../../../../core/services/changelog-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { LogoutButtonComponent } from '../../../../shared/components/logout-button/logout-button.component';
 import { PasswordFieldComponent } from '../../../../shared/components/password-field/password-field.component';
 import { ThemeSwitchComponent } from '../../../../shared/components/theme-switch/theme-switch.component';
 
 @Component({
   selector: 'app-account',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, PasswordFieldComponent, ThemeSwitchComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    LogoutButtonComponent,
+    PasswordFieldComponent,
+    ThemeSwitchComponent,
+  ],
   template: `
     <div class="container account-page">
       <header class="fin-page-header">
@@ -114,7 +122,7 @@ import { ThemeSwitchComponent } from '../../../../shared/components/theme-switch
         </div>
       </section>
 
-      <section class="fin-panel" aria-labelledby="sessionsHeading">
+      <section class="fin-panel account-section" aria-labelledby="sessionsHeading">
         <div class="fin-panel__body account-row">
           <div class="account-row__text">
             <h2 id="sessionsHeading" class="account-heading account-heading--tight">
@@ -126,6 +134,34 @@ import { ThemeSwitchComponent } from '../../../../shared/components/theme-switch
             <i class="bi bi-shield-lock" aria-hidden="true"></i>
             <span>Verwalten</span>
           </a>
+        </div>
+      </section>
+
+      <section class="fin-panel account-section" aria-labelledby="versionHeading">
+        <div class="fin-panel__body account-row">
+          <div class="account-row__text">
+            <h2 id="versionHeading" class="account-heading account-heading--tight">Version</h2>
+            <p class="account-note">{{ versionNote() }}</p>
+          </div>
+          <a routerLink="/changelog" class="btn btn-outline-secondary">
+            <i class="bi bi-journal-text" aria-hidden="true"></i>
+            <span>Changelog</span>
+          </a>
+        </div>
+      </section>
+
+      <!--
+        Abmelden steht ganz unten und damit am weitesten weg von allem, was man
+        hier sonst tut. Auf schmalen Displays ist das der einzige Weg hinaus —
+        die Kopfzeile trägt dort kein Menü mehr.
+      -->
+      <section class="fin-panel" aria-labelledby="logoutHeading">
+        <div class="fin-panel__body account-row">
+          <div class="account-row__text">
+            <h2 id="logoutHeading" class="account-heading account-heading--tight">Abmelden</h2>
+            <p class="account-note">Beendet die Anmeldung auf diesem Gerät.</p>
+          </div>
+          <app-logout-button variant="button" />
         </div>
       </section>
     </div>
@@ -179,11 +215,27 @@ import { ThemeSwitchComponent } from '../../../../shared/components/theme-switch
 export class AccountComponent {
   private fb = inject(FormBuilder);
   private accountApi = inject(AccountApiService);
+  private changelogApi = inject(ChangelogApiService);
   private toastService = inject(ToastService);
   protected authService = inject(AuthService);
 
   protected user = this.authService.currentUser;
   protected loading = signal(false);
+
+  /**
+   * Auf schmalen Displays ist das hier die einzige Stelle, an der die Version
+   * steht — die Seitenleiste mit ihrer Versionszeile gibt es dort nicht.
+   */
+  protected versionNote = computed(() => {
+    const version = this.changelogApi.currentVersion();
+    return version
+      ? `Installierte Version: v${version}.`
+      : 'Alle Änderungen der Anwendung im Überblick.';
+  });
+
+  constructor() {
+    this.changelogApi.ensureVersionLoaded();
+  }
 
   protected passwordForm = this.fb.nonNullable.group(
     {

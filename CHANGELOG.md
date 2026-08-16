@@ -1,6 +1,6 @@
 # v1.1 — 16.08.2026
 
-Diese Version bringt eine neu aufgebaute Startseite und behebt die fehlerhafte Darstellung der Monatsauswahl.
+Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Navigation und behebt die fehlerhafte Darstellung der Monatsauswahl.
 
 **Features:**
 - Die Startseite ist in die Bereiche „Konten" und „Statistiken" geteilt, zwischen denen gewechselt werden kann.
@@ -11,6 +11,10 @@ Diese Version bringt eine neu aufgebaute Startseite und behebt die fehlerhafte D
 - Zu jeder Kontoart werden Bilanz, Einnahmen, Ausgaben und Vermögen gesondert ausgewiesen.
 - Auf größeren Bildschirmen stehen mehrere Konten nebeneinander.
 - Die Gesamtbilanz und der Jahresverlauf werden auf der Startseite vorerst nicht mehr angezeigt.
+- Auf größeren Bildschirmen steht die Navigation nun als Leiste am linken Rand, auf kleinen Bildschirmen bleibt sie am unteren Rand.
+- Das Menü oben rechts wurde entfernt.
+- Erscheinungsbild, aktive Sitzungen, die Versionsanzeige und das Abmelden sind nun auf der Profilseite zu finden.
+- Vor dem Abmelden wird nun eine Bestätigung eingeholt.
 
 **Bugfixes:**
 - Ein Bug, der den Kalender zur Monatsauswahl abgeschnitten hat, wurde behoben.
