@@ -215,10 +215,50 @@
 }
 
 .fin-sidebar__label {
+  // Wächst mit, damit eine Zahl am Ziel rechtsbündig steht statt direkt an der
+  // Beschriftung zu kleben.
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+// -----------------------------------------------------------------------------
+// Zahl an einem Navigationsziel
+//
+// Sie beantwortet im Vorbeigehen „ist hier etwas offen?“. Deshalb eine gefüllte
+// Fläche statt farbiger Ziffern: Farbe allein trägt die Aussage nicht, die Form
+// schon. Sie erscheint nur, wenn sie größer als 0 ist — eine Null wäre kein
+// Signal, sondern Rauschen.
+// -----------------------------------------------------------------------------
+.fin-nav-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: var(--fin-radius-pill);
+  background-color: var(--fin-danger-solid);
+  color: var(--fin-text-on-danger);
+  font-size: var(--fin-text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+// In der Tab-Bar sitzt die Zahl an der oberen rechten Ecke des Symbols. Der Rand
+// in der Leistenfarbe hebt sie vom Symbol ab, wenn beide sich überlappen.
+.fin-nav-badge--float {
+  position: absolute;
+  top: -0.35rem;
+  left: 55%;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border: 2px solid var(--fin-bg-elevated);
 }
 
 .fin-sidebar__link--danger {
@@ -343,6 +383,15 @@
   text-decoration: none;
   transition: color var(--fin-duration-fast) var(--fin-ease-out);
   -webkit-tap-highlight-color: transparent;
+}
+
+// Bezugsrahmen für die Zahl am Symbol — ohne ihn läge sie an der ganzen
+// Schaltfläche an und damit neben der Beschriftung statt am Symbol.
+.fin-tabbar__icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fin-tabbar__icon {

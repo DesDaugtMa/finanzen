@@ -3,6 +3,7 @@ import {
   Component,
   DOCUMENT,
   DestroyRef,
+  Signal,
   computed,
   inject,
   signal,
@@ -10,6 +11,7 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ChangelogApiService } from '../../../core/services/changelog-api.service';
+import { DebtStateService } from '../../../core/services/debt-state.service';
 import { LogoutButtonComponent } from '../logout-button/logout-button.component';
 
 interface NavTarget {
@@ -22,6 +24,14 @@ interface NavTarget {
   iconActive: string;
   exact: boolean;
   adminOnly?: boolean;
+  /**
+   * Zahl am Ziel, sobald sie größer als 0 ist — heute ausschließlich die offenen
+   * Forderungen. Sie ist bewusst Teil der Zieldefinition, damit beide Ausprägungen der
+   * Navigation dieselbe Zahl aus derselben Quelle zeigen.
+   */
+  badge?: Signal<number>;
+  /** Was die Zahl bedeutet — nur für Hilfstechnik, das Auge liest sie aus dem Zusammenhang. */
+  badgeLabel?: (count: number) => string;
 }
 
 /**
@@ -79,6 +89,15 @@ interface NavTarget {
                 aria-hidden="true"
               ></i>
               <span class="fin-sidebar__label">{{ target.label }}</span>
+
+              @if (target.badge; as badge) {
+                @if (badge() > 0) {
+                  <span class="fin-nav-badge">
+                    <span aria-hidden="true">{{ badge() }}</span>
+                    <span class="visually-hidden">{{ badgeLabel(target, badge()) }}</span>
+                  </span>
+                }
+              }
             </a>
           </li>
         }
@@ -126,11 +145,26 @@ interface NavTarget {
               #link="routerLinkActive"
               [attr.aria-current]="link.isActive ? 'page' : null"
             >
-              <i
-                class="bi fin-tabbar__icon"
-                [class]="'bi-' + (link.isActive ? target.iconActive : target.icon)"
-                aria-hidden="true"
-              ></i>
+              <!--
+                In der Tab-Bar hat die Beschriftung kaum Platz; die Zahl sitzt deshalb am
+                Symbol statt daneben — dort, wo sie aus Apps gewohnt ist.
+              -->
+              <span class="fin-tabbar__icon-wrap">
+                <i
+                  class="bi fin-tabbar__icon"
+                  [class]="'bi-' + (link.isActive ? target.iconActive : target.icon)"
+                  aria-hidden="true"
+                ></i>
+
+                @if (target.badge; as badge) {
+                  @if (badge() > 0) {
+                    <span class="fin-nav-badge fin-nav-badge--float">
+                      <span aria-hidden="true">{{ badge() }}</span>
+                      <span class="visually-hidden">{{ badgeLabel(target, badge()) }}</span>
+                    </span>
+                  }
+                }
+              </span>
               <span class="fin-tabbar__label">{{ target.shortLabel }}</span>
             </a>
           </li>
@@ -143,6 +177,8 @@ export class NavbarComponent {
   protected readonly authService = inject(AuthService);
 
   private readonly changelogApi = inject(ChangelogApiService);
+
+  private readonly debtState = inject(DebtStateService);
 
   private readonly document = inject(DOCUMENT);
 
@@ -165,6 +201,10 @@ export class NavbarComponent {
       icon: 'people',
       iconActive: 'people-fill',
       exact: false,
+      // Die Zahl kommt aus dem gemeinsamen Stand der Schuldnerliste. Jede Änderung dort
+      // schreibt ihn neu, deshalb steht sie ohne eigenes Nachladen sofort richtig.
+      badge: this.debtState.openCount,
+      badgeLabel: (count) => (count === 1 ? '1 offene Forderung' : `${count} offene Forderungen`),
     },
     // „Sitzungen“ steht bewusst nicht hier: es ist eine Sicherheitseinstellung,
     // kein täglich genutztes Ziel. Erreichbar bleibt es über die Profilseite.
@@ -218,6 +258,10 @@ export class NavbarComponent {
     // lässt den Link im Fehlerfall schlicht ohne Version stehen.
     this.changelogApi.ensureVersionLoaded();
 
+    // Der Zähler soll auf jeder Seite stimmen, nicht erst nach einem Besuch der
+    // Schuldnerliste. Danach hält ihn jede Änderung von selbst aktuell.
+    this.debtState.ensureLoaded();
+
     const view = this.document.defaultView;
     if (!view) return;
 
@@ -236,6 +280,14 @@ export class NavbarComponent {
 
     view.addEventListener('scroll', onScroll, { passive: true });
     inject(DestroyRef).onDestroy(() => view.removeEventListener('scroll', onScroll));
+  }
+
+  /**
+   * Beschriftung der Zahl für Hilfstechnik. Ohne sie läse ein Screenreader nur „3“
+   * hinter dem Zielnamen, ohne zu sagen, wovon.
+   */
+  protected badgeLabel(target: NavTarget, count: number): string {
+    return target.badgeLabel?.(count) ?? `${count}`;
   }
 
   /** Initialen aus der E-Mail-Adresse — es gibt (noch) keinen Anzeigenamen. */

@@ -9,12 +9,14 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, Subject, catchError, debounceTime, switchMap } from 'rxjs';
 import { DebtApiService } from '../../../../core/services/debt-api.service';
+import { DebtStateService } from '../../../../core/services/debt-state.service';
 import { BankAccountApiService } from '../../../../core/services/bank-account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { BankAccount } from '../../../../core/models/bank-account.model';
 import {
   Debt,
-  DebtOverview,
+  DebtEntry,
+  DebtEntryPayload,
   DebtPayload,
   DebtTransaction,
 } from '../../../../core/models/debt.model';
@@ -22,26 +24,36 @@ import { ConfirmDialogComponent } from '../../../../shared/components/confirm-di
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { StatTileComponent } from '../../../../shared/components/stat-tile/stat-tile.component';
 import {
+  DebtEntryEvent,
   DebtTransactionEvent,
   DebtorGroupComponent,
 } from '../../components/debtor-group/debtor-group.component';
 import { DebtFormDialogComponent } from '../../components/debt-form-dialog/debt-form-dialog.component';
+import { DebtEntryFormDialogComponent } from '../../components/debt-entry-form-dialog/debt-entry-form-dialog.component';
 import { AssignDebtTransactionDialogComponent } from '../../components/assign-debt-transaction-dialog/assign-debt-transaction-dialog.component';
+import { formatMoney } from '../../../../shared/utils/money.util';
+import { formatDate } from '../../../../shared/utils/month.util';
 
 /** Welcher Dialog gerade offen ist. */
 type DialogState =
   | { kind: 'none' }
   | { kind: 'form'; debt: Debt | null }
   | { kind: 'delete'; debt: Debt }
-  | { kind: 'assign'; debt: Debt };
+  | { kind: 'assign'; debt: Debt }
+  | { kind: 'entry'; debt: Debt; entry: DebtEntry | null }
+  | { kind: 'deleteEntry'; debt: Debt; entry: DebtEntry };
 
 /** Wartezeit, bevor eine Sucheingabe zur API geht. */
 const SEARCH_DEBOUNCE_MS = 300;
 
 /**
  * Die Schuldnerliste: Geld, das der Nutzer anderen geliehen hat, gruppiert nach Person.
- * Ein Eintrag trägt keinen eigenen Betrag — was offen ist, ergibt sich aus den
- * zugeordneten Buchungen der Geldkonten und ist damit immer belegt.
+ * Ein Eintrag trägt keinen eigenen Betrag — was offen ist, ergibt sich aus seinen
+ * Positionen: den zugeordneten Buchungen der Geldkonten und den manuell erfassten
+ * Beträgen für alles, was ohne Buchung geflossen ist.
+ *
+ * Der Stand liegt im gemeinsamen {@link DebtStateService}, nicht in dieser Seite: die
+ * Navigation zeigt dieselbe Zahl und muss sie im selben Moment kennen.
  */
 @Component({
   selector: 'app-debt-overview',
@@ -52,6 +64,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     StatTileComponent,
     DebtorGroupComponent,
     DebtFormDialogComponent,
+    DebtEntryFormDialogComponent,
     AssignDebtTransactionDialogComponent,
   ],
   template: `
@@ -105,14 +118,14 @@ const SEARCH_DEBOUNCE_MS = 300;
                 icon="arrow-up-right"
                 [amount]="overview.totalLent"
                 [currency]="overview.currency"
-                hint="Summe aller zugeordneten Ausgaben."
+                hint="Buchungen und manuell erfasste Beträge zusammen."
               />
               <app-stat-tile
                 label="Zurückbekommen"
                 icon="arrow-down-left"
                 [amount]="overview.totalRepaid"
                 [currency]="overview.currency"
-                hint="Summe aller zugeordneten Einnahmen."
+                hint="Alles, was schon zurückgezahlt wurde."
               />
             </div>
           </section>
@@ -130,7 +143,7 @@ const SEARCH_DEBOUNCE_MS = 300;
             <app-empty-state
               icon="people"
               title="Noch niemand schuldet dir Geld"
-              message="Lege einen Eintrag an und verknüpfe die Buchung, mit der du das Geld verliehen hast. Danach siehst du hier jederzeit, wer dir noch wie viel schuldet."
+              message="Lege einen Eintrag an und trage ein, was du geliehen hast — als Betrag von Hand oder als verknüpfte Buchung. Danach siehst du hier jederzeit, wer dir noch wie viel schuldet."
             >
               <button type="button" class="btn btn-primary" (click)="openCreate()">
                 Ersten Eintrag anlegen
@@ -145,6 +158,9 @@ const SEARCH_DEBOUNCE_MS = 300;
                   (remove)="openDelete($event)"
                   (assign)="openAssign($event)"
                   (unlink)="unlinkTransaction($event)"
+                  (addEntry)="openEntry($event)"
+                  (editEntry)="openEditEntry($event)"
+                  (removeEntry)="openDeleteEntry($event)"
                 />
               }
             </div>
@@ -170,6 +186,24 @@ const SEARCH_DEBOUNCE_MS = 300;
           variant="danger"
           [busy]="saving()"
           (confirmed)="confirmDelete(state.debt)"
+          (cancelled)="closeDialog()"
+        />
+      } @else if (state.kind === 'entry') {
+        <app-debt-entry-form-dialog
+          [debt]="state.debt"
+          [entry]="state.entry"
+          [saving]="saving()"
+          (save)="submitEntry($event, state.debt, state.entry)"
+          (cancelled)="closeDialog()"
+        />
+      } @else if (state.kind === 'deleteEntry') {
+        <app-confirm-dialog
+          title="Betrag entfernen"
+          [message]="deleteEntryMessage(state.entry)"
+          confirmLabel="Entfernen"
+          variant="danger"
+          [busy]="saving()"
+          (confirmed)="confirmDeleteEntry(state.debt, state.entry)"
           (cancelled)="closeDialog()"
         />
       } @else if (state.kind === 'assign') {
@@ -217,13 +251,15 @@ const SEARCH_DEBOUNCE_MS = 300;
 })
 export class DebtOverviewComponent {
   private readonly debtApi = inject(DebtApiService);
+  private readonly debtState = inject(DebtStateService);
   private readonly bankAccountApi = inject(BankAccountApiService);
   private readonly toastService = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly data = signal<DebtOverview | null>(null);
-  protected readonly loading = signal(true);
-  protected readonly error = signal('');
+  /** Der Stand kommt aus dem gemeinsamen Dienst — dieselbe Quelle wie für die Navigation. */
+  protected readonly data = this.debtState.overview;
+  protected readonly loading = this.debtState.loading;
+  protected readonly error = this.debtState.error;
   protected readonly saving = signal(false);
   protected readonly dialog = signal<DialogState>({ kind: 'none' });
 
@@ -253,9 +289,10 @@ export class DebtOverviewComponent {
     }
 
     const entries =
-      overview.openCount === 1 ? '1 Eintrag ist offen' : `${overview.openCount} Einträge sind offen`;
-    const people =
-      overview.debtorCount === 1 ? '1 Person' : `${overview.debtorCount} Personen`;
+      overview.openCount === 1
+        ? '1 Eintrag ist offen'
+        : `${overview.openCount} Einträge sind offen`;
+    const people = overview.debtorCount === 1 ? '1 Person' : `${overview.debtorCount} Personen`;
 
     return `${entries} · ${people} insgesamt.`;
   });
@@ -306,20 +343,9 @@ export class DebtOverviewComponent {
       });
   }
 
+  /** Der Dienst hält Lade- und Fehlerzustand; der Fehler ist dort bereits behandelt. */
   protected load(): void {
-    this.loading.set(true);
-    this.error.set('');
-
-    this.debtApi.getOverview().subscribe({
-      next: (data) => {
-        this.data.set(data);
-        this.loading.set(false);
-      },
-      error: (err: Error) => {
-        this.error.set(err.message || 'Die Schuldnerliste konnte nicht geladen werden.');
-        this.loading.set(false);
-      },
-    });
+    this.debtState.load().subscribe({ error: () => undefined });
   }
 
   protected openCreate(): void {
@@ -332,6 +358,24 @@ export class DebtOverviewComponent {
 
   protected openDelete(debt: Debt): void {
     this.dialog.set({ kind: 'delete', debt });
+  }
+
+  protected openEntry(debt: Debt): void {
+    this.dialog.set({ kind: 'entry', debt, entry: null });
+  }
+
+  protected openEditEntry(event: DebtEntryEvent): void {
+    const entry = this.findEntry(event);
+    if (!entry) return;
+
+    this.dialog.set({ kind: 'entry', debt: event.debt, entry });
+  }
+
+  protected openDeleteEntry(event: DebtEntryEvent): void {
+    const entry = this.findEntry(event);
+    if (!entry) return;
+
+    this.dialog.set({ kind: 'deleteEntry', debt: event.debt, entry });
   }
 
   protected openAssign(debt: Debt): void {
@@ -349,14 +393,26 @@ export class DebtOverviewComponent {
 
   protected deleteMessage(debt: Debt): string {
     const base = `Soll der Eintrag „${debt.title}“ von ${debt.personName} gelöscht werden?`;
+    const parts: string[] = [];
 
-    if (debt.transactionCount === 0) return base;
+    if (debt.transactionCount > 0) {
+      const count = debt.transactionCount;
+      parts.push(
+        `${count} zugeordnete ${count === 1 ? 'Buchung bleibt' : 'Buchungen bleiben'} erhalten ` +
+          `und ${count === 1 ? 'verliert' : 'verlieren'} nur die Zuordnung.`,
+      );
+    }
 
-    const count = debt.transactionCount;
-    return (
-      `${base} ${count} zugeordnete ${count === 1 ? 'Buchung bleibt' : 'Buchungen bleiben'} erhalten ` +
-      `und ${count === 1 ? 'verliert' : 'verlieren'} nur die Zuordnung.`
-    );
+    // Manuelle Beträge sind der einzige Teil, der wirklich verschwindet — das muss vor
+    // dem Bestätigen dastehen, weil es sich nicht rückgängig machen lässt.
+    if (debt.entryCount > 0) {
+      const count = debt.entryCount;
+      parts.push(
+        `${count} manuell erfasste${count === 1 ? 'r Betrag wird' : ' Beträge werden'} dabei gelöscht.`,
+      );
+    }
+
+    return parts.length === 0 ? base : `${base} ${parts.join(' ')}`;
   }
 
   protected submitForm(payload: DebtPayload, existing: Debt | null): void {
@@ -369,6 +425,44 @@ export class DebtOverviewComponent {
     request$.subscribe({
       next: () => this.finish(existing ? 'Eintrag aktualisiert.' : 'Eintrag angelegt.'),
       error: (err: Error) => this.fail(err, 'Der Eintrag konnte nicht gespeichert werden.'),
+    });
+  }
+
+  protected deleteEntryMessage(entry: DebtEntry): string {
+    const direction =
+      entry.direction === 'Income' ? 'Die Rückzahlung über' : 'Der verliehene Betrag';
+    const amount = formatMoney(entry.amount, entry.currency);
+    const subject =
+      entry.direction === 'Income' ? `${direction} ${amount}` : `${direction} von ${amount}`;
+
+    return `${subject} vom ${formatDate(entry.entryDate)} wird entfernt. Der offene Betrag ändert sich dadurch.`;
+  }
+
+  protected submitEntry(payload: DebtEntryPayload, debt: Debt, existing: DebtEntry | null): void {
+    this.saving.set(true);
+
+    const request$ = existing
+      ? this.debtApi.updateEntry(debt.id, existing.id, payload)
+      : this.debtApi.addEntry(debt.id, payload);
+
+    request$.subscribe({
+      next: (data) => {
+        this.debtState.apply(data);
+        this.finish(existing ? 'Betrag aktualisiert.' : 'Betrag erfasst.', false);
+      },
+      error: (err: Error) => this.fail(err, 'Der Betrag konnte nicht gespeichert werden.'),
+    });
+  }
+
+  protected confirmDeleteEntry(debt: Debt, entry: DebtEntry): void {
+    this.saving.set(true);
+
+    this.debtApi.deleteEntry(debt.id, entry.id).subscribe({
+      next: (data) => {
+        this.debtState.apply(data);
+        this.finish('Betrag entfernt.', false);
+      },
+      error: (err: Error) => this.fail(err, 'Der Betrag konnte nicht entfernt werden.'),
     });
   }
 
@@ -386,7 +480,7 @@ export class DebtOverviewComponent {
 
     this.debtApi.linkTransaction(debt.id, transactionId).subscribe({
       next: (data) => {
-        this.data.set(data);
+        this.debtState.apply(data);
         this.finish('Buchung zugeordnet.', false);
       },
       error: (err: Error) => this.fail(err, 'Die Buchung konnte nicht zugeordnet werden.'),
@@ -396,7 +490,7 @@ export class DebtOverviewComponent {
   protected unlinkTransaction(event: DebtTransactionEvent): void {
     this.debtApi.unlinkTransaction(event.debt.id, event.transactionId).subscribe({
       next: (data) => {
-        this.data.set(data);
+        this.debtState.apply(data);
         this.toastService.success('Zuordnung gelöst.');
       },
       error: (err: Error) =>
@@ -417,6 +511,18 @@ export class DebtOverviewComponent {
 
     // Ein Kontowechsel ist eine bewusste Auswahl und lädt sofort, ohne Verzögerung.
     this.loadAssignable(state.debt.id);
+  }
+
+  /**
+   * Der Eintrag im Ereignis stammt aus dem zuletzt gezeichneten Stand. Die Position wird
+   * deshalb frisch nachgeschlagen: hat eine andere Aktion sie inzwischen entfernt, öffnet
+   * sich lieber kein Dialog, als einer auf einen Betrag, den es nicht mehr gibt.
+   */
+  private findEntry(event: DebtEntryEvent): DebtEntry | null {
+    const debts = this.data()?.debtors.flatMap((debtor) => debtor.debts) ?? [];
+    const debt = debts.find((item) => item.id === event.debt.id);
+
+    return debt?.entries.find((entry) => entry.id === event.entryId) ?? null;
   }
 
   private loadAssignable(debtId: number): void {

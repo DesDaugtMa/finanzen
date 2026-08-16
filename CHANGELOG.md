@@ -1,10 +1,15 @@
 # v1.1 — 16.08.2026
 
-Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Navigation und behebt die fehlerhafte Darstellung der Monatsauswahl.
+Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Navigation und Schuldnerliste und behebt die fehlerhafte Darstellung der Monatsauswahl.
 
 **Features:**
 - Die Startseite ist in die Bereiche „Konten" und „Statistiken" geteilt, zwischen denen gewechselt werden kann.
 - Der Zeitraum der Startseite kann wahlweise auf einen Monat oder auf ein ganzes Jahr gestellt werden.
+- Zu einem Schuldeintrag können Beträge von Hand erfasst werden, auch wenn es dazu keine Buchung gibt.
+- Ein von Hand erfasster Betrag kann wahlweise als verliehen oder als zurückgezahlt eingetragen werden.
+- Von Hand erfasste Beträge können nachträglich geändert und wieder entfernt werden.
+- Beim Anlegen eines Schuldeintrags kann der geliehene Betrag gleich mit angegeben werden.
+- In der Navigation zeigt eine rote Zahl beim Punkt „Schuldner", wie viele Einträge noch offen sind.
 
 **Changes:**
 - Die Startseite wurde neu gestaltet und gliedert die Konten nach ihrer Kontoart.
@@ -15,6 +20,8 @@ Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Navigat
 - Das Menü oben rechts wurde entfernt.
 - Erscheinungsbild, aktive Sitzungen, die Versionsanzeige und das Abmelden sind nun auf der Profilseite zu finden.
 - Vor dem Abmelden wird nun eine Bestätigung eingeholt.
+- Zugeordnete Buchungen und von Hand erfasste Beträge stehen bei einem Schuldeintrag gemeinsam in einer Liste, geordnet nach Datum.
+- Die Zahl in der Navigation wird sofort aktualisiert, sobald sich an den Schulden etwas ändert.
 
 **Bugfixes:**
 - Ein Bug, der den Kalender zur Monatsauswahl abgeschnitten hat, wurde behoben.

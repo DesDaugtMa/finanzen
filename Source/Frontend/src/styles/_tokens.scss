@@ -235,6 +235,10 @@
   --fin-info-tint: var(--status-info-tint);
   --fin-danger: var(--money-expense-600);
   --fin-danger-tint: var(--money-expense-tint);
+  // Gefüllte Warnfläche mit ihrem Textton — für kleine Signale wie die Zahl an
+  // einem Navigationsziel, die als Fläche gelesen werden muss, nicht als Text.
+  --fin-danger-solid: var(--money-expense-600);
+  --fin-text-on-danger: #ffffff;
   --fin-success: var(--money-income-600);
   --fin-success-tint: var(--money-income-tint);
 
@@ -351,6 +355,10 @@
   --fin-info-tint: rgba(107, 166, 232, 0.14);
   --fin-danger: var(--money-expense-400);
   --fin-danger-tint: rgba(240, 138, 114, 0.14);
+  // Im Dunkeln trägt die helle Rotstufe die Fläche; der Text darauf muss dann
+  // dunkel sein, sonst bliebe die Zahl auf der Fläche unlesbar.
+  --fin-danger-solid: var(--money-expense-400);
+  --fin-text-on-danger: #2b0d06;
   --fin-success: var(--money-income-400);
   --fin-success-tint: rgba(76, 195, 138, 0.14);
 
