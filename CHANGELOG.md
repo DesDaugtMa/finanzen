@@ -1,6 +1,16 @@
 # v1.1 — 16.08.2026
 
-Diese Version behebt die fehlerhafte Darstellung der Monatsauswahl.
+Diese Version bringt eine neu aufgebaute Startseite und behebt die fehlerhafte Darstellung der Monatsauswahl.
+
+**Features:**
+- Die Startseite ist in die Bereiche „Konten" und „Statistiken" geteilt, zwischen denen gewechselt werden kann.
+- Der Zeitraum der Startseite kann wahlweise auf einen Monat oder auf ein ganzes Jahr gestellt werden.
+
+**Changes:**
+- Die Startseite wurde neu gestaltet und gliedert die Konten nach ihrer Kontoart.
+- Zu jeder Kontoart werden Bilanz, Einnahmen, Ausgaben und Vermögen gesondert ausgewiesen.
+- Auf größeren Bildschirmen stehen mehrere Konten nebeneinander.
+- Die Gesamtbilanz und der Jahresverlauf werden auf der Startseite vorerst nicht mehr angezeigt.
 
 **Bugfixes:**
 - Ein Bug, der den Kalender zur Monatsauswahl abgeschnitten hat, wurde behoben.

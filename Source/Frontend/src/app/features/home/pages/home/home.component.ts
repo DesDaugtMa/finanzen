@@ -12,43 +12,65 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { AccountApiService } from '../../../../core/services/account-api.service';
 import { BalanceApiService } from '../../../../core/services/balance-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { MonthBalance, YearBalance } from '../../../../core/models/balance.model';
-import { isValidMonthKey, toMonthKey, yearOf } from '../../../../shared/utils/month.util';
-import { BankAccountsSectionComponent } from '../../../bank-accounts/components/bank-accounts-section/bank-accounts-section.component';
+import { PeriodBalance } from '../../../../core/models/balance.model';
 import { OfflineNoticeComponent } from '../../../../shared/components/offline-notice/offline-notice.component';
-import { BalanceHeroComponent } from '../../components/balance-hero/balance-hero.component';
-import { YearBalancePanelComponent } from '../../components/year-balance-panel/year-balance-panel.component';
+import { PeriodPickerComponent } from '../../../../shared/components/period-picker/period-picker.component';
+import { TabItem, TabNavComponent } from '../../../../shared/components/tab-nav/tab-nav.component';
+import {
+  Period,
+  currentMonthPeriod,
+  formatPeriodLong,
+  parsePeriod,
+  yearPeriod,
+} from '../../../../shared/utils/period.util';
+import { AccountsTabComponent } from '../../components/accounts-tab/accounts-tab.component';
+import { StatisticsTabComponent } from '../../components/statistics-tab/statistics-tab.component';
+
+/** Die Reiter der Startseite. Die Kennung steht so auch in der URL. */
+type TabId = 'konten' | 'statistiken';
+
+const TABS: readonly TabItem[] = [
+  { id: 'konten', label: 'Konten', icon: 'wallet2' },
+  { id: 'statistiken', label: 'Statistiken', icon: 'bar-chart-line' },
+];
 
 /**
- * Die Startseite: die Bilanz des Monats über alle Konten, darunter das Jahr im
- * Verlauf und die Konten nach Kategorie.
+ * Die Startseite: die Konten des gewählten Zeitraums, nach Kontoart gegliedert.
  *
- * Der gewählte Monat steht als Query-Parameter `monat` in der URL. Damit
- * überleben Auswahl und Ansicht ein Neuladen, lassen sich teilen, funktionieren
- * mit dem Zurück-Knopf des Browsers — und die Kontodetailseite kann denselben
- * Zeitraum übernehmen, statt beim aktuellen Monat neu anzufangen.
+ * Zeitraum und Reiter stehen als Query-Parameter in der URL (`modus`, `monat`,
+ * `jahr`, `tab`). Damit überleben Auswahl und Ansicht ein Neuladen, lassen sich
+ * teilen, funktionieren mit dem Zurück-Knopf des Browsers — und die
+ * Kontodetailseite kann denselben Zeitraum übernehmen, statt beim aktuellen
+ * Monat neu anzufangen.
+ *
+ * Die Zeitraum-Auswahl sitzt bewusst über den Reitern: sie gilt für alle Reiter
+ * und darf deshalb nicht so aussehen, als gehöre sie zu einem davon.
  */
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    BankAccountsSectionComponent,
-    BalanceHeroComponent,
-    YearBalancePanelComponent,
+    AccountsTabComponent,
+    StatisticsTabComponent,
     OfflineNoticeComponent,
+    PeriodPickerComponent,
+    TabNavComponent,
   ],
   template: `
-    <div class="container">
+    <div class="container fin-container--wide">
       @let user = authService.currentUser();
 
       <header class="fin-page-header home-header">
         <div class="fin-page-header__text">
-          <span class="fin-eyebrow">{{ greeting() }}</span>
-          <h1 class="fin-page-header__title">Übersicht</h1>
-          <p class="fin-page-header__subtitle">
-            Was der Monat unter dem Strich bringt — über alle Konten hinweg.
-          </p>
+          <h1 class="fin-page-header__title home-title">Übersicht</h1>
         </div>
+
+        <app-period-picker
+          class="home-period"
+          [period]="period()"
+          [disabled]="loading()"
+          (periodChange)="selectPeriod($event)"
+        />
       </header>
 
       @if (user && !user.emailVerified) {
@@ -80,53 +102,79 @@ import { YearBalancePanelComponent } from '../../components/year-balance-panel/y
 
       <app-offline-notice class="home-block" [stale]="stale()" [savedAt]="savedAt()" />
 
-      <app-balance-hero
-        class="home-block"
-        [month]="month()"
-        [balance]="monthBalance()"
-        [loading]="monthLoading()"
-        [error]="monthError()"
-        (monthChange)="selectMonth($event)"
-        (retry)="loadMonth()"
+      <!-- Der Zeitraum steht nur einmal sichtbar in der Auswahl oben. Diese Zeile
+           spricht ihn für Screenreader aus, damit nach einem Wechsel klar ist,
+           worauf sich die folgenden Zahlen beziehen. -->
+      <p class="visually-hidden" aria-live="polite">Zeitraum: {{ periodLabel() }}</p>
+
+      <app-tab-nav
+        class="home-tabs"
+        label="Bereiche der Übersicht"
+        [tabs]="tabs"
+        [active]="tab()"
+        (activeChange)="selectTab($event)"
       />
 
-      <app-year-balance-panel
-        class="home-block"
-        [balance]="yearBalance()"
-        [year]="year()"
-        [selectedMonth]="month()"
-        [loading]="yearLoading()"
-        [error]="yearError()"
-        (yearChange)="selectYear($event)"
-        (monthSelect)="selectMonth($event)"
-        (retry)="loadYear()"
-      />
-
-      <app-bank-accounts-section
-        [groups]="groups()"
-        [month]="month()"
-        [loading]="monthLoading()"
-        [error]="monthError()"
-        (changed)="reloadAll()"
-        (reload)="loadMonth()"
-      />
+      <div
+        role="tabpanel"
+        [id]="'panel-' + tab()"
+        [attr.aria-labelledby]="'tab-' + tab()"
+        tabindex="-1"
+      >
+        @switch (tab()) {
+          @case ('statistiken') {
+            <app-statistics-tab />
+          }
+          @default {
+            <app-accounts-tab
+              [groups]="groups()"
+              [period]="period()"
+              [loading]="loading()"
+              [error]="error()"
+              (changed)="load()"
+              (reload)="load()"
+            />
+          }
+        }
+      </div>
     </div>
   `,
   styles: [
     `
       .home-header {
-        margin-bottom: var(--fin-space-6);
+        /* Der Kopf trägt nur noch Titel und Zeitraum — die Seite soll mit ihrem
+           Inhalt beginnen und nicht mit einer Ansprache. */
+        align-items: center;
+        margin-bottom: var(--fin-space-5);
+      }
+      .home-title {
+        margin-bottom: 0;
+      }
+      .home-period {
+        flex: 1 1 auto;
+      }
+      @media (min-width: 48rem) {
+        .home-period {
+          flex: 0 0 auto;
+        }
       }
       .home-block {
         display: block;
+        margin-bottom: var(--fin-space-5);
+      }
+      .home-tabs {
+        display: block;
         margin-bottom: var(--fin-space-6);
+      }
+      [role='tabpanel']:focus {
+        outline: none;
       }
       .verify-banner {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: var(--fin-space-3);
-        margin-bottom: var(--fin-space-6);
+        margin-bottom: var(--fin-space-5);
       }
       .verify-banner__icon {
         flex-shrink: 0;
@@ -154,121 +202,103 @@ export class HomeComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  protected readonly tabs = TABS;
+
   protected resending = signal(false);
 
-  protected readonly monthBalance = signal<MonthBalance | null>(null);
-  protected readonly monthLoading = signal(true);
-  protected readonly monthError = signal('');
+  protected readonly balance = signal<PeriodBalance | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly error = signal('');
 
-  protected readonly yearBalance = signal<YearBalance | null>(null);
-  protected readonly yearLoading = signal(true);
-  protected readonly yearError = signal('');
+  /** Wann die gezeigte Bilanz geholt wurde — null, solange sie frisch vom Server kommt. */
+  private readonly savedAtSignal = signal<Date | null>(null);
 
-  /** Wann die gezeigte Monatsbilanz geholt wurde — null, solange sie frisch vom Server kommt. */
-  private readonly monthSavedAt = signal<Date | null>(null);
-
-  /** Das Jahr des Verlaufs. Startet beim Jahr des gewählten Monats, ist aber frei blätterbar. */
-  private readonly browsedYear = signal<number | null>(null);
+  /** Der Zeitraum, der ohne Angabe in der URL gilt. Einmal bestimmt, damit er stabil bleibt. */
+  private readonly fallbackPeriod = currentMonthPeriod(new Date());
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
   });
 
-  /** Der gewählte Monat. Ungültige oder fehlende Angaben fallen auf den aktuellen Monat zurück. */
-  protected readonly month = computed(() => {
-    const fromUrl = this.queryParams().get('monat');
-    return isValidMonthKey(fromUrl) ? fromUrl : toMonthKey(new Date());
+  /**
+   * Der gewählte Zeitraum. `modus` entscheidet, welcher der beiden Werte gilt —
+   * beide bleiben in der URL stehen, damit ein Hin- und Herschalten den zuletzt
+   * gewählten Monat beziehungsweise das Jahr wiederfindet.
+   */
+  protected readonly period = computed<Period>(() => {
+    const params = this.queryParams();
+
+    if (params.get('modus') === 'jahr') {
+      return parsePeriod(params.get('jahr')) ?? yearPeriod(this.fallbackPeriod.year);
+    }
+
+    const month = parsePeriod(params.get('monat'));
+    return month?.kind === 'Month' ? month : this.fallbackPeriod;
   });
 
-  protected readonly year = computed(() => this.browsedYear() ?? yearOf(this.month()));
+  protected readonly periodLabel = computed(() => formatPeriodLong(this.period()));
 
-  protected readonly groups = computed(() => this.monthBalance()?.groups ?? []);
+  protected readonly tab = computed<TabId>(() =>
+    this.queryParams().get('tab') === 'statistiken' ? 'statistiken' : 'konten',
+  );
+
+  protected readonly groups = computed(() => this.balance()?.groups ?? []);
 
   /** True, wenn die Bilanz aus dem Zwischenspeicher stammt statt vom Server. */
-  protected readonly stale = computed(() => this.monthSavedAt() !== null);
-  protected readonly savedAt = computed(() => this.monthSavedAt());
-
-  /**
-   * Tageszeitabhängige Anrede. Wird einmal beim Erzeugen der Seite bestimmt —
-   * eine über den Tag mitlaufende Begrüßung wäre Aufwand ohne Nutzen.
-   */
-  protected readonly greeting = signal(buildGreeting(new Date())).asReadonly();
+  protected readonly stale = computed(() => this.savedAtSignal() !== null);
+  protected readonly savedAt = computed(() => this.savedAtSignal());
 
   constructor() {
-    // Beide Abfragen hängen an je einer Auswahl und laufen deshalb getrennt:
-    // ein Monatswechsel innerhalb desselben Jahres lädt den Verlauf nicht neu.
     effect(() => {
-      this.month();
-      this.loadMonth();
-    });
-
-    effect(() => {
-      this.year();
-      this.loadYear();
+      this.period();
+      this.load();
     });
   }
 
-  protected loadMonth(): void {
-    const month = this.month();
+  protected load(): void {
+    const period = this.period();
 
-    this.monthLoading.set(true);
-    this.monthError.set('');
+    this.loading.set(true);
+    this.error.set('');
 
-    this.balanceApi.getMonth(month).subscribe({
+    this.balanceApi.getPeriod(period.key).subscribe({
       next: (result) => {
-        this.monthBalance.set(result.value);
-        this.monthSavedAt.set(result.savedAt);
-        this.monthLoading.set(false);
+        // Eine spät eintreffende Antwort zu einem inzwischen verlassenen Zeitraum
+        // darf die aktuelle Anzeige nicht überschreiben.
+        if (this.period().key !== period.key) return;
+
+        this.balance.set(result.value);
+        this.savedAtSignal.set(result.savedAt);
+        this.loading.set(false);
       },
       error: (err: Error) => {
-        this.monthError.set(err.message || 'Die Bilanz konnte nicht geladen werden.');
-        this.monthLoading.set(false);
+        if (this.period().key !== period.key) return;
+
+        this.error.set(err.message || 'Die Bilanz konnte nicht geladen werden.');
+        this.loading.set(false);
       },
     });
-  }
-
-  protected loadYear(): void {
-    const year = this.year();
-
-    this.yearLoading.set(true);
-    this.yearError.set('');
-
-    this.balanceApi.getYear(year).subscribe({
-      next: (result) => {
-        this.yearBalance.set(result.value);
-        this.yearLoading.set(false);
-      },
-      error: (err: Error) => {
-        this.yearError.set(err.message || 'Die Jahresbilanz konnte nicht geladen werden.');
-        this.yearLoading.set(false);
-      },
-    });
-  }
-
-  protected reloadAll(): void {
-    this.loadMonth();
-    this.loadYear();
   }
 
   /**
-   * Der Monat wandert in die URL; das Nachladen übernimmt der Effekt oben.
-   * `replaceUrl`, damit das Blättern durch Monate nicht die Browser-Historie füllt
-   * und der Zurück-Knopf zuverlässig die vorherige Seite erreicht.
+   * Der Zeitraum wandert in die URL; das Nachladen übernimmt der Effekt oben.
+   * `replaceUrl`, damit das Blättern durch Zeiträume nicht die Browser-Historie
+   * füllt und der Zurück-Knopf zuverlässig die vorherige Seite erreicht.
    */
-  protected selectMonth(month: string): void {
-    if (month === this.month()) return;
+  protected selectPeriod(period: Period): void {
+    if (period.key === this.period().key) return;
 
-    this.browsedYear.set(null);
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { monat: month },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
+    this.updateQueryParams(
+      period.kind === 'Year'
+        ? { modus: 'jahr', jahr: period.key }
+        : { modus: 'monat', monat: period.key },
+    );
   }
 
-  protected selectYear(year: number): void {
-    this.browsedYear.set(year);
+  protected selectTab(tab: string): void {
+    if (tab === this.tab()) return;
+
+    this.updateQueryParams({ tab });
   }
 
   protected resend(): void {
@@ -287,12 +317,13 @@ export class HomeComponent {
       },
     });
   }
-}
 
-function buildGreeting(now: Date): string {
-  const hour = now.getHours();
-  if (hour < 5) return 'Gute Nacht';
-  if (hour < 11) return 'Guten Morgen';
-  if (hour < 18) return 'Guten Tag';
-  return 'Guten Abend';
+  private updateQueryParams(params: Record<string, string>): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 }

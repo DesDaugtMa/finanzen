@@ -152,6 +152,9 @@
 
   // Layout
   --fin-container-max: 76rem;
+  // Breite für das Konten-Dashboard auf sehr grossen Bildschirmen — Platz für
+  // vier Kontokarten nebeneinander, ohne dass die Karten selbst wachsen.
+  --fin-container-wide: 96rem;
   // Breite für zusammenhängenden Fließtext (Changelog, Erklärseiten). Schmaler als das
   // Dashboard, damit Zeilen nicht zu lang zum Lesen werden, aber breiter als ein Formular.
   --fin-container-reading: 48rem;

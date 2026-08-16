@@ -36,6 +36,16 @@
   max-width: var(--fin-container-reading);
 }
 
+// Dashboard-Breite: erst auf sehr breiten Schirmen darf die Seite über das
+// normale Mass hinauswachsen. Darunter bleibt sie exakt so breit wie jede
+// andere Seite — eine Seite, die schon bei 1400px aus der Reihe tanzt, wirkt
+// wie ein Fehler und nicht wie eine Absicht.
+@media (min-width: 100rem) {
+  .fin-container--wide {
+    max-width: var(--fin-container-wide);
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Seitengerüst
 // -----------------------------------------------------------------------------

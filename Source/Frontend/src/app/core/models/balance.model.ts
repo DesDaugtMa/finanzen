@@ -77,6 +77,39 @@ export interface MonthBalance {
   groups: AccountGroupBalance[];
 }
 
+/**
+ * Die Bilanz eines frei gewählten Zeitraums. Spiegelt `PeriodBalanceDto`.
+ *
+ * Inhaltlich die Monatsbilanz, nur dass der Zeitraum ein Monat oder ein ganzes
+ * Jahr sein kann. Alle Flusszahlen (Einnahmen, Ausgaben, Bilanz) beziehen sich
+ * auf den Zeitraum; die Vermögenswerte (`netWorth`, `currentBalance` je Konto)
+ * zeigen immer den heutigen Stand — ein Kontostand ist eine Zeitpunktgröße.
+ */
+export interface PeriodBalance {
+  /** `yyyy-MM` bei Monat, `yyyy` bei Jahr. */
+  period: string;
+  kind: 'Month' | 'Year';
+  currency: string;
+  income: number;
+  /** Summe der Ausgaben als positiver Wert. */
+  expenses: number;
+  /** `income − expenses`. Die Bilanz des Zeitraums. */
+  net: number;
+  /** Bewegtes Volumen der Umbuchungen, je Umbuchung einmal gezählt. Rein informativ. */
+  transferVolume: number;
+  /** Bilanz des vorangehenden Zeitraums gleicher Körnung (Vormonat bzw. Vorjahr). */
+  previousNet: number;
+  /** Aktuelles Gesamtvermögen über alle Kontokategorien. */
+  netWorth: number;
+  /** Das Gesamtvermögen „laut Bank“, ohne die noch nicht abgebuchten Ausgaben. */
+  settledNetWorth: number;
+  pendingTotal: number;
+  pendingCount: number;
+  transactionCount: number;
+  /** Kategorien in fester Reihenfolge; Kategorien ohne Konto fehlen. */
+  groups: AccountGroupBalance[];
+}
+
 /** Ein Monat im Jahresverlauf. Spiegelt `MonthBalancePointDto`. */
 export interface MonthBalancePoint {
   /** Monat im Format `yyyy-MM`. */
