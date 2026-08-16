@@ -8,7 +8,8 @@ namespace Backend.Services.Changelog;
 /// Übersetzt die <c>CHANGELOG.md</c> in die Struktur, die der Zeitstrahl im Frontend braucht.
 ///
 /// Bewusst ein eigener, eng geschnittener Parser statt einer Markdown-Bibliothek: die Datei
-/// folgt einem festen, im Projekt dokumentierten Aufbau (Überschrift <c># vX.Y.Z — TT.MM.JJJJ</c>,
+/// folgt einem festen, im Projekt dokumentierten Aufbau (Überschrift <c># vX.Y — TT.MM.JJJJ</c>
+/// bzw. <c># vX.Y.Z — TT.MM.JJJJ</c> für eine Bugfix-Version,
 /// danach die Abschnitte <c>**Features:**</c>, <c>**Changes:**</c>, <c>**Bugfixes:**</c> mit
 /// Aufzählungspunkten). Gebraucht wird nicht beliebiges Markdown, sondern genau diese Gliederung.
 ///
@@ -102,7 +103,7 @@ public static partial class ChangelogMarkdownParser
         if (!match.Success)
         {
             logger.LogWarning(
-                "Changelog: Überschrift in Zeile {LineNumber} entspricht nicht dem Muster '# vX.Y.Z — TT.MM.JJJJ' und wird übersprungen.",
+                "Changelog: Überschrift in Zeile {LineNumber} entspricht nicht dem Muster '# vX.Y — TT.MM.JJJJ' (bzw. '# vX.Y.Z — TT.MM.JJJJ') und wird übersprungen.",
                 lineNumber);
             return null;
         }
@@ -186,8 +187,12 @@ public static partial class ChangelogMarkdownParser
     private static IEnumerable<string> SplitLines(string markdown) =>
         markdown.Split('\n').Select(line => line.TrimEnd('\r'));
 
-    /// <summary>Überschrift einer Version; als Trenner sind Geviert-, Halbgeviert- und Bindestrich erlaubt.</summary>
-    [GeneratedRegex(@"^#\s*[vV](?<version>\d+\.\d+\.\d+)\s*[—–-]\s*(?<date>\d{2}\.\d{2}\.\d{4})\s*$")]
+    /// <summary>
+    /// Überschrift einer Version; als Trenner sind Geviert-, Halbgeviert- und Bindestrich erlaubt.
+    /// Der dritte Zahlenblock ist optional: Vollwertige Versionen heißen <c>v1.2</c>, eine Version
+    /// mit wichtigem Bugfix heißt <c>v1.2.1</c>.
+    /// </summary>
+    [GeneratedRegex(@"^#\s*[vV](?<version>\d+\.\d+(?:\.\d+)?)\s*[—–-]\s*(?<date>\d{2}\.\d{2}\.\d{4})\s*$")]
     private static partial Regex VersionHeadingPattern();
 
     /// <summary>Abschnittszeile wie <c>**Features:**</c>; der Doppelpunkt darf innen oder außen stehen.</summary>
@@ -205,9 +210,13 @@ public static partial class ChangelogMarkdownParser
 
         public DateOnly ReleaseDate { get; } = releaseDate;
 
-        /// <summary>Für die Sortierung: <c>1.10.0</c> muss über <c>1.9.0</c> stehen, nicht darunter.</summary>
+        /// <summary>
+        /// Für die Sortierung: <c>1.10</c> muss über <c>1.9</c> stehen, nicht darunter, und die
+        /// Bugfix-Version <c>1.2.1</c> über ihrer Grundversion <c>1.2</c>. Beides leistet
+        /// <see cref="System.Version"/> — ein fehlender dritter Block zählt als kleiner.
+        /// </summary>
         public System.Version SortableVersion { get; } =
-            System.Version.TryParse(version, out var parsed) ? parsed : new System.Version(0, 0, 0);
+            System.Version.TryParse(version, out var parsed) ? parsed : new System.Version(0, 0);
 
         public List<string> SummaryLines { get; } = [];
 

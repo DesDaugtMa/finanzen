@@ -1,27 +1,33 @@
 # v1.1 — 16.08.2026
 
-Die Auswahl des Monats klappt jetzt überall zuverlässig auf — auch auf kleinen Bildschirmen.
+Diese Version behebt die fehlerhafte Darstellung der Monatsauswahl.
 
 **Bugfixes:**
-- Der Kalender zur Monatsauswahl wird nicht mehr abgeschnitten: Er liegt jetzt vollständig über der Seite, bleibt immer im sichtbaren Bereich und klappt bei wenig Platz nach oben auf.
+- Ein Bug, der den Kalender zur Monatsauswahl abgeschnitten hat, wurde behoben.
+- Der Kalender zur Monatsauswahl bleibt nun auch auf kleinen Bildschirmen vollständig sichtbar.
 
 # v1.0 — 14.08.2026
 
-Die erste Version von Finanzen ist da. Du behältst ab jetzt an einem Ort im Blick, was auf deine Konten hereinkommt, was herausgeht und was am Monatsende übrig bleibt.
+Der erste Funktionsumfang der Anwendung: Konten, Buchungen, Kategorien, Budgets, Fixkosten und Auswertungen.
 
 **Features:**
-- Du kannst deine Girokonten anlegen und siehst für jedes davon jederzeit den aktuellen Kontostand.
-- Du erfasst Einnahmen und Ausgaben in wenigen Sekunden und ordnest sie eigenen Kategorien mit Farbe und Symbol zu.
-- Du markierst eine Ausgabe als „noch nicht abgebucht", wenn du sie gerade erst bezahlt hast, und hakst sie später mit einem Klick ab — auch alle offenen eines Monats auf einmal.
-- Unter jedem Kontostand siehst du zusätzlich den Stand „laut Bank", also ohne die Buchungen, die deine Bank noch nicht abgezogen hat.
-- Du setzt pro Kategorie und Monat ein Budget und siehst auf einen Blick, wie viel davon noch übrig ist.
-- Du planst deine monatlichen Fixkosten, hakst sie mit der passenden Buchung ab und übernimmst sie mit einem Klick in den nächsten Monat.
-- Du verknüpfst zwei Buchungen, die zusammengehören — etwa eine Ausgabe auf dem einen und die dazugehörige Einnahme auf dem anderen Konto —, und sie zählen dann nicht mehr als Einnahme oder Ausgabe.
-- Du siehst zu einer verknüpften Buchung mit einem Klick alle Angaben der Gegenbuchung und springst von dort direkt zu ihr auf das andere Konto.
-- Du siehst in der Monatsübersicht, wie sich Einnahmen, Ausgaben und dein Ergebnis über den Monat entwickeln.
-- Du führst eine Liste, wem du Geld geliehen hast, und siehst, wie viel davon noch offen ist.
-- Du meldest dich mit E-Mail und Passwort oder direkt mit deinem Google-Konto an — neue Mitglieder kommen per Einladung dazu.
-- Du kannst dein Passwort jederzeit zurücksetzen und siehst, auf welchen Geräten du gerade angemeldet bist.
-- Du wählst zwischen hellem und dunklem Erscheinungsbild, oder lässt dich von deinem Gerät entscheiden.
-- Du installierst Finanzen als App auf deinem Smartphone und siehst auch ohne Internet noch den zuletzt geladenen Stand.
-- Du findest in diesem Changelog künftig zu jeder Version, was sich für dich geändert hat.
+- Girokonten wurden hinzugefügt und können nun mit ihrem aktuellen Kontostand angelegt werden.
+- Einnahmen und Ausgaben können erfasst und eigenen Kategorien zugeordnet werden.
+- Kategorien können mit einer eigenen Farbe und einem Symbol versehen werden.
+- Ausgaben können als „noch nicht abgebucht" markiert und später einzeln abgehakt werden.
+- Alle offenen Buchungen eines Monats können gemeinsam auf einmal abgehakt werden.
+- Zu jedem Konto wird zusätzlich der Stand „laut Bank" ohne die noch nicht abgebuchten Beträge ausgewiesen.
+- Budgets können je Kategorie und Monat festgelegt werden und zeigen den verbleibenden Betrag an.
+- Monatliche Fixkosten können geplant, mit der passenden Buchung abgehakt und in den Folgemonat übernommen werden.
+- Zwei zusammengehörige Buchungen können miteinander verknüpft werden und zählen dann nicht mehr als Einnahme oder Ausgabe.
+- Zu einer verknüpften Buchung können die Angaben der Gegenbuchung eingesehen und diese direkt auf dem anderen Konto geöffnet werden.
+- Die Monatsübersicht zeigt den Verlauf von Einnahmen, Ausgaben und Ergebnis über den Monat.
+- Verliehenes Geld kann als Liste geführt werden und weist den noch offenen Betrag aus.
+- Die Anmeldung ist per E-Mail und Passwort sowie über ein Google-Konto möglich.
+- Neue Mitglieder werden ausschließlich per Einladung aufgenommen.
+- Das Passwort kann jederzeit zurückgesetzt werden.
+- Die aktuell angemeldeten Geräte werden aufgelistet und können eingesehen werden.
+- Ein helles und ein dunkles Erscheinungsbild stehen zur Wahl, wahlweise gesteuert durch das Gerät.
+- Die Anwendung kann als App auf dem Smartphone installiert werden.
+- Ohne Internetverbindung wird der zuletzt geladene Stand weiterhin angezeigt.
+- Der Changelog wurde hinzugefügt und zeigt zu jeder Version die Änderungen an.

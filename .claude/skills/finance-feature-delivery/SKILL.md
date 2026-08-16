@@ -200,14 +200,33 @@ offen ist — kein Ausnahmefall, keine Abkürzung.**
 5. **Abschlussbericht:** Liste die ausgeführten Befehle mit Ergebnis, die
    geprüften Szenarien und alle offenen Punkte ehrlich auf.
 
+### Schritt 6 — Changelog-Eintrag (Pflicht, immer zuletzt)
+
+**Kein Feature und keine Änderung ist abgeschlossen, bevor sie im Changelog
+steht.** Rufe nach der Verifikation den Skill **`changelog-entry`** auf und lege
+den Eintrag an:
+
+- Ordne jeden Punkt dem richtigen Abschnitt zu: komplett neu →
+  `**Features:**`, vorhandenes verändert → `**Changes:**`, Fehler behoben →
+  `**Bugfixes:**`.
+- Jeder Punkt ist **ein neutraler Satz** aus Nutzersicht — z. B. „Depots wurden
+  hinzugefügt und können nun angelegt werden." Keine Du-Ansprache, keine
+  technischen Begriffe, keine Werbesprache.
+- **Frage vor dem Schreiben nach der Versionsnummer.** Schlage sie vor
+  (Features oder Changes → nächste vollwertige Version wie `v1.2`) und warte die
+  Bestätigung des Nutzers ab.
+- Hat die Arbeit **keine für Nutzer sichtbare Wirkung**, schreibe keinen
+  Eintrag — vermerke das aber ausdrücklich im Abschlussbericht, statt es
+  stillschweigend auszulassen.
+
 ## Abgrenzung & Nachbarskills
 
 - **Design-/Konventionsdetails:** Skill `fitness-fullstack-feature`
   (dieser Skill hier erweitert ihn um Datenbank-Schicht und verpflichtende
   Verifikation; die Design-Regeln dort bleiben maßgeblich).
-- **Changelog:** Wenn der Nutzer das Feature veröffentlichen oder dokumentieren
-  will → Skill `changelog-entry` (niemals selbst technische Changelog-Texte
-  erfinden).
+- **Changelog:** Skill `changelog-entry` — nicht optional, sondern der
+  verpflichtende Schritt 6 dieses Ablaufs (niemals selbst technische
+  Changelog-Texte erfinden, Versionsnummer beim Nutzer erfragen).
 - **Grenzfall Bug:** Stellt sich heraus, dass die „Änderung" in Wahrheit ein
   Defekt in bestehendem Verhalten ist (etwas hat früher funktioniert oder
   weicht vom dokumentierten Verhalten ab), wechsle zum Skill
