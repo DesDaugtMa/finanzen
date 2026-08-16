@@ -1,4 +1,11 @@
-# v1.0.0 — 14.08.2026
+# v1.1 — 16.08.2026
+
+Die Auswahl des Monats klappt jetzt überall zuverlässig auf — auch auf kleinen Bildschirmen.
+
+**Bugfixes:**
+- Der Kalender zur Monatsauswahl wird nicht mehr abgeschnitten: Er liegt jetzt vollständig über der Seite, bleibt immer im sichtbaren Bereich und klappt bei wenig Platz nach oben auf.
+
+# v1.0 — 14.08.2026
 
 Die erste Version von Finanzen ist da. Du behältst ab jetzt an einem Ort im Blick, was auf deine Konten hereinkommt, was herausgeht und was am Monatsende übrig bleibt.
 

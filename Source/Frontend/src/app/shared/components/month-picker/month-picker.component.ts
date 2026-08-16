@@ -1,12 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import {
   addMonths,
@@ -17,6 +21,7 @@ import {
   toMonthKey,
   yearOf,
 } from '../../utils/month.util';
+import { MonthPanelPosition, computeMonthPanelPosition } from './month-panel-position.util';
 
 /**
  * Auswahl eines Abrechnungsmonats: Blättern über die Pfeile, größere Sprünge über
@@ -31,7 +36,7 @@ import {
     '(document:keydown.escape)': 'close()',
   },
   template: `
-    <div class="btn-group month-nav" role="group" aria-label="Monat auswählen">
+    <div #nav class="btn-group month-nav" role="group" aria-label="Monat auswählen">
       <button
         type="button"
         class="btn btn-outline-secondary month-step"
@@ -66,7 +71,17 @@ import {
     </div>
 
     @if (open()) {
-      <div class="month-panel" role="dialog" aria-label="Monat und Jahr auswählen">
+      <div
+        #panel
+        class="month-panel"
+        role="dialog"
+        aria-label="Monat und Jahr auswählen"
+        [class.month-panel--placed]="position() !== null"
+        [class.month-panel--above]="position()?.placement === 'above'"
+        [style.top.px]="position()?.top"
+        [style.left.px]="position()?.left"
+        [style.width.px]="position()?.width"
+      >
         <div class="month-panel__head">
           <button
             type="button"
@@ -161,28 +176,32 @@ import {
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      /* Das Panel hängt am Viewport, nicht am Auslöser: absolut positioniert
+         wurde es von jedem clippenden Vorfahren abgeschnitten — hier von der
+         Markenfläche mit overflow:hidden, in der beide Einsatzorte liegen
+         (Issue #23). Position und Breite rechnet die Komponente, siehe
+         month-panel-position.util.ts. */
       .month-panel {
-        position: absolute;
+        position: fixed;
         z-index: var(--fin-z-dropdown);
-        top: calc(100% + var(--fin-space-2));
-        /* Auf Mobil deckt das Panel die Breite des Auslösers ab — so kann es
-           weder aus dem sichtbaren Bereich laufen, noch stehen die Monatsfelder
-           unnötig schmal. */
-        right: 0;
-        left: 0;
         padding: var(--fin-space-3);
         background-color: var(--fin-bg-elevated);
         border: 1px solid var(--fin-border);
         border-radius: var(--fin-radius-md);
         box-shadow: var(--fin-shadow-lg);
-        animation: fin-pop-in var(--fin-duration-fast) var(--fin-ease-out) both;
         transform-origin: top left;
       }
-      @media (min-width: 34rem) {
-        .month-panel {
-          right: auto;
-          width: 20rem;
-        }
+      /* Vor der ersten Messung steht das Panel noch am falschen Fleck. Es
+         bleibt deshalb einen Frame lang unsichtbar — sonst blitzte es oben
+         links auf und spränge dann an seinen Platz. */
+      .month-panel:not(.month-panel--placed) {
+        visibility: hidden;
+      }
+      .month-panel--placed {
+        animation: fin-pop-in var(--fin-duration-fast) var(--fin-ease-out) both;
+      }
+      .month-panel--above {
+        transform-origin: bottom left;
       }
       .month-panel__head {
         display: flex;
@@ -289,7 +308,17 @@ export class MonthPickerComponent {
   protected readonly names = monthNames();
   protected readonly open = signal(false);
 
+  /** Gerechnete Lage des Panels; `null`, solange es noch nicht vermessen wurde. */
+  protected readonly position = signal<MonthPanelPosition | null>(null);
+
+  private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
+
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly injector = inject(Injector);
+
+  /** Aufräumen der Fensterlistener, falls die Komponente offen verschwindet. */
+  private detachViewportListeners: (() => void) | null = null;
 
   /** Jahr, das im Auswahlfeld gezeigt wird — unabhängig vom gewählten Monat blätterbar. */
   private readonly browsedYear = signal<number | null>(null);
@@ -299,17 +328,37 @@ export class MonthPickerComponent {
   protected readonly nextLabel = computed(() => formatMonthLong(addMonths(this.month(), 1)));
   protected readonly panelYear = computed(() => this.browsedYear() ?? yearOf(this.month()));
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.detachViewportListeners?.());
+  }
+
   protected step(offset: number): void {
     this.monthChange.emit(addMonths(this.month(), offset));
   }
 
   protected toggle(): void {
+    if (this.open()) {
+      this.close();
+      return;
+    }
+
     this.browsedYear.set(yearOf(this.month()));
-    this.open.update((value) => !value);
+    this.position.set(null);
+    this.open.set(true);
+
+    // Die Lage steht erst fest, wenn das Panel im DOM ist: seine Höhe
+    // entscheidet, ob nach unten oder nach oben aufgeklappt wird.
+    afterNextRender(() => this.reposition(), { injector: this.injector });
+    this.attachViewportListeners();
   }
 
   protected close(): void {
+    if (!this.open()) return;
+
     this.open.set(false);
+    this.position.set(null);
+    this.detachViewportListeners?.();
+    this.detachViewportListeners = null;
   }
 
   protected stepYear(offset: number): void {
@@ -335,5 +384,40 @@ export class MonthPickerComponent {
     if (this.host.nativeElement.contains(event.target as Node)) return;
 
     this.close();
+  }
+
+  /**
+   * Solange das Panel offen ist, folgt es dem Auslöser. Das Scroll-Ereignis wird
+   * in der Capture-Phase abgegriffen, damit auch das Scrollen innerhalb eines
+   * Containers (und nicht nur das der Seite) ankommt.
+   */
+  private attachViewportListeners(): void {
+    const reposition = () => this.reposition();
+
+    window.addEventListener('scroll', reposition, { capture: true, passive: true });
+    window.addEventListener('resize', reposition, { passive: true });
+
+    this.detachViewportListeners = () => {
+      window.removeEventListener('scroll', reposition, { capture: true });
+      window.removeEventListener('resize', reposition);
+    };
+  }
+
+  private reposition(): void {
+    const panel = this.panel()?.nativeElement;
+    if (!panel) return;
+
+    this.position.set(
+      computeMonthPanelPosition(
+        this.nav().nativeElement.getBoundingClientRect(),
+        // Die Höhe hängt nicht an der Breite: das Raster hat feste drei Spalten
+        // mit einzeiligen Beschriftungen. Einmal messen genügt daher.
+        panel.offsetHeight,
+        {
+          width: document.documentElement.clientWidth,
+          height: document.documentElement.clientHeight,
+        },
+      ),
+    );
   }
 }
