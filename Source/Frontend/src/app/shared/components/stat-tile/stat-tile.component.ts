@@ -1,17 +1,22 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { MoneyAmountComponent, MoneyTone } from '../money-amount/money-amount.component';
 
 /**
  * Kennzahl-Kachel für Übersichten: Beschriftung, Geldbetrag und optionaler
  * Zusatzhinweis. Der Betrag läuft über <code>app-money-amount</code>, damit
  * Formatierung und Vorzeichen überall identisch aussehen.
+ *
+ * In der Größe <code>sm</code> rückt alles enger zusammen, damit auf einem
+ * Handy zwei Kacheln nebeneinander passen, ohne dass der Betrag umbricht.
  */
+export type StatTileSize = 'md' | 'sm';
+
 @Component({
   selector: 'app-stat-tile',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MoneyAmountComponent],
   template: `
-    <div class="stat-tile">
+    <div class="stat-tile" [class.stat-tile--sm]="size() === 'sm'">
       <div class="stat-head">
         <span class="fin-emblem fin-emblem--sm fin-emblem--muted" aria-hidden="true">
           <i class="bi bi-{{ icon() }}"></i>
@@ -19,7 +24,12 @@ import { MoneyAmountComponent, MoneyTone } from '../money-amount/money-amount.co
         <span class="fin-eyebrow stat-label">{{ label() }}</span>
       </div>
 
-      <app-money-amount [amount]="amount()" [currency]="currency()" [tone]="tone()" size="lg" />
+      <app-money-amount
+        [amount]="amount()"
+        [currency]="currency()"
+        [tone]="tone()"
+        [size]="amountSize()"
+      />
 
       @if (hint()) {
         <p class="stat-hint">{{ hint() }}</p>
@@ -60,6 +70,21 @@ import { MoneyAmountComponent, MoneyTone } from '../money-amount/money-amount.co
         font-size: var(--fin-text-sm);
         line-height: var(--fin-leading-snug);
       }
+
+      /* Kompakte Variante: engere Ränder, kleinere Schrift im Hinweis. Das
+         Emblem entfällt nicht — es trägt die Kachel optisch —, rückt aber
+         näher an die Beschriftung heran. */
+      .stat-tile--sm {
+        padding: var(--fin-space-3);
+      }
+      .stat-tile--sm .stat-head {
+        gap: var(--fin-space-2);
+        margin-bottom: var(--fin-space-2);
+      }
+      .stat-tile--sm .stat-hint {
+        margin-top: var(--fin-space-1);
+        font-size: var(--fin-text-xs);
+      }
     `,
   ],
 })
@@ -70,4 +95,8 @@ export class StatTileComponent {
   readonly icon = input('graph-up');
   readonly tone = input<MoneyTone>('neutral');
   readonly hint = input('');
+  readonly size = input<StatTileSize>('md');
+
+  /** In der kompakten Kachel muss der Betrag eine Stufe kleiner sein, sonst bricht er um. */
+  protected readonly amountSize = computed(() => (this.size() === 'sm' ? 'md' : 'lg'));
 }

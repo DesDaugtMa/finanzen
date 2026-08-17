@@ -1,38 +1,53 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { AccountType } from '../../../../core/models/balance.model';
 import { MonthSummary } from '../../../../core/models/month-summary.model';
-import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
+import { AccountStatistics } from '../../../../core/models/account-statistics.model';
 import { StatTileComponent } from '../../../../shared/components/stat-tile/stat-tile.component';
-import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
-import { BudgetProgressComponent } from '../../../../shared/components/budget-progress/budget-progress.component';
-import { CategoryBadgeComponent } from '../../../../shared/components/category-badge/category-badge.component';
-import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
+import { AccountBasicOverviewTabComponent } from '../basic-overview-tab/basic-overview-tab.component';
+import { AccountTrendPanelComponent } from '../trend-panel/trend-panel.component';
+import { AccountSpendingPanelComponent } from '../spending-panel/spending-panel.component';
+import { AccountPlanComparisonPanelComponent } from '../plan-comparison-panel/plan-comparison-panel.component';
 import { formatMoney } from '../../../../shared/utils/money.util';
-import { formatMonthLong } from '../../../../shared/utils/month.util';
 
 /**
- * Übersicht des gewählten Monats: Kennzahlen, Budget-Gesamtstand und die Verteilung
- * der Ausgaben auf die Kategorien. Rein anzeigend — verändert wird in den anderen Bereichen.
+ * Die Übersicht des gewählten Monats. Rein anzeigend — verändert wird in den anderen
+ * Bereichen.
+ *
+ * Girokonten bekommen die volle Auswertung: vier Kennzahlen, die alle nach vorn
+ * schauen, darunter Verlauf, Gewichtung und Plan-Ist-Vergleich. Bilanz, Kontostand,
+ * Einnahmen und Ausgaben stehen bereits im Kopf der Seite und werden hier bewusst
+ * nicht wiederholt — sie hätten den Platz gekostet, den die Auswertungen brauchen.
+ *
+ * Alle anderen Kontotypen behalten die schlichte Übersicht: dort trägt ein
+ * Tagesverlauf keine Aussage.
  */
 @Component({
   selector: 'app-account-overview-tab',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    MoneyAmountComponent,
     StatTileComponent,
-    EmptyStateComponent,
-    BudgetProgressComponent,
-    CategoryBadgeComponent,
+    AccountBasicOverviewTabComponent,
+    AccountTrendPanelComponent,
+    AccountSpendingPanelComponent,
+    AccountPlanComparisonPanelComponent,
   ],
   template: `
     @if (loading()) {
-      <div class="fin-grid fin-grid--stats" role="status" aria-label="Kennzahlen werden geladen">
+      <div
+        class="fin-grid fin-grid--stats-compact"
+        role="status"
+        aria-label="Kennzahlen werden geladen"
+      >
         @for (placeholder of skeletonSlots; track $index) {
           <div class="fin-panel stat-skeleton">
             <div class="fin-skeleton fin-skeleton--line-short"></div>
             <div class="fin-skeleton fin-skeleton--amount"></div>
           </div>
         }
+      </div>
+      <div class="fin-panel chart-skeleton">
+        <div class="fin-skeleton fin-skeleton--line-short"></div>
+        <div class="fin-skeleton chart-skeleton__area"></div>
       </div>
     } @else if (error()) {
       <div class="alert alert-danger overview-error" role="alert">
@@ -42,142 +57,60 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
         </button>
       </div>
     } @else if (summary(); as data) {
-      <div class="fin-grid fin-grid--stats overview-stats">
-        <app-stat-tile
-          label="Einnahmen"
-          icon="arrow-down-left-circle"
-          tone="income"
-          [amount]="data.income"
-          [currency]="data.currency"
-        />
-        <app-stat-tile
-          label="Ausgaben"
-          icon="arrow-up-right-circle"
-          tone="expense"
-          [amount]="data.expenses"
-          [currency]="data.currency"
-        />
-        <app-stat-tile
-          label="Saldo des Monats"
-          icon="calculator"
-          [amount]="data.net"
-          [currency]="data.currency"
-          [hint]="balanceHint()"
-        />
-        <app-stat-tile
-          label="Frei verfügbar"
-          icon="piggy-bank"
-          [amount]="data.disposable"
-          [currency]="data.currency"
-          [hint]="disposableHint()"
-        />
-        <!-- Der Kontostand schließt die Reihe ab: die drei Kacheln davor beschreiben
-             den Monat, diese sagt, was insgesamt da ist. Der Stand „laut Bank“ steht
-             als Hinweis darunter, weil er die Nebenfrage beantwortet. -->
-        <app-stat-tile
-          label="Kontostand"
-          icon="wallet2"
-          [amount]="data.currentBalance"
-          [currency]="data.currency"
-          [hint]="settledHint()"
-        />
-      </div>
-
-      <section class="fin-panel overview-panel" aria-labelledby="budgetTotalsHeading">
-        <div class="fin-panel__body">
-          <h2 id="budgetTotalsHeading" class="overview-heading">Budgets im {{ monthLabel() }}</h2>
-
-          @if (data.totalBudget > 0) {
-            <dl class="budget-totals">
-              <div>
-                <dt class="fin-kv__label">Budgetiert</dt>
-                <dd>
-                  <app-money-amount [amount]="data.totalBudget" [currency]="data.currency" />
-                </dd>
-              </div>
-              <div>
-                <dt class="fin-kv__label">Ausgegeben</dt>
-                <dd>
-                  <app-money-amount [amount]="data.totalSpentBudgeted" [currency]="data.currency" />
-                </dd>
-              </div>
-              <div>
-                <dt class="fin-kv__label">
-                  {{ data.totalRemaining < 0 ? 'Überschritten' : 'Übrig' }}
-                </dt>
-                <dd>
-                  <app-money-amount [amount]="data.totalRemaining" [currency]="data.currency" />
-                </dd>
-              </div>
-            </dl>
-
-            <app-budget-progress
-              label="Auslastung aller Budgets"
-              [spent]="data.totalSpentBudgeted"
-              [budget]="data.totalBudget"
-              [currency]="data.currency"
-            />
-          } @else {
-            <p class="overview-note">
-              Für diesen Monat ist noch kein Budget hinterlegt. Im Bereich „Budgets“ legst du je
-              Kategorie fest, wie viel zur Verfügung steht.
-            </p>
-          }
+      @if (statistics(); as stats) {
+        <div class="fin-grid fin-grid--stats-compact overview-stats">
+          <app-stat-tile
+            size="sm"
+            [label]="allowanceLabel()"
+            [icon]="allowanceIcon()"
+            [amount]="stats.dailyAllowance.amount"
+            [currency]="data.currency"
+            [hint]="allowanceHint()"
+          />
+          <app-stat-tile
+            size="sm"
+            label="Frei verfügbar"
+            icon="piggy-bank"
+            [amount]="data.disposable"
+            [currency]="data.currency"
+            [hint]="disposableHint()"
+          />
+          <app-stat-tile
+            size="sm"
+            label="Prognose Monatsende"
+            icon="graph-up-arrow"
+            [amount]="stats.forecast.amount"
+            [currency]="data.currency"
+            [hint]="forecastHint()"
+          />
+          <app-stat-tile
+            size="sm"
+            label="Kontostand"
+            icon="wallet2"
+            [amount]="data.currentBalance"
+            [currency]="data.currency"
+            [hint]="settledHint()"
+          />
         </div>
-      </section>
 
-      <section class="fin-panel" aria-labelledby="spendingHeading">
-        <div class="fin-panel__body">
-          <h2 id="spendingHeading" class="overview-heading">Ausgaben nach Kategorie</h2>
+        <div class="overview-panels">
+          <app-account-trend-panel [statistics]="stats" />
 
-          @if (data.spending.length === 0) {
-            <app-empty-state
-              icon="receipt"
-              title="Noch keine Ausgaben in diesem Monat"
-              message="Sobald Buchungen erfasst sind, siehst du hier, wohin dein Geld fließt."
-            >
-              <button type="button" class="btn btn-primary" (click)="showTransactions.emit()">
-                Zu den Transaktionen
-              </button>
-            </app-empty-state>
-          } @else {
-            <ul class="spending-list">
-              @for (item of data.spending; track item.categoryId ?? 0) {
-                <li class="spending-item">
-                  <div class="spending-item__head">
-                    <app-category-badge
-                      class="spending-item__category"
-                      [name]="item.categoryId === null ? null : item.categoryName"
-                      [color]="item.categoryColor"
-                      [icon]="item.categoryIcon"
-                    />
-                    <span class="spending-item__share">{{ item.share }} %</span>
-                    <app-money-amount
-                      size="sm"
-                      tone="expense"
-                      [amount]="item.amount"
-                      [currency]="data.currency"
-                    />
-                  </div>
+          <app-account-spending-panel
+            [spending]="data.spending"
+            [currency]="data.currency"
+            (showTransactions)="showTransactions.emit()"
+          />
 
-                  <!--
-                    Der Anteilsbalken ist eine reine Wiederholung der Prozentzahl
-                    daneben; als role=presentation bleibt er aus der Vorlesereihen-
-                    folge heraus, statt sie zu verdoppeln.
-                  -->
-                  <div class="share-track" role="presentation">
-                    <span
-                      class="share-fill"
-                      [style.width.%]="item.share"
-                      [style.background-color]="item.categoryColor ?? defaultColor"
-                    ></span>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
+          <app-account-plan-comparison-panel [statistics]="stats" />
         </div>
-      </section>
+      } @else {
+        <app-account-basic-overview-tab
+          [summary]="data"
+          [month]="month()"
+          (showTransactions)="showTransactions.emit()"
+        />
+      }
     }
   `,
   styles: [
@@ -192,79 +125,39 @@ import { formatMonthLong } from '../../../../shared/utils/month.util';
       .overview-stats {
         margin-bottom: var(--fin-space-4);
       }
-      .overview-panel {
-        margin-bottom: var(--fin-space-4);
-      }
-      .overview-heading {
-        margin: 0 0 var(--fin-space-4);
-        font-size: var(--fin-text-md);
-      }
-      .overview-note {
-        margin: 0;
-        color: var(--fin-text-muted);
-        font-size: var(--fin-text-base);
-      }
-
-      .budget-totals {
-        display: grid;
-        /* Drei Werte nebeneinander, auf sehr schmalen Displays zweispaltig —
-           umbrechen ist besser als die Beträge zu quetschen. */
-        grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
-        gap: var(--fin-space-4);
-        margin: 0 0 var(--fin-space-5);
-      }
-      .budget-totals dd {
-        margin: 0.15rem 0 0;
-      }
-
-      .spending-list {
+      .overview-panels {
         display: flex;
         flex-direction: column;
         gap: var(--fin-space-4);
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .spending-item__head {
-        display: flex;
-        align-items: center;
-        gap: var(--fin-space-2);
-        margin-bottom: var(--fin-space-2);
-      }
-      .spending-item__category {
-        flex: 1 1 auto;
-        min-width: 0;
-      }
-      .spending-item__share {
-        flex-shrink: 0;
-        color: var(--fin-text-muted);
-        font-size: var(--fin-text-sm);
-        font-variant-numeric: tabular-nums;
-      }
-      .share-track {
-        height: 0.375rem;
-        border-radius: var(--fin-radius-pill);
-        background-color: var(--fin-surface-active);
-        overflow: hidden;
-      }
-      .share-fill {
-        display: block;
-        height: 100%;
-        border-radius: var(--fin-radius-pill);
-        transition: width var(--fin-duration-slow) var(--fin-ease-out);
       }
 
       .stat-skeleton {
         display: flex;
         flex-direction: column;
         gap: var(--fin-space-3);
+        padding: var(--fin-space-3);
+      }
+      .chart-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-3);
+        margin-top: var(--fin-space-4);
         padding: var(--fin-space-4);
+      }
+      .chart-skeleton__area {
+        height: 8rem;
+        border-radius: var(--fin-radius-md);
       }
     `,
   ],
 })
 export class AccountOverviewTabComponent {
   readonly summary = input<MonthSummary | null>(null);
+  /**
+   * Die Auswertungen. `null` für Kontotypen, die sie nicht bekommen — dann fällt die
+   * Ansicht auf die schlichte Übersicht zurück.
+   */
+  readonly statistics = input<AccountStatistics | null>(null);
   readonly loading = input(false);
   readonly error = input('');
   readonly month = input.required<string>();
@@ -274,12 +167,74 @@ export class AccountOverviewTabComponent {
   readonly retry = output<void>();
   readonly showTransactions = output<void>();
 
-  protected readonly defaultColor = DEFAULT_ACCENT_COLOR;
-
   /** Anzahl der Platzhalter-Kacheln während des Ladens. */
-  protected readonly skeletonSlots = [0, 1, 2, 3, 4];
+  protected readonly skeletonSlots = [0, 1, 2, 3];
 
-  protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
+  // --- Maximale Ausgabe pro Tag ---------------------------------------
+
+  /**
+   * Ein abgeschlossener Monat hat keinen Spielraum mehr — dort steht dieselbe Kachel
+   * für den erreichten Tagesschnitt. Der Titel muss das sagen, sonst liest sich eine
+   * rückblickende Zahl wie eine Erlaubnis.
+   */
+  protected readonly allowanceLabel = computed(() =>
+    this.statistics()?.dailyAllowance.mode === 'PastAverage'
+      ? 'Ausgaben pro Tag'
+      : 'Max. Ausgabe pro Tag',
+  );
+
+  protected readonly allowanceIcon = computed(() =>
+    this.statistics()?.dailyAllowance.mode === 'PastAverage' ? 'clock-history' : 'speedometer2',
+  );
+
+  protected readonly allowanceHint = computed(() => {
+    const stats = this.statistics();
+    const data = this.summary();
+    if (!stats || !data) return '';
+
+    const allowance = stats.dailyAllowance;
+    const open = formatMoney(allowance.openFixedCosts, data.currency);
+
+    if (allowance.mode === 'PastAverage') {
+      return `im Schnitt über ${allowance.days} Tage — der Monat ist abgeschlossen`;
+    }
+
+    // Reicht der Kontostand die offenen Fixkosten nicht mehr, steht die Kachel bei 0 €.
+    // Ohne diesen Hinweis sähe das nach „nichts mehr übrig“ statt nach Unterdeckung aus.
+    if (allowance.available < 0) {
+      return `Der Kontostand deckt ${open} offene Fixkosten nicht — es fehlen ${formatMoney(-allowance.available, data.currency)}`;
+    }
+
+    const days = `${allowance.days} ${allowance.days === 1 ? 'Tag' : 'Tage'}`;
+    const scope = allowance.mode === 'RemainingDays' ? `noch ${days}` : `alle ${days} des Monats`;
+
+    return allowance.openFixedCosts > 0
+      ? `${scope}, nach ${open} offenen Fixkosten`
+      : `${scope} — keine offenen Fixkosten mehr`;
+  });
+
+  // --- Prognose --------------------------------------------------------
+
+  protected readonly forecastHint = computed(() => {
+    const stats = this.statistics();
+    const data = this.summary();
+    if (!stats || !data) return '';
+
+    const forecast = stats.forecast;
+
+    if (!forecast.isProjected) {
+      return stats.position === 'Past'
+        ? 'tatsächliches Ergebnis — der Monat ist abgeschlossen'
+        : 'nach Fixkosten — für eine Hochrechnung fehlt noch der Verlauf';
+    }
+
+    const rate = formatMoney(forecast.dailyAverageExpenses, data.currency);
+    const days = `${forecast.remainingDays} ${forecast.remainingDays === 1 ? 'Tag' : 'Tage'}`;
+
+    return `erwartet bei ${rate} pro Tag über ${days}`;
+  });
+
+  // --- Übernommene Kennzahlen -----------------------------------------
 
   /**
    * Der Stand „laut Bank“ unter dem Kontostand. Gibt es offene Buchungen, sagt der
@@ -298,13 +253,6 @@ export class AccountOverviewTabComponent {
     return `${settled} — ${data.pendingCount} ${label} über ${formatMoney(data.pendingTotal, data.currency)}`;
   });
 
-  protected readonly balanceHint = computed(() => {
-    const data = this.summary();
-    if (!data) return '';
-
-    return `${data.transactionCount} ${data.transactionCount === 1 ? 'Buchung' : 'Buchungen'} in diesem Monat`;
-  });
-
   /**
    * Macht die Rechnung hinter „frei verfügbar“ sichtbar. Reichen die Einnahmen nicht,
    * steht die Kennzahl bei 0 € — dann hat die Unterdeckung Vorrang vor der Erklärung,
@@ -319,7 +267,7 @@ export class AccountOverviewTabComponent {
     }
 
     if (data.fixedCostCount === 0) {
-      return 'Noch keine Fixkosten hinterlegt — im Bereich „Fixkosten“ planbar machen';
+      return 'Noch keine Fixkosten hinterlegt';
     }
 
     const fixed = formatMoney(data.fixedCosts, data.currency);
@@ -327,6 +275,6 @@ export class AccountOverviewTabComponent {
 
     return open === 0
       ? `nach ${fixed} Fixkosten und den variablen Ausgaben`
-      : `nach ${fixed} Fixkosten (davon ${open} noch offen) und den variablen Ausgaben`;
+      : `nach ${fixed} Fixkosten (davon ${open} offen) und den variablen Ausgaben`;
   });
 }

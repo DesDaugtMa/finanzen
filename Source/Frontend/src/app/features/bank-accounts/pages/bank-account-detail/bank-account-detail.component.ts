@@ -14,6 +14,7 @@ import { CategoryApiService } from '../../../../core/services/category-api.servi
 import { BankAccount } from '../../../../core/models/bank-account.model';
 import { Category } from '../../../../core/models/category.model';
 import { MonthSummary } from '../../../../core/models/month-summary.model';
+import { AccountStatistics } from '../../../../core/models/account-statistics.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { MonthPickerComponent } from '../../../../shared/components/month-picker/month-picker.component';
 import { SettledBalanceComponent } from '../../../../shared/components/settled-balance/settled-balance.component';
@@ -191,11 +192,12 @@ type TabId = (typeof TAB_IDS)[number];
             @case ('uebersicht') {
               <app-account-overview-tab
                 [summary]="summary()"
-                [loading]="summaryLoading()"
-                [error]="summaryError()"
+                [statistics]="statistics()"
+                [loading]="overviewLoading()"
+                [error]="overviewError()"
                 [month]="month()"
                 [accountType]="item.type"
-                (retry)="loadSummary()"
+                (retry)="reloadOverview()"
                 (showTransactions)="selectTab('transaktionen')"
               />
             }
@@ -468,6 +470,27 @@ export class BankAccountDetailComponent {
   /** True, wenn die Kennzahlen aus dem Zwischenspeicher stammen statt vom Server. */
   protected readonly summaryStale = computed(() => this.summarySavedAt() !== null);
 
+  protected readonly statistics = signal<AccountStatistics | null>(null);
+  // Startet auf true: solange offen ist, ob das Konto Auswertungen bekommt, darf die
+  // Übersicht nicht kurz in die schlichte Fassung springen und dann zurück.
+  protected readonly statisticsLoading = signal(true);
+  protected readonly statisticsError = signal('');
+
+  /** Nur Girokonten bekommen Verlauf, Spielraum pro Tag und Hochrechnung. */
+  protected readonly isCheckingAccount = computed(() => this.account()?.type === 'CheckingAccount');
+
+  /**
+   * Die Übersicht braucht Kennzahlen und Auswertungen gemeinsam. Eine halb gefüllte
+   * Seite, die sich nachträglich umbaut, wäre unruhiger als ein kurzer Ladezustand.
+   */
+  protected readonly overviewLoading = computed(
+    () => this.summaryLoading() || (this.isCheckingAccount() && this.statisticsLoading()),
+  );
+
+  protected readonly overviewError = computed(
+    () => this.summaryError() || (this.isCheckingAccount() ? this.statisticsError() : ''),
+  );
+
   protected readonly categories = signal<Category[]>([]);
   protected readonly categoriesLoading = signal(true);
   protected readonly categoriesError = signal('');
@@ -567,6 +590,25 @@ export class BankAccountDetailComponent {
       const month = this.month();
       untracked(() => this.loadSummary(accountId, month));
     });
+
+    // Die Auswertungen hängen zusätzlich am Kontotyp — er steht erst fest, wenn die
+    // Stammdaten geladen sind.
+    effect(() => {
+      const accountId = this.accountId();
+      const month = this.month();
+      const isChecking = this.isCheckingAccount();
+
+      untracked(() => {
+        if (isChecking) {
+          this.loadStatistics(accountId, month);
+          return;
+        }
+
+        this.statistics.set(null);
+        this.statisticsError.set('');
+        this.statisticsLoading.set(false);
+      });
+    });
   }
 
   protected selectMonth(month: string): void {
@@ -594,17 +636,26 @@ export class BankAccountDetailComponent {
   protected reload(): void {
     this.loadAccount(this.accountId());
     this.loadCategories(this.accountId());
-    this.loadSummary();
+    this.reloadOverview();
   }
 
-  /** Nach Buchungs- oder Budgetänderungen stimmen die Kennzahlen im Kopf nicht mehr. */
+  /** Nach Buchungs-, Fixkosten- oder Budgetänderungen stimmen Kennzahlen und Auswertungen nicht mehr. */
   protected onDataChanged(): void {
-    this.loadSummary();
+    this.reloadOverview();
   }
 
   protected onCategoriesChanged(): void {
     this.loadCategories(this.accountId());
+    this.reloadOverview();
+  }
+
+  /** Holt beides, was die Übersicht speist — getrennt neu zu laden ließe die Seite widersprüchlich zurück. */
+  protected reloadOverview(): void {
     this.loadSummary();
+
+    if (this.isCheckingAccount()) {
+      this.loadStatistics();
+    }
   }
 
   protected loadSummary(accountId = this.accountId(), month = this.month()): void {
@@ -622,6 +673,24 @@ export class BankAccountDetailComponent {
       error: (err: Error) => {
         this.summaryError.set(err.message || 'Die Kennzahlen konnten nicht geladen werden.');
         this.summaryLoading.set(false);
+      },
+    });
+  }
+
+  private loadStatistics(accountId = this.accountId(), month = this.month()): void {
+    if (!this.isValidAccountId(accountId)) return;
+
+    this.statisticsLoading.set(true);
+    this.statisticsError.set('');
+
+    this.bankAccountApi.getStatistics(accountId, month).subscribe({
+      next: (result) => {
+        this.statistics.set(result.value);
+        this.statisticsLoading.set(false);
+      },
+      error: (err: Error) => {
+        this.statisticsError.set(err.message || 'Die Auswertungen konnten nicht geladen werden.');
+        this.statisticsLoading.set(false);
       },
     });
   }

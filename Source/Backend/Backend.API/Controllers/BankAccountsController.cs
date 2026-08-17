@@ -13,6 +13,7 @@ namespace Backend.Controllers;
 public sealed class BankAccountsController(
     IBankAccountService bankAccountService,
     IMonthSummaryService monthSummaryService,
+    IAccountStatisticsService accountStatisticsService,
     ICurrentUser currentUser) : ControllerBase
 {
     /// <summary>Kennzahlen des Kontos für einen Abrechnungsmonat.</summary>
@@ -25,6 +26,18 @@ public sealed class BankAccountsController(
             return Unauthorized();
 
         return Ok(await monthSummaryService.GetAsync(userId.Value, id, AccountingMonth.Parse(month), ct));
+    }
+
+    /// <summary>Auswertungen des Kontos für einen Abrechnungsmonat: Verlauf, Spielraum pro Tag, Plan gegen Ist.</summary>
+    /// <param name="month">Monat im Format <c>yyyy-MM</c>, z. B. <c>2026-07</c>.</param>
+    [HttpGet("{id:int}/statistics")]
+    public async Task<ActionResult<AccountStatisticsDto>> GetStatistics(int id, [FromQuery] string month, CancellationToken ct)
+    {
+        var userId = currentUser.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        return Ok(await accountStatisticsService.GetAsync(userId.Value, id, AccountingMonth.Parse(month), ct));
     }
 
     [HttpGet]
