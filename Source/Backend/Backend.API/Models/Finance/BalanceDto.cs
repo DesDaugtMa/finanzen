@@ -1,6 +1,67 @@
 using Backend.Domain.Enums;
+using Backend.ValueObjects;
 
 namespace Backend.Models.Finance;
+
+/// <summary>
+/// Die Bilanz eines frei gewählten Zeitraums — die Datenquelle der Startseite.
+/// </summary>
+/// <remarks>
+/// Inhaltlich identisch zur Monatsbilanz, nur dass der Zeitraum ein Monat oder ein
+/// ganzes Jahr sein kann. Sämtliche Zahlen und die gesamte Kontoaufschlüsselung
+/// beziehen sich auf diesen Zeitraum; einzige Ausnahme sind die Vermögenswerte
+/// (<see cref="NetWorth"/>, <c>CurrentBalance</c> je Konto), die immer den heutigen
+/// Stand zeigen — ein Kontostand ist eine Zeitpunkt- und keine Zeitraumgröße.
+///
+/// Umbuchungen zwischen eigenen Konten sind wie überall aus Einnahmen und Ausgaben
+/// herausgerechnet.
+/// </remarks>
+public class PeriodBalanceDto
+{
+    /// <summary>Der abgefragte Zeitraum als <c>yyyy-MM</c> (Monat) oder <c>yyyy</c> (Jahr).</summary>
+    public string Period { get; set; } = string.Empty;
+
+    /// <summary>Die Körnung des Zeitraums — <c>Month</c> oder <c>Year</c>.</summary>
+    public BalancePeriodKind Kind { get; set; }
+
+    public string Currency { get; set; } = string.Empty;
+
+    /// <summary>Einnahmen des Zeitraums über alle Konten, ohne Umbuchungen.</summary>
+    public decimal Income { get; set; }
+
+    /// <summary>Ausgaben des Zeitraums über alle Konten, ohne Umbuchungen, als positiver Wert.</summary>
+    public decimal Expenses { get; set; }
+
+    /// <summary><c>Income − Expenses</c>. Die Bilanz des Zeitraums.</summary>
+    public decimal Net { get; set; }
+
+    /// <summary>
+    /// Bewegtes Volumen der Umbuchungen zwischen eigenen Konten (je Umbuchung einmal gezählt).
+    /// Rein informativ — es steckt weder in <see cref="Income"/> noch in <see cref="Expenses"/>.
+    /// </summary>
+    public decimal TransferVolume { get; set; }
+
+    /// <summary>Bilanz des vorangehenden Zeitraums gleicher Körnung (Vormonat bzw. Vorjahr).</summary>
+    public decimal PreviousNet { get; set; }
+
+    /// <summary>Aktuelles Gesamtvermögen: Summe der heutigen Kontostände aller Kategorien.</summary>
+    public decimal NetWorth { get; set; }
+
+    /// <summary>Das Gesamtvermögen ohne die noch nicht abgebuchten Ausgaben.</summary>
+    public decimal SettledNetWorth { get; set; }
+
+    /// <summary>Summe aller noch nicht abgebuchten Ausgaben über alle Konten, zeitraumübergreifend.</summary>
+    public decimal PendingTotal { get; set; }
+
+    /// <summary>Anzahl der noch nicht abgebuchten Buchungen über alle Konten.</summary>
+    public int PendingCount { get; set; }
+
+    /// <summary>Anzahl der berücksichtigten Buchungen im Zeitraum, ohne Umbuchungen.</summary>
+    public int TransactionCount { get; set; }
+
+    /// <summary>Die Kontokategorien in fester Reihenfolge; leere Kategorien fehlen.</summary>
+    public IReadOnlyList<AccountGroupBalanceDto> Groups { get; set; } = [];
+}
 
 /// <summary>
 /// Die Monatsbilanz über alle Konten des Nutzers — die Leitzahl der Startseite.
@@ -58,7 +119,11 @@ public class OverallMonthBalanceDto
     public IReadOnlyList<AccountGroupBalanceDto> Groups { get; set; } = [];
 }
 
-/// <summary>Bilanz und Vermögen einer Kontokategorie im abgefragten Monat.</summary>
+/// <summary>
+/// Bilanz und Vermögen einer Kontokategorie im abgefragten Zeitraum. Wird sowohl von
+/// der Monatsbilanz als auch von der Zeitraumbilanz verwendet; „Monat“ in den
+/// Beschreibungen der Flusszahlen meint dort entsprechend den abgefragten Zeitraum.
+/// </summary>
 public class AccountGroupBalanceDto
 {
     public AccountType Type { get; set; }
@@ -87,7 +152,10 @@ public class AccountGroupBalanceDto
     public IReadOnlyList<AccountBalanceDto> Accounts { get; set; } = [];
 }
 
-/// <summary>Ein einzelnes Konto mit Kontostand und Monatsbilanz.</summary>
+/// <summary>
+/// Ein einzelnes Konto mit seinem heutigen Kontostand und seiner Bilanz im
+/// abgefragten Zeitraum (Monat oder Jahr).
+/// </summary>
 public class AccountBalanceDto
 {
     public int AccountId { get; set; }

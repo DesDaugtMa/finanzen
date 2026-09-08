@@ -4,6 +4,7 @@ import { ApiService } from './api.service';
 import { OfflineCacheService, Sourced } from './offline-cache.service';
 import { BankAccount, BankAccountPayload } from '../models/bank-account.model';
 import { MonthSummary } from '../models/month-summary.model';
+import { AccountStatistics } from '../models/account-statistics.model';
 
 @Injectable({ providedIn: 'root' })
 export class BankAccountApiService {
@@ -44,6 +45,14 @@ export class BankAccountApiService {
     return this.cache.withFallback(
       `summary.${id}.${month}`,
       this.api.get<MonthSummary>(`${this.resource}/${id}/summary`, { params: { month } }),
+    );
+  }
+
+  /** Auswertungen des Kontos für einen Abrechnungsmonat (`yyyy-MM`), mit Offline-Rückfall. */
+  getStatistics(id: number, month: string): Observable<Sourced<AccountStatistics>> {
+    return this.cache.withFallback(
+      `statistics.${id}.${month}`,
+      this.api.get<AccountStatistics>(`${this.resource}/${id}/statistics`, { params: { month } }),
     );
   }
 }

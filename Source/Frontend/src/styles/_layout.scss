@@ -36,6 +36,16 @@
   max-width: var(--fin-container-reading);
 }
 
+// Dashboard-Breite: erst auf sehr breiten Schirmen darf die Seite über das
+// normale Mass hinauswachsen. Darunter bleibt sie exakt so breit wie jede
+// andere Seite — eine Seite, die schon bei 1400px aus der Reihe tanzt, wirkt
+// wie ein Fehler und nicht wie eine Absicht.
+@media (min-width: 100rem) {
+  .fin-container--wide {
+    max-width: var(--fin-container-wide);
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Seitengerüst
 // -----------------------------------------------------------------------------
@@ -49,6 +59,15 @@
   min-height: 100dvh;
 }
 
+// Ab Desktop steht die Seitenleiste fest am linken Rand. Das Gerüst rückt um
+// ihre Breite ein, statt sie in den Fluss zu nehmen: so scrollt der Inhalt
+// unabhängig und die Navigation bleibt stehen.
+@media (min-width: 62rem) {
+  .fin-shell--with-sidebar {
+    padding-left: var(--fin-sidebar-width);
+  }
+}
+
 .fin-main {
   flex: 1 1 auto;
   padding-top: var(--fin-space-5);
@@ -60,7 +79,12 @@
 @media (min-width: 48rem) {
   .fin-main {
     padding-top: var(--fin-space-8);
-    // Ab Tablet liegt die Navigation oben — unten ist keine Leiste im Weg.
+  }
+}
+
+@media (min-width: 62rem) {
+  .fin-main {
+    // Ab Desktop steht die Navigation links — unten ist keine Leiste im Weg.
     padding-bottom: var(--fin-space-12);
   }
 }
@@ -150,6 +174,21 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
 }
 
+// Kompakte Kennzahlen: auf dem Handy bewusst feste zwei Spalten statt `auto-fit`.
+// Vier untereinander stehende Kacheln schieben den Rest der Seite unter die Falz;
+// nebeneinander bleibt der Block auf einen Blick erfassbar.
+.fin-grid--stats-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fin-space-3);
+}
+
+@media (min-width: 48rem) {
+  .fin-grid--stats-compact {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: var(--fin-space-4);
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Werkzeugleiste
 // -----------------------------------------------------------------------------
@@ -179,7 +218,7 @@
   box-shadow: var(--fin-shadow-lg);
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 62rem) {
   // Auf grossen Screens hat die Aktion ihren Platz im Seitenkopf.
   .fin-fab {
     display: none;

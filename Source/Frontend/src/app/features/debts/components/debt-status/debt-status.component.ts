@@ -3,15 +3,16 @@ import { DebtStatus } from '../../../../core/models/debt.model';
 
 /** Beschriftung, Symbol und Farbton je Stand — an einer Stelle, damit die Anzeige überall gleich ist. */
 const STATUS_PRESETS: Record<DebtStatus, { label: string; icon: string; tone: string }> = {
-  Empty: { label: 'Ohne Buchung', icon: 'circle', tone: 'outline' },
+  Empty: { label: 'Ohne Betrag', icon: 'circle', tone: 'outline' },
   Open: { label: 'Offen', icon: 'hourglass-split', tone: 'warn' },
   Settled: { label: 'Beglichen', icon: 'check-circle-fill', tone: 'income' },
   Overpaid: { label: 'Zu viel zurück', icon: 'exclamation-circle-fill', tone: 'expense' },
 };
 
 /**
- * Stand eines Schuldeintrags. Der Unterschied steckt in Symbol und Text, nicht nur in
- * der Farbe — die Anzeige bleibt damit auch ohne Farbwahrnehmung eindeutig.
+ * Stand eines Schuldeintrags gegenüber seinen Positionen. Der Unterschied steckt in
+ * Symbol und Text, nicht nur in der Farbe — die Anzeige bleibt damit auch ohne
+ * Farbwahrnehmung eindeutig.
  */
 @Component({
   selector: 'app-debt-status',

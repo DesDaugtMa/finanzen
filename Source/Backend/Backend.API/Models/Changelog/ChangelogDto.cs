@@ -7,7 +7,7 @@ namespace Backend.Models.Changelog;
 public class ChangelogDto
 {
     /// <summary>
-    /// Die jüngste veröffentlichte Version, z. B. <c>1.0.0</c> — die Navigation zeigt sie
+    /// Die jüngste veröffentlichte Version, z. B. <c>1.2</c> — die Navigation zeigt sie
     /// am Changelog-Link. <c>null</c>, solange es keinen gültigen Eintrag gibt.
     /// </summary>
     public string? CurrentVersion { get; set; }
@@ -19,7 +19,7 @@ public class ChangelogDto
 /// <summary>Eine veröffentlichte Version mit dem, was sich für den Nutzer geändert hat.</summary>
 public class ChangelogEntryDto
 {
-    /// <summary>Versionsnummer ohne führendes <c>v</c>, z. B. <c>1.0.0</c>.</summary>
+    /// <summary>Versionsnummer ohne führendes <c>v</c>, z. B. <c>1.2</c> oder <c>1.2.1</c>.</summary>
     public string Version { get; set; } = string.Empty;
 
     public DateOnly ReleaseDate { get; set; }

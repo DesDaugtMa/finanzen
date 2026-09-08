@@ -1,11 +1,33 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { Debt, DebtTransaction } from '../../../../core/models/debt.model';
+import { Debt, DebtEntry, DebtTransactionDirection } from '../../../../core/models/debt.model';
 import { MoneyAmountComponent } from '../../../../shared/components/money-amount/money-amount.component';
 import { formatDate } from '../../../../shared/utils/month.util';
 import { DebtStatusComponent } from '../debt-status/debt-status.component';
 
 /**
- * Ein Schuldeintrag mit seinen Buchungen. Der offene Betrag steht groß und allein — er
+ * Eine Zeile der Positionsliste — vereinheitlicht, damit Buchungen und manuell erfasste
+ * Beträge in derselben chronologischen Liste stehen können. Der Nutzer denkt in einem
+ * Verlauf („was ist bei diesem Vorgang passiert?“), nicht in Herkunftsarten.
+ */
+interface DebtPosition {
+  /** Eindeutig über beide Herkünfte hinweg — die IDs allein würden kollidieren. */
+  key: string;
+  /** Buchung oder manueller Betrag. Entscheidet über Kennzeichnung und Aktionen. */
+  manual: boolean;
+  direction: DebtTransactionDirection;
+  title: string;
+  amount: number;
+  currency: string;
+  /** ISO-Datum `yyyy-MM-dd`. */
+  date: string;
+  /** Herkunft in Worten: der Kontoname, oder „Manuell“. */
+  origin: string;
+  /** Die ID innerhalb der eigenen Herkunft — für die Aktionen an der Zeile. */
+  id: number;
+}
+
+/**
+ * Ein Schuldeintrag mit seinen Positionen. Der offene Betrag steht groß und allein — er
  * ist die eigentliche Frage des Eintrags; Verliehen und Zurück erklären ihn darunter.
  */
 @Component({
@@ -21,11 +43,19 @@ import { DebtStatusComponent } from '../debt-status/debt-status.component';
           <h4 class="debt-card__title fin-truncate">{{ item.title }}</h4>
           <div class="debt-card__meta">
             <app-debt-status [status]="item.status" />
-            <span class="debt-card__count">{{ transactionsLabel() }}</span>
+            <span class="debt-card__count">{{ positionsLabel() }}</span>
           </div>
         </div>
 
         <div class="debt-card__actions">
+          <button
+            type="button"
+            class="btn fin-btn-icon"
+            [attr.aria-label]="'Betrag zu ' + item.title + ' erfassen'"
+            (click)="addEntry.emit()"
+          >
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          </button>
           <button
             type="button"
             class="btn fin-btn-icon"
@@ -87,43 +117,67 @@ import { DebtStatusComponent } from '../debt-status/debt-status.component';
         <p class="debt-card__note">{{ item.note }}</p>
       }
 
-      @if (item.transactionCount > 0) {
+      @if (positions().length > 0) {
         <details class="fin-details debt-card__details">
-          <summary class="fin-details__summary">{{ transactionsLabel() }}</summary>
+          <summary class="fin-details__summary">{{ positionsLabel() }}</summary>
 
+          <!--
+            Buchungen und manuelle Beträge stehen in einer Liste, chronologisch: der
+            Nutzer sucht den Verlauf des Vorgangs, nicht die Herkunft der Zahlen. Woher
+            eine Zeile stammt, sagt ihre Kennzeichnung.
+          -->
           <ul class="fin-details__body debt-card__transactions">
-            @for (transaction of item.transactions; track transaction.id) {
+            @for (position of positions(); track position.key) {
               <li class="debt-card__transaction">
                 <div class="debt-card__transaction-text">
                   <span class="debt-card__transaction-title fin-truncate">
-                    {{ transaction.title }}
+                    {{ position.title }}
                   </span>
-                  <span class="debt-card__transaction-meta">{{ meta(transaction) }}</span>
+                  <span class="debt-card__transaction-meta">{{ meta(position) }}</span>
                 </div>
 
                 <app-money-amount
                   size="sm"
-                  [tone]="transaction.direction === 'Income' ? 'income' : 'expense'"
-                  [amount]="transaction.amount"
-                  [currency]="transaction.currency"
+                  [tone]="position.direction === 'Income' ? 'income' : 'expense'"
+                  [amount]="position.amount"
+                  [currency]="position.currency"
                 />
 
-                <button
-                  type="button"
-                  class="btn fin-btn-icon"
-                  [attr.aria-label]="'Zuordnung von ' + transaction.title + ' lösen'"
-                  (click)="unlink.emit(transaction.id)"
-                >
-                  <i class="bi bi-x-lg" aria-hidden="true"></i>
-                </button>
+                @if (position.manual) {
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon"
+                    [attr.aria-label]="'Betrag ' + position.title + ' bearbeiten'"
+                    (click)="editEntry.emit(position.id)"
+                  >
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon debt-card__remove"
+                    [attr.aria-label]="'Betrag ' + position.title + ' entfernen'"
+                    (click)="removeEntry.emit(position.id)"
+                  >
+                    <i class="bi bi-trash" aria-hidden="true"></i>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn fin-btn-icon"
+                    [attr.aria-label]="'Zuordnung von ' + position.title + ' lösen'"
+                    (click)="unlink.emit(position.id)"
+                  >
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                  </button>
+                }
               </li>
             }
           </ul>
         </details>
       } @else {
         <p class="debt-card__hint">
-          Noch keine Buchung zugeordnet. Verknüpfe die Ausgabe, mit der du das Geld verliehen
-          hast — erst dann zählt der Eintrag mit.
+          Noch kein Betrag erfasst. Trage ein, was du geliehen hast — oder verknüpfe die Buchung,
+          mit der das Geld geflossen ist.
         </p>
       }
     </article>
@@ -250,6 +304,13 @@ export class DebtCardComponent {
   /** Die ID der Buchung, deren Zuordnung gelöst werden soll. */
   readonly unlink = output<number>();
 
+  /** Ein neuer manueller Betrag soll erfasst werden. */
+  readonly addEntry = output<void>();
+  /** Die ID des manuellen Betrags, der bearbeitet werden soll. */
+  readonly editEntry = output<number>();
+  /** Die ID des manuellen Betrags, der entfernt werden soll. */
+  readonly removeEntry = output<number>();
+
   /**
    * Ein zu viel zurückgezahlter Eintrag würde als negative Zahl unnötig verwirren.
    * Angezeigt wird deshalb der Betrag ohne Vorzeichen, die Bedeutung trägt die
@@ -261,14 +322,62 @@ export class DebtCardComponent {
     this.debt().outstandingAmount < 0 ? 'Zu viel zurückbekommen' : 'Offen',
   );
 
-  protected readonly transactionsLabel = computed(() => {
-    const count = this.debt().transactionCount;
-    if (count === 0) return 'Keine Buchung';
-    return count === 1 ? '1 Buchung' : `${count} Buchungen`;
+  protected readonly positionsLabel = computed(() => {
+    const count = this.positions().length;
+    if (count === 0) return 'Kein Betrag';
+    return count === 1 ? '1 Position' : `${count} Positionen`;
   });
 
-  protected meta(transaction: DebtTransaction): string {
-    const direction = transaction.direction === 'Income' ? 'Zurück' : 'Verliehen';
-    return `${direction} · ${formatDate(transaction.bookingDate)} · ${transaction.accountName}`;
+  /**
+   * Buchungen und manuelle Beträge in einer Liste, absteigend nach Datum. Beide Quellen
+   * kommen bereits sortiert vom Server; zusammengeführt muss aber neu sortiert werden.
+   * Bei gleichem Datum steht die manuelle Position hinten — sie hat kein Konto, an dem
+   * sich eine feinere Reihenfolge festmachen ließe.
+   */
+  protected readonly positions = computed<DebtPosition[]>(() => {
+    const item = this.debt();
+
+    const booked: DebtPosition[] = item.transactions.map((transaction) => ({
+      key: `t-${transaction.id}`,
+      manual: false,
+      direction: transaction.direction,
+      title: transaction.title,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      date: transaction.bookingDate,
+      origin: transaction.accountName,
+      id: transaction.id,
+    }));
+
+    const manual: DebtPosition[] = item.entries.map((entry) => ({
+      key: `e-${entry.id}`,
+      manual: true,
+      direction: entry.direction,
+      title: this.entryTitle(entry),
+      amount: entry.amount,
+      currency: entry.currency,
+      date: entry.entryDate,
+      origin: 'Manuell',
+      id: entry.id,
+    }));
+
+    return [...booked, ...manual].sort((left, right) => {
+      if (left.date !== right.date) return right.date.localeCompare(left.date);
+      return Number(left.manual) - Number(right.manual);
+    });
+  });
+
+  protected meta(position: DebtPosition): string {
+    const direction = position.direction === 'Income' ? 'Zurück' : 'Verliehen';
+    return `${direction} · ${formatDate(position.date)} · ${position.origin}`;
+  }
+
+  /**
+   * Eine manuelle Position trägt keinen Pflicht-Titel. Steht eine Notiz da, ist sie die
+   * beste Bezeichnung; sonst benennt die Richtung die Zeile, damit sie nicht namenlos ist.
+   */
+  private entryTitle(entry: DebtEntry): string {
+    if (entry.note) return entry.note;
+    return entry.direction === 'Income' ? 'Rückzahlung' : 'Verliehen';
   }
 }

@@ -1,20 +1,68 @@
-# v1.0.0 — 14.08.2026
+# v1.1 — 16.08.2026
 
-Die erste Version von Finanzen ist da. Du behältst ab jetzt an einem Ort im Blick, was auf deine Konten hereinkommt, was herausgeht und was am Monatsende übrig bleibt.
+Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Übersicht von Girokonten, eine überarbeitete Navigation und Schuldnerliste und behebt die fehlerhafte Darstellung der Monatsauswahl.
 
 **Features:**
-- Du kannst deine Girokonten anlegen und siehst für jedes davon jederzeit den aktuellen Kontostand.
-- Du erfasst Einnahmen und Ausgaben in wenigen Sekunden und ordnest sie eigenen Kategorien mit Farbe und Symbol zu.
-- Du markierst eine Ausgabe als „noch nicht abgebucht", wenn du sie gerade erst bezahlt hast, und hakst sie später mit einem Klick ab — auch alle offenen eines Monats auf einmal.
-- Unter jedem Kontostand siehst du zusätzlich den Stand „laut Bank", also ohne die Buchungen, die deine Bank noch nicht abgezogen hat.
-- Du setzt pro Kategorie und Monat ein Budget und siehst auf einen Blick, wie viel davon noch übrig ist.
-- Du planst deine monatlichen Fixkosten, hakst sie mit der passenden Buchung ab und übernimmst sie mit einem Klick in den nächsten Monat.
-- Du verknüpfst zwei Buchungen, die zusammengehören — etwa eine Ausgabe auf dem einen und die dazugehörige Einnahme auf dem anderen Konto —, und sie zählen dann nicht mehr als Einnahme oder Ausgabe.
-- Du siehst zu einer verknüpften Buchung mit einem Klick alle Angaben der Gegenbuchung und springst von dort direkt zu ihr auf das andere Konto.
-- Du siehst in der Monatsübersicht, wie sich Einnahmen, Ausgaben und dein Ergebnis über den Monat entwickeln.
-- Du führst eine Liste, wem du Geld geliehen hast, und siehst, wie viel davon noch offen ist.
-- Du meldest dich mit E-Mail und Passwort oder direkt mit deinem Google-Konto an — neue Mitglieder kommen per Einladung dazu.
-- Du kannst dein Passwort jederzeit zurücksetzen und siehst, auf welchen Geräten du gerade angemeldet bist.
-- Du wählst zwischen hellem und dunklem Erscheinungsbild, oder lässt dich von deinem Gerät entscheiden.
-- Du installierst Finanzen als App auf deinem Smartphone und siehst auch ohne Internet noch den zuletzt geladenen Stand.
-- Du findest in diesem Changelog künftig zu jeder Version, was sich für dich geändert hat.
+- In der Übersicht eines Girokontos wird ausgewiesen, wie viel pro verbleibendem Tag des Monats noch ausgegeben werden kann.
+- Die Übersicht eines Girokontos zeigt den Verlauf des Monats als Linie mit einem Wert für jeden Tag.
+- Ein Tag im Verlauf kann angetippt werden, um Datum und Stand dieses Tages zu lesen.
+- Die Gewichtung der Ausgaben wird als Ringdiagramm nach Kategorien dargestellt, mit Prozentwert und Betrag.
+- Die geplanten Beträge einer Kategorie werden den tatsächlichen Ausgaben als Säulenpaar gegenübergestellt.
+- Die Übersicht eines Girokontos zeigt eine Hochrechnung, mit welchem Ergebnis der Monat voraussichtlich endet.
+- Die Startseite ist in die Bereiche „Konten" und „Statistiken" geteilt, zwischen denen gewechselt werden kann.
+- Der Zeitraum der Startseite kann wahlweise auf einen Monat oder auf ein ganzes Jahr gestellt werden.
+- Zu einem Schuldeintrag können Beträge von Hand erfasst werden, auch wenn es dazu keine Buchung gibt.
+- Ein von Hand erfasster Betrag kann wahlweise als verliehen oder als zurückgezahlt eingetragen werden.
+- Von Hand erfasste Beträge können nachträglich geändert und wieder entfernt werden.
+- Beim Anlegen eines Schuldeintrags kann der geliehene Betrag gleich mit angegeben werden.
+- In der Navigation zeigt eine rote Zahl beim Punkt „Schuldner", wie viele Einträge noch offen sind.
+
+**Changes:**
+- Die Übersicht eines Girokontos wurde neu aufgebaut und stellt die Auswertungen des Monats in den Vordergrund.
+- Die Kennzahlen der Übersicht nehmen weniger Platz ein und stehen auf Handys zu zweit nebeneinander.
+- Bilanz, Kontostand, Einnahmen und Ausgaben werden in der Übersicht nicht mehr wiederholt, da sie bereits im Kopf der Seite stehen.
+- Die Liste der Ausgaben nach Kategorie wurde durch das Ringdiagramm ersetzt.
+- Bei mehr als sechs Kategorien werden die kleinsten zusammengefasst und lassen sich bei Bedarf einzeln anzeigen.
+- Sparkonten, Depots und Wallets behalten die bisherige Übersicht.
+- Die Startseite wurde neu gestaltet und gliedert die Konten nach ihrer Kontoart.
+- Zu jeder Kontoart werden Bilanz, Einnahmen, Ausgaben und Vermögen gesondert ausgewiesen.
+- Auf größeren Bildschirmen stehen mehrere Konten nebeneinander.
+- Die Gesamtbilanz und der Jahresverlauf werden auf der Startseite vorerst nicht mehr angezeigt.
+- Auf größeren Bildschirmen steht die Navigation nun als Leiste am linken Rand, auf kleinen Bildschirmen bleibt sie am unteren Rand.
+- Das Menü oben rechts wurde entfernt.
+- Erscheinungsbild, aktive Sitzungen, die Versionsanzeige und das Abmelden sind nun auf der Profilseite zu finden.
+- Vor dem Abmelden wird nun eine Bestätigung eingeholt.
+- Zugeordnete Buchungen und von Hand erfasste Beträge stehen bei einem Schuldeintrag gemeinsam in einer Liste, geordnet nach Datum.
+- Die Zahl in der Navigation wird sofort aktualisiert, sobald sich an den Schulden etwas ändert.
+
+**Bugfixes:**
+- Ein Bug, der den Kalender zur Monatsauswahl abgeschnitten hat, wurde behoben.
+- Der Kalender zur Monatsauswahl bleibt nun auch auf kleinen Bildschirmen vollständig sichtbar.
+- Beim Wechseln zwischen den Bereichen eines Girokontos springt die Seite nicht mehr an den Anfang.
+- Das frei verfügbare Geld eines Girokontos wird nun anhand des aktuellen Kontostands berechnet, statt anhand der Bilanz des Monats.
+
+# v1.0 — 14.08.2026
+
+Der erste Funktionsumfang der Anwendung: Konten, Buchungen, Kategorien, Budgets, Fixkosten und Auswertungen.
+
+**Features:**
+- Girokonten wurden hinzugefügt und können nun mit ihrem aktuellen Kontostand angelegt werden.
+- Einnahmen und Ausgaben können erfasst und eigenen Kategorien zugeordnet werden.
+- Kategorien können mit einer eigenen Farbe und einem Symbol versehen werden.
+- Ausgaben können als „noch nicht abgebucht" markiert und später einzeln abgehakt werden.
+- Alle offenen Buchungen eines Monats können gemeinsam auf einmal abgehakt werden.
+- Zu jedem Konto wird zusätzlich der Stand „laut Bank" ohne die noch nicht abgebuchten Beträge ausgewiesen.
+- Budgets können je Kategorie und Monat festgelegt werden und zeigen den verbleibenden Betrag an.
+- Monatliche Fixkosten können geplant, mit der passenden Buchung abgehakt und in den Folgemonat übernommen werden.
+- Zwei zusammengehörige Buchungen können miteinander verknüpft werden und zählen dann nicht mehr als Einnahme oder Ausgabe.
+- Zu einer verknüpften Buchung können die Angaben der Gegenbuchung eingesehen und diese direkt auf dem anderen Konto geöffnet werden.
+- Die Monatsübersicht zeigt den Verlauf von Einnahmen, Ausgaben und Ergebnis über den Monat.
+- Verliehenes Geld kann als Liste geführt werden und weist den noch offenen Betrag aus.
+- Die Anmeldung ist per E-Mail und Passwort sowie über ein Google-Konto möglich.
+- Neue Mitglieder werden ausschließlich per Einladung aufgenommen.
+- Das Passwort kann jederzeit zurückgesetzt werden.
+- Die aktuell angemeldeten Geräte werden aufgelistet und können eingesehen werden.
+- Ein helles und ein dunkles Erscheinungsbild stehen zur Wahl, wahlweise gesteuert durch das Gerät.
+- Die Anwendung kann als App auf dem Smartphone installiert werden.
+- Ohne Internetverbindung wird der zuletzt geladene Stand weiterhin angezeigt.
+- Der Changelog wurde hinzugefügt und zeigt zu jeder Version die Änderungen an.

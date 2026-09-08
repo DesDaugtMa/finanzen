@@ -1,10 +1,13 @@
 /**
- * Stand eines Schuldeintrags gegenüber seinen Buchungen.
+ * Stand eines Schuldeintrags gegenüber seinen Positionen.
  * Die Werte entsprechen `DebtStatus` des Backends.
  */
 export type DebtStatus = 'Empty' | 'Open' | 'Settled' | 'Overpaid';
 
-/** Richtung einer zugeordneten Buchung. Entspricht `TransactionType` des Backends. */
+/**
+ * Richtung einer Position — gilt für zugeordnete Buchungen und manuell erfasste Beträge
+ * gleichermaßen. Entspricht `TransactionType` des Backends.
+ */
 export type DebtTransactionDirection = 'Income' | 'Expense';
 
 /** Eine einem Schuldeintrag zugeordnete oder zuordenbare Buchung in Kurzform. */
@@ -28,6 +31,32 @@ export interface DebtTransaction {
   accountingMonth: string;
 }
 
+/**
+ * Ein manuell erfasster Betrag — Geld, zu dem es keine Buchung auf einem Geldkonto gibt.
+ * Spiegelt `DebtEntryDto`.
+ */
+export interface DebtEntry {
+  id: number;
+  /** `Expense` heißt verliehen, `Income` heißt zurückgezahlt. */
+  direction: DebtTransactionDirection;
+  /** Immer positiv. Die Richtung steckt in `direction`. */
+  amount: number;
+  /** Die Währung des Schuldeintrags — eine manuelle Position führt keine eigene. */
+  currency: string;
+  /** ISO-Datum `yyyy-MM-dd`. */
+  entryDate: string;
+  note: string | null;
+}
+
+/** Nutzdaten zum Anlegen und Bearbeiten eines manuell erfassten Betrags. */
+export interface DebtEntryPayload {
+  direction: DebtTransactionDirection;
+  amount: number;
+  /** ISO-Datum `yyyy-MM-dd`. */
+  entryDate: string;
+  note: string | null;
+}
+
 /** Ein Schuldeintrag — ein Vorgang, bei dem einer Person Geld geliehen wurde. */
 export interface Debt {
   id: number;
@@ -35,15 +64,20 @@ export interface Debt {
   title: string;
   note: string | null;
   currency: string;
-  /** Summe der zugeordneten Ausgaben. */
+  /** Verliehen: zugeordnete Ausgaben plus manuell erfasste Beträge. */
   lentAmount: number;
-  /** Summe der zugeordneten Einnahmen. */
+  /** Zurückgezahlt: zugeordnete Einnahmen plus manuell erfasste Beträge. */
   repaidAmount: number;
   /** `lentAmount − repaidAmount`. Negativ, wenn mehr zurückkam als verliehen wurde. */
   outstandingAmount: number;
   transactionCount: number;
+  /** Anzahl der manuell erfassten Beträge. */
+  entryCount: number;
+  /** Positionen insgesamt — Buchungen und manuelle Beträge zusammen. */
+  positionCount: number;
   status: DebtStatus;
   transactions: DebtTransaction[];
+  entries: DebtEntry[];
 }
 
 /** Alle Einträge einer Person mit ihren Summen. Spiegelt `DebtorSummaryDto`. */
@@ -76,4 +110,11 @@ export interface DebtPayload {
   personName: string;
   title: string;
   note: string | null;
+  /**
+   * Optionaler Startbetrag: ist er gesetzt, entsteht beim Anlegen zugleich die erste
+   * manuelle Position „verliehen“. Beim Bearbeiten ignoriert der Server das Feld.
+   */
+  initialAmount: number | null;
+  /** ISO-Datum `yyyy-MM-dd` des Startbetrags. Nur mit `initialAmount` von Bedeutung. */
+  initialDate: string | null;
 }

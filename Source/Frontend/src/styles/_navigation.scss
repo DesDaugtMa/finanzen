@@ -3,20 +3,22 @@
 // =============================================================================
 // Zwei Ausprägungen derselben Zielliste:
 //
-//   < 48rem   Tab-Bar am unteren Rand. Am Smartphone ist der untere Bildschirm-
+//   < 62rem   Tab-Bar am unteren Rand. Am Smartphone ist der untere Bildschirm-
 //             rand die Daumenzone; eine Leiste oben ist einhändig kaum
-//             erreichbar. Zusätzlich eine schlanke Kopfzeile für Marke und
-//             Kontomenü.
-//   ≥ 48rem   Waagerechte Leiste oben. Auf iPad und Desktop gibt es keine
-//             Daumenzone, dafür Platz in der Breite — und der Inhalt soll die
-//             volle Höhe bekommen.
+//             erreichbar. Zusätzlich eine schlanke Kopfzeile, die nur die Marke
+//             trägt — alle Einstellungen leben auf der Profilseite.
+//   ≥ 62rem   Senkrechte Seitenleiste links. Bildschirme sind breiter als hoch;
+//             eine stehende Liste verträgt beliebig viele Ziele, zeigt sie
+//             dauerhaft ausgeschrieben und gibt dem Inhalt die volle Höhe.
 //
 // Beide Ausprägungen zeigen dieselben Ziele in derselben Reihenfolge, damit das
-// mentale Modell beim Wechsel zwischen Geräten erhalten bleibt.
+// mentale Modell beim Wechsel zwischen Geräten erhalten bleibt. Es ist immer nur
+// eine von beiden im Dokument sichtbar (`display: none` nimmt die andere auch
+// aus dem Baum für Screenreader), deshalb bleibt die Landmarke eindeutig.
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// Kopfzeile
+// Kopfzeile (nur Mobil)
 // -----------------------------------------------------------------------------
 
 .fin-topbar {
@@ -48,6 +50,14 @@
 // ist — ohne Scroll schwebt die Leiste randlos über der Seite.
 .fin-topbar--scrolled {
   border-bottom-color: var(--fin-border);
+}
+
+// Ab Desktop trägt die Seitenleiste die Marke — eine zweite Kopfzeile wäre
+// doppelt gemoppelt und würde dem Inhalt nur Höhe wegnehmen.
+@media (min-width: 62rem) {
+  .fin-topbar {
+    display: none;
+  }
 }
 
 .fin-topbar__inner {
@@ -92,75 +102,228 @@
 }
 
 // -----------------------------------------------------------------------------
-// Ziele in der Kopfzeile (ab Tablet)
+// Seitenleiste (ab Desktop)
 // -----------------------------------------------------------------------------
+// Fest am linken Rand statt mitscrollend: die Navigation ist ein Anker, der beim
+// Lesen einer langen Kontoseite nicht verschwinden darf. Der Inhalt bekommt die
+// Breite über einen Innenabstand am Seitengerüst zurück (siehe `_layout.scss`).
 
-.fin-topnav {
+.fin-sidebar {
   display: none;
-  align-items: center;
-  gap: var(--fin-space-1);
-  margin-right: auto;
-  padding: 0;
-  margin-bottom: 0;
-  list-style: none;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--fin-z-nav);
+  width: var(--fin-sidebar-width);
+  flex-direction: column;
+  gap: var(--fin-space-2);
+  padding: var(--fin-space-5) var(--fin-space-3) var(--fin-space-4);
+  background-color: var(--fin-bg-elevated);
+  border-right: 1px solid var(--fin-border);
+  // Seitliche Safe-Area für Geräte mit Aussparung im Querformat.
+  padding-left: max(var(--fin-space-3), env(safe-area-inset-left, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
-@media (min-width: 48rem) {
-  .fin-topnav {
+@media (min-width: 62rem) {
+  .fin-sidebar {
     display: flex;
   }
 }
 
-.fin-topnav__link {
+.fin-sidebar__brand {
+  margin: 0 0 var(--fin-space-4);
+  padding: 0 var(--fin-space-2);
+}
+
+.fin-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fin-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// Der Fussbereich sitzt unten: Profil, Abmelden und die Version sind Ziele, die
+// man selten und bewusst ansteuert — sie gehören nicht zwischen die täglichen.
+.fin-sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fin-space-1);
+  margin-top: auto;
+  padding-top: var(--fin-space-3);
+  border-top: 1px solid var(--fin-border-subtle);
+}
+
+.fin-sidebar__link {
   position: relative;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--fin-space-2);
+  gap: var(--fin-space-3);
+  width: 100%;
   min-height: var(--fin-touch-min);
-  padding: 0 var(--fin-space-3);
+  padding: var(--fin-space-2) var(--fin-space-3);
+  border: 0;
   border-radius: var(--fin-radius-sm);
+  background: none;
   color: var(--fin-text-muted);
   font-size: var(--fin-text-base);
   font-weight: 550;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition:
     color var(--fin-duration-fast) var(--fin-ease-out),
     background-color var(--fin-duration-fast) var(--fin-ease-out);
 }
 
-.fin-topnav__link:hover {
+.fin-sidebar__link:hover {
   background-color: var(--fin-surface-hover);
   color: var(--fin-text-strong);
 }
 
-.fin-topnav__link.fin-active {
-  color: var(--fin-text-strong);
+.fin-sidebar__link.fin-active {
+  background-color: var(--fin-accent-tint);
+  color: var(--fin-accent);
   font-weight: 650;
 }
 
-// Aktivmarkierung als feine Linie unter dem Ziel. Sie wächst aus der Mitte,
-// wenn das Ziel aktiv wird — die einzige Bewegung in der Leiste.
-.fin-topnav__link.fin-active::after {
+// Aktivmarkierung als stehende Linie am linken Rand — dieselbe Sprache wie die
+// Linie über dem aktiven Tab, nur um 90 Grad gedreht.
+.fin-sidebar__link.fin-active::before {
   content: '';
   position: absolute;
-  bottom: -0.05rem;
-  left: var(--fin-space-3);
-  right: var(--fin-space-3);
-  height: 2px;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 1.25rem;
   border-radius: var(--fin-radius-pill);
   background-color: var(--fin-accent);
-  animation: fin-underline-grow var(--fin-duration-base) var(--fin-ease-out) both;
+  transform: translateY(-50%);
+  animation: fin-fade-in var(--fin-duration-base) var(--fin-ease-out) both;
 }
 
-@keyframes fin-underline-grow {
-  from {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-  to {
-    transform: scaleX(1);
-    opacity: 1;
-  }
+.fin-sidebar__icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  font-size: var(--fin-text-md);
+  line-height: 1;
+  text-align: center;
+}
+
+.fin-sidebar__label {
+  // Wächst mit, damit eine Zahl am Ziel rechtsbündig steht statt direkt an der
+  // Beschriftung zu kleben.
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// -----------------------------------------------------------------------------
+// Zahl an einem Navigationsziel
+//
+// Sie beantwortet im Vorbeigehen „ist hier etwas offen?“. Deshalb eine gefüllte
+// Fläche statt farbiger Ziffern: Farbe allein trägt die Aussage nicht, die Form
+// schon. Sie erscheint nur, wenn sie größer als 0 ist — eine Null wäre kein
+// Signal, sondern Rauschen.
+// -----------------------------------------------------------------------------
+.fin-nav-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: var(--fin-radius-pill);
+  background-color: var(--fin-danger-solid);
+  color: var(--fin-text-on-danger);
+  font-size: var(--fin-text-2xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+// In der Tab-Bar sitzt die Zahl an der oberen rechten Ecke des Symbols. Der Rand
+// in der Leistenfarbe hebt sie vom Symbol ab, wenn beide sich überlappen.
+.fin-nav-badge--float {
+  position: absolute;
+  top: -0.35rem;
+  left: 55%;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border: 2px solid var(--fin-bg-elevated);
+}
+
+.fin-sidebar__link--danger {
+  color: var(--fin-text-muted);
+}
+
+.fin-sidebar__link--danger:hover {
+  background-color: var(--fin-danger-tint);
+  color: var(--fin-danger);
+}
+
+// Profil-Eintrag mit Initialen und E-Mail: er ersetzt das frühere Kontomenü und
+// beantwortet die Frage „als wer bin ich hier eigentlich angemeldet?“.
+.fin-sidebar__profile {
+  align-items: center;
+  gap: var(--fin-space-2);
+  padding-block: var(--fin-space-2);
+}
+
+.fin-sidebar__avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: var(--fin-surface-sunken);
+  color: var(--fin-text-strong);
+  font-size: var(--fin-text-xs);
+  font-weight: 680;
+}
+
+.fin-sidebar__profile.fin-active .fin-sidebar__avatar {
+  background-color: var(--fin-accent);
+  color: var(--fin-text-on-accent);
+}
+
+.fin-sidebar__profile-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.fin-sidebar__profile-mail {
+  color: var(--fin-text-subtle);
+  font-size: var(--fin-text-2xs);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Versionszeile: Auskunft über den eigenen Stand, kein Hauptziel — deshalb
+// kleiner und ruhiger, aber mit voller Trefferfläche.
+.fin-sidebar__meta {
+  justify-content: center;
+  min-height: var(--fin-touch-min);
+  color: var(--fin-text-subtle);
+  font-size: var(--fin-text-xs);
+  font-weight: 500;
+}
+
+.fin-sidebar__meta:hover {
+  color: var(--fin-text);
 }
 
 // -----------------------------------------------------------------------------
@@ -188,7 +351,7 @@
   }
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 62rem) {
   .fin-tabbar {
     display: none;
   }
@@ -220,6 +383,15 @@
   text-decoration: none;
   transition: color var(--fin-duration-fast) var(--fin-ease-out);
   -webkit-tap-highlight-color: transparent;
+}
+
+// Bezugsrahmen für die Zahl am Symbol — ohne ihn läge sie an der ganzen
+// Schaltfläche an und damit neben der Beschriftung statt am Symbol.
+.fin-tabbar__icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fin-tabbar__icon {
@@ -275,33 +447,8 @@
 }
 
 // -----------------------------------------------------------------------------
-// Kontomenü
+// Aufklappmenü (Karten-Aktionen)
 // -----------------------------------------------------------------------------
-
-.fin-avatar-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--fin-touch-min);
-  height: var(--fin-touch-min);
-  padding: 0;
-  border: 1px solid var(--fin-border);
-  border-radius: 50%;
-  background-color: var(--fin-surface);
-  color: var(--fin-text-strong);
-  font-size: var(--fin-text-sm);
-  font-weight: 680;
-  letter-spacing: var(--fin-tracking-normal);
-  cursor: pointer;
-  transition:
-    border-color var(--fin-duration-fast) var(--fin-ease-out),
-    box-shadow var(--fin-duration-fast) var(--fin-ease-out);
-}
-
-.fin-avatar-button:hover {
-  border-color: var(--fin-accent);
-  box-shadow: var(--fin-shadow-sm);
-}
 
 .fin-menu {
   position: absolute;
@@ -316,26 +463,6 @@
   box-shadow: var(--fin-shadow-lg);
   animation: fin-pop-in var(--fin-duration-fast) var(--fin-ease-out) both;
   transform-origin: top right;
-}
-
-.fin-menu__header {
-  padding: var(--fin-space-2) var(--fin-space-3) var(--fin-space-3);
-  border-bottom: 1px solid var(--fin-border-subtle);
-  margin-bottom: var(--fin-space-2);
-}
-
-.fin-menu__name {
-  display: block;
-  color: var(--fin-text-strong);
-  font-size: var(--fin-text-sm);
-  font-weight: 650;
-}
-
-.fin-menu__mail {
-  display: block;
-  color: var(--fin-text-muted);
-  font-size: var(--fin-text-xs);
-  overflow-wrap: anywhere;
 }
 
 .fin-menu__item {
@@ -371,18 +498,6 @@
 .fin-menu__item--danger:hover {
   background-color: var(--fin-danger-tint);
   color: var(--fin-danger);
-}
-
-// Nebeneintrag: gehört ins Menü, ist aber keine der Hauptaktionen. Kleiner und ruhiger
-// gesetzt — die Trefferfläche bleibt trotzdem die volle Touch-Mindesthöhe.
-.fin-menu__item--meta {
-  color: var(--fin-text-muted);
-  font-size: var(--fin-text-sm);
-  font-weight: 500;
-}
-
-.fin-menu__item--meta:hover {
-  color: var(--fin-text);
 }
 
 .fin-menu__icon {

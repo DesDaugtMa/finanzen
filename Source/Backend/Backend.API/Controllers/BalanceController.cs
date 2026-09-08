@@ -1,6 +1,7 @@
 using Backend.Middleware;
 using Backend.Models.Finance;
 using Backend.Services.Interfaces;
+using Backend.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,17 @@ public sealed class BalanceController(
     IBalanceService balanceService,
     ICurrentUser currentUser) : FinanceControllerBase(currentUser)
 {
+    /// <summary>
+    /// Bilanz eines Zeitraums über alle Konten, aufgeschlüsselt nach Kontokategorie.
+    /// Die Startseite lädt damit Monats- wie Jahresansicht über denselben Aufruf.
+    /// </summary>
+    /// <param name="period">Monat als <c>yyyy-MM</c> oder Jahr als <c>yyyy</c>, z. B. <c>2026-07</c> oder <c>2026</c>.</param>
+    [HttpGet("period/{period}")]
+    [ProducesResponseType<PeriodBalanceDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ErrorResponse>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<PeriodBalanceDto>> GetPeriod(string period, CancellationToken ct)
+        => Ok(await balanceService.GetPeriodAsync(UserId, BalancePeriod.Parse(period), ct));
+
     /// <summary>Bilanz eines Monats über alle Konten, aufgeschlüsselt nach Kontokategorie.</summary>
     /// <param name="month">Monat im Format <c>yyyy-MM</c>, z. B. <c>2026-07</c>.</param>
     [HttpGet("month")]

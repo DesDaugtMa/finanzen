@@ -15,12 +15,12 @@ import { SettledBalanceComponent } from '../../../../shared/components/settled-b
 import { maskIban } from '../../../../shared/utils/iban.util';
 import { DEFAULT_ACCENT_COLOR } from '../../../../shared/utils/color-presets';
 import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/account-type';
-import { formatMonthShort } from '../../../../shared/utils/month.util';
 
 /**
  * Übersichtskarte eines Kontos. Die gesamte Karte führt zur Detailseite und
- * nimmt den gewählten Monat als Query-Parameter mit, damit man dort denselben
- * Zeitraum vorfindet wie auf der Übersicht.
+ * nimmt einen Monat als Query-Parameter mit, damit man dort im selben Zeitraum
+ * landet wie auf der Übersicht. Die Detailseite ist durchgehend monatsbasiert;
+ * bei Jahresansicht bestimmt der Aufrufer, welcher Monat das ist.
  *
  * Das Aktionsmenü ist bewusst selbst gebaut und signalgesteuert — wie das
  * Kontomenü in der Navigation. Damit braucht die App kein Bootstrap-JavaScript,
@@ -64,7 +64,7 @@ import { formatMonthShort } from '../../../../shared/utils/month.util';
             <a
               class="stretched-link account-card__link"
               [routerLink]="['/girokonten', item.accountId]"
-              [queryParams]="{ monat: month() }"
+              [queryParams]="{ monat: detailMonth() }"
             >
               {{ item.name }}
             </a>
@@ -110,7 +110,7 @@ import { formatMonthShort } from '../../../../shared/utils/month.util';
            stellt man sich beim Blick auf ein Konto gleichzeitig. -->
       <dl class="account-card__figures">
         <div class="account-card__figure">
-          <dt class="fin-eyebrow">Bilanz {{ monthLabel() }}</dt>
+          <dt class="fin-eyebrow">Bilanz {{ periodLabel() }}</dt>
           <dd class="account-card__value">
             <app-money-amount [amount]="net()" [currency]="item.currency" size="lg" />
           </dd>
@@ -277,8 +277,10 @@ import { formatMonthShort } from '../../../../shared/utils/month.util';
 })
 export class BankAccountCardComponent {
   readonly account = input.required<AccountBalance>();
-  /** Der Monat, auf den sich die Bilanz der Karte bezieht, als `yyyy-MM`. */
-  readonly month = input.required<string>();
+  /** Beschriftung des Zeitraums, auf den sich die Bilanz bezieht, z. B. `Jul 2026` oder `2026`. */
+  readonly periodLabel = input.required<string>();
+  /** Der Monat (`yyyy-MM`), mit dem die Detailseite geöffnet wird. */
+  readonly detailMonth = input.required<string>();
 
   readonly edit = output<AccountBalance>();
   readonly remove = output<AccountBalance>();
@@ -292,8 +294,6 @@ export class BankAccountCardComponent {
   protected readonly icon = computed(() => accountTypeIcon(this.account().type));
 
   protected readonly net = computed(() => this.account().net);
-
-  protected readonly monthLabel = computed(() => formatMonthShort(this.month()));
 
   protected readonly subtitle = computed(() => {
     const { bankName, iban, type } = this.account();

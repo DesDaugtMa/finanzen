@@ -1,6 +1,6 @@
 @let authenticated = authService.isAuthenticated();
 
-<div class="fin-shell">
+<div class="fin-shell" [class.fin-shell--with-sidebar]="authenticated">
   @if (authenticated) {
     <!--
       Sprungmarke: Tastaturnutzer überspringen damit die Navigation. Sie ist

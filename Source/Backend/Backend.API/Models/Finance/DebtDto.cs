@@ -4,10 +4,10 @@ using System.Text.Json.Serialization;
 
 namespace Backend.Models.Finance;
 
-/// <summary>Stand eines Schuldeintrags, abgeleitet aus seinen zugeordneten Buchungen.</summary>
+/// <summary>Stand eines Schuldeintrags, abgeleitet aus allen seinen Positionen.</summary>
 public enum DebtStatus
 {
-    /// <summary>Noch keine Buchung zugeordnet — es steht noch nichts fest.</summary>
+    /// <summary>Weder eine Buchung noch ein manueller Betrag erfasst — es steht noch nichts fest.</summary>
     Empty = 1,
 
     /// <summary>Es steht noch Geld aus.</summary>
@@ -21,8 +21,9 @@ public enum DebtStatus
 }
 
 /// <summary>
-/// Ein Schuldeintrag samt seiner Buchungen. Alle Beträge sind positiv; die Richtung
-/// steckt in den einzelnen Buchungen bzw. in der Bedeutung des jeweiligen Feldes.
+/// Ein Schuldeintrag samt seiner Positionen — den zugeordneten Buchungen und den manuell
+/// erfassten Beträgen. Alle Beträge sind positiv; die Richtung steckt in der einzelnen
+/// Position bzw. in der Bedeutung des jeweiligen Feldes.
 /// </summary>
 public class DebtDto
 {
@@ -36,10 +37,15 @@ public class DebtDto
 
     public string Currency { get; set; } = string.Empty;
 
-    /// <summary>Summe der zugeordneten Ausgaben — das verliehene Geld.</summary>
+    /// <summary>
+    /// Das verliehene Geld: zugeordnete Ausgaben plus manuell als „verliehen“ erfasste Beträge.
+    /// </summary>
     public decimal LentAmount { get; set; }
 
-    /// <summary>Summe der zugeordneten Einnahmen — das bereits Zurückgezahlte.</summary>
+    /// <summary>
+    /// Das bereits Zurückgezahlte: zugeordnete Einnahmen plus manuell als „zurückgezahlt“
+    /// erfasste Beträge.
+    /// </summary>
     public decimal RepaidAmount { get; set; }
 
     /// <summary>
@@ -50,10 +56,44 @@ public class DebtDto
 
     public int TransactionCount { get; set; }
 
+    /// <summary>Anzahl der manuell erfassten Beträge.</summary>
+    public int EntryCount { get; set; }
+
+    /// <summary>Positionen insgesamt — Buchungen und manuelle Beträge zusammen.</summary>
+    public int PositionCount => TransactionCount + EntryCount;
+
     public DebtStatus Status { get; set; }
 
     /// <summary>Die zugeordneten Buchungen, absteigend nach Buchungsdatum.</summary>
     public IReadOnlyList<DebtTransactionDto> Transactions { get; set; } = [];
+
+    /// <summary>Die manuell erfassten Beträge, absteigend nach Datum.</summary>
+    public IReadOnlyList<DebtEntryDto> Entries { get; set; } = [];
+}
+
+/// <summary>
+/// Ein manuell erfasster Betrag eines Schuldeintrags — Geld ohne zugehörige Buchung auf
+/// einem Geldkonto.
+/// </summary>
+public class DebtEntryDto
+{
+    public int Id { get; set; }
+
+    /// <summary>
+    /// <c>Expense</c> heißt verliehen, <c>Income</c> heißt zurückgezahlt — dieselbe Bedeutung
+    /// wie bei einer zugeordneten Buchung.
+    /// </summary>
+    public TransactionType Direction { get; set; }
+
+    /// <summary>Immer positiv. Die Richtung steckt in <see cref="Direction"/>.</summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>Die Währung des Schuldeintrags — eine manuelle Position führt keine eigene.</summary>
+    public string Currency { get; set; } = string.Empty;
+
+    public DateOnly EntryDate { get; set; }
+
+    public string? Note { get; set; }
 }
 
 /// <summary>

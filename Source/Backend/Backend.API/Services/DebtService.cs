@@ -10,13 +10,14 @@ namespace Backend.Services;
 
 /// <summary>
 /// Schuldeinträge des Nutzers. Ein Eintrag hat bewusst keinen eigenen Sollbetrag —
-/// verliehen und zurückgezahlt ergeben sich ausschließlich aus zugeordneten Buchungen.
-/// Damit gibt es nur eine Wahrheit, und jeder ausgewiesene Betrag ist durch eine echte
-/// Geldbewegung belegt.
+/// verliehen und zurückgezahlt ergeben sich aus seinen Positionen: den zugeordneten
+/// Buchungen und den manuell erfassten Beträgen. Beide zählen gleichberechtigt, denn
+/// Bargeld und fremde Konten hinterlassen keine Buchung.
 /// </summary>
 /// <remarks>
-/// Die Zuordnung ist rein informativ: eine zugeordnete Buchung zählt in der
-/// Monatsrechnung ihres Kontos unverändert weiter.
+/// Die Zuordnung einer Buchung ist rein informativ: sie zählt in der Monatsrechnung ihres
+/// Kontos unverändert weiter. Ein manuell erfasster Betrag ist umgekehrt keine
+/// Geldbewegung — er berührt keinen Kontostand und lebt nur in der Schuldnerrechnung.
 /// </remarks>
 public sealed class DebtService(
     AppDbContext context,
@@ -50,10 +51,25 @@ public sealed class DebtService(
             Note = NormalizeOptional(request.Note)
         };
 
+        // Der Startbetrag ist bewusst keine Eigenschaft des Eintrags, sondern seine erste
+        // Position: damit gibt es von Anfang an nur einen Weg, wie ein Betrag entsteht.
+        if (request.InitialAmount is { } initialAmount)
+        {
+            debt.Entries.Add(new DebtEntry
+            {
+                Direction = TransactionType.Expense,
+                Amount = NormalizeAmount(initialAmount),
+                EntryDate = request.InitialDate ?? Today(),
+                Note = null
+            });
+        }
+
         context.Debts.Add(debt);
         await context.SaveChangesAsync(ct);
 
-        logger.LogInformation("Schuldeintrag {DebtId} für Nutzer {UserId} angelegt.", debt.Id, userId);
+        logger.LogInformation(
+            "Schuldeintrag {DebtId} für Nutzer {UserId} angelegt; Startbetrag erfasst: {HasInitialAmount}.",
+            debt.Id, userId, request.InitialAmount is not null);
 
         return await GetAsync(userId, debt.Id, ct);
     }
@@ -86,12 +102,78 @@ public sealed class DebtService(
             .Where(t => t.DebtId == debtId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.DebtId, (int?)null), ct);
 
+        // Manuelle Positionen hängen ausschließlich an diesem Eintrag und gehen per
+        // Cascade mit ihm — sie belegen keine Geldbewegung, die woanders zählen würde.
         context.Debts.Remove(debt);
         await context.SaveChangesAsync(ct);
 
         logger.LogInformation(
             "Schuldeintrag {DebtId} von Nutzer {UserId} gelöscht; {TransactionCount} Buchungen wieder ohne Zuordnung.",
             debtId, userId, affected);
+    }
+
+    public async Task<DebtOverviewDto> AddEntryAsync(
+        int userId, int debtId, SaveDebtEntryRequest request, CancellationToken ct = default)
+    {
+        var debt = await FindAsync(userId, debtId, ct);
+
+        var entry = new DebtEntry
+        {
+            DebtId = debtId,
+            Direction = RequireDirection(request.Direction),
+            Amount = NormalizeAmount(request.Amount),
+            EntryDate = request.EntryDate ?? Today(),
+            Note = NormalizeOptional(request.Note)
+        };
+
+        context.DebtEntries.Add(entry);
+        debt.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Manueller Betrag {EntryId} ({Direction}) zum Schuldeintrag {DebtId} von Nutzer {UserId} erfasst.",
+            entry.Id, entry.Direction, debtId, userId);
+
+        return await BuildOverviewAsync(userId, ct);
+    }
+
+    public async Task<DebtOverviewDto> UpdateEntryAsync(
+        int userId, int debtId, int entryId, SaveDebtEntryRequest request, CancellationToken ct = default)
+    {
+        var debt = await FindAsync(userId, debtId, ct);
+        var entry = await FindEntryAsync(debtId, entryId, ct);
+
+        entry.Direction = RequireDirection(request.Direction);
+        entry.Amount = NormalizeAmount(request.Amount);
+        entry.EntryDate = request.EntryDate ?? entry.EntryDate;
+        entry.Note = NormalizeOptional(request.Note);
+        entry.UpdatedAt = DateTime.UtcNow;
+        debt.UpdatedAt = entry.UpdatedAt;
+
+        await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Manueller Betrag {EntryId} des Schuldeintrags {DebtId} von Nutzer {UserId} geändert.",
+            entryId, debtId, userId);
+
+        return await BuildOverviewAsync(userId, ct);
+    }
+
+    public async Task<DebtOverviewDto> DeleteEntryAsync(
+        int userId, int debtId, int entryId, CancellationToken ct = default)
+    {
+        var debt = await FindAsync(userId, debtId, ct);
+        var entry = await FindEntryAsync(debtId, entryId, ct);
+
+        context.DebtEntries.Remove(entry);
+        debt.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Manueller Betrag {EntryId} des Schuldeintrags {DebtId} von Nutzer {UserId} entfernt.",
+            entryId, debtId, userId);
+
+        return await BuildOverviewAsync(userId, ct);
     }
 
     public async Task<IReadOnlyList<DebtTransactionDto>> GetAssignableTransactionsAsync(
@@ -232,7 +314,8 @@ public sealed class DebtService(
 
     /// <summary>
     /// Lädt alle Einträge eines Nutzers — oder, mit <paramref name="debtId"/>, einen einzelnen.
-    /// Beträge und Buchungen kommen in einem Durchgang aus der Datenbank; gerundet wird erst hier.
+    /// Beträge, Buchungen und manuelle Positionen kommen in einem Durchgang aus der Datenbank;
+    /// gerundet wird erst hier.
     /// </summary>
     private async Task<List<DebtDto>> LoadItemsAsync(
         int userId, string currency, CancellationToken ct, int? debtId = null)
@@ -251,13 +334,32 @@ public sealed class DebtService(
                 d.PersonName,
                 d.Title,
                 d.Note,
-                LentAmount = d.Transactions
+                BookedLent = d.Transactions
                     .Where(t => t.Type == TransactionType.Expense)
                     .Sum(t => (decimal?)t.Amount) ?? 0m,
-                RepaidAmount = d.Transactions
+                BookedRepaid = d.Transactions
                     .Where(t => t.Type == TransactionType.Income)
                     .Sum(t => (decimal?)t.Amount) ?? 0m,
+                ManualLent = d.Entries
+                    .Where(e => e.Direction == TransactionType.Expense)
+                    .Sum(e => (decimal?)e.Amount) ?? 0m,
+                ManualRepaid = d.Entries
+                    .Where(e => e.Direction == TransactionType.Income)
+                    .Sum(e => (decimal?)e.Amount) ?? 0m,
                 TransactionCount = d.Transactions.Count(),
+                EntryCount = d.Entries.Count(),
+                Entries = d.Entries
+                    .OrderByDescending(e => e.EntryDate)
+                    .ThenByDescending(e => e.Id)
+                    .Select(e => new DebtEntryDto
+                    {
+                        Id = e.Id,
+                        Direction = e.Direction,
+                        Amount = e.Amount,
+                        EntryDate = e.EntryDate,
+                        Note = e.Note
+                    })
+                    .ToList(),
                 Transactions = d.Transactions
                     .OrderByDescending(t => t.BookingDate)
                     .ThenByDescending(t => t.Id)
@@ -284,11 +386,21 @@ public sealed class DebtService(
         return rows
             .Select(r =>
             {
-                var lent = Round(r.LentAmount);
-                var repaid = Round(r.RepaidAmount);
+                // Erst summieren, dann runden: würde jede Position einzeln gerundet, könnten
+                // sich die halben Cent über viele Positionen zu einem sichtbaren Fehler häufen.
+                var lent = Round(r.BookedLent + r.ManualLent);
+                var repaid = Round(r.BookedRepaid + r.ManualRepaid);
 
                 foreach (var transaction in r.Transactions)
                     transaction.Amount = Round(transaction.Amount);
+
+                foreach (var entry in r.Entries)
+                {
+                    entry.Amount = Round(entry.Amount);
+                    // Eine manuelle Position führt keine eigene Währung — sie erbt die des
+                    // Eintrags, damit gemischte Summen gar nicht erst entstehen können.
+                    entry.Currency = currency;
+                }
 
                 return new DebtDto
                 {
@@ -301,16 +413,19 @@ public sealed class DebtService(
                     RepaidAmount = repaid,
                     OutstandingAmount = Round(lent - repaid),
                     TransactionCount = r.TransactionCount,
-                    Status = DetermineStatus(r.TransactionCount, lent, repaid),
-                    Transactions = r.Transactions
+                    EntryCount = r.EntryCount,
+                    Status = DetermineStatus(r.TransactionCount + r.EntryCount, lent, repaid),
+                    Transactions = r.Transactions,
+                    Entries = r.Entries
                 };
             })
             .ToList();
     }
 
-    private static DebtStatus DetermineStatus(int transactionCount, decimal lent, decimal repaid)
+    /// <param name="positionCount">Buchungen und manuelle Beträge zusammen.</param>
+    private static DebtStatus DetermineStatus(int positionCount, decimal lent, decimal repaid)
     {
-        if (transactionCount == 0)
+        if (positionCount == 0)
             return DebtStatus.Empty;
 
         var outstanding = lent - repaid;
@@ -399,6 +514,50 @@ public sealed class DebtService(
 
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private async Task<DebtEntry> FindEntryAsync(int debtId, int entryId, CancellationToken ct)
+    {
+        // Über den bereits geprüften Eintrag gesucht: damit ist die Position implizit auch
+        // dem richtigen Nutzer zugeordnet und kann nicht über eine fremde ID erreicht werden.
+        var entry = await context.DebtEntries
+            .FirstOrDefaultAsync(e => e.Id == entryId && e.DebtId == debtId, ct);
+
+        if (entry is null)
+        {
+            logger.LogInformation(
+                "Manueller Betrag {EntryId} im Schuldeintrag {DebtId} nicht gefunden.", entryId, debtId);
+            throw new NotFoundException("Der manuelle Betrag");
+        }
+
+        return entry;
+    }
+
+    /// <summary>
+    /// Der Betrag wird beim Speichern gerundet, nicht erst bei der Ausgabe: sonst stünde in
+    /// der Datenbank ein anderer Wert als der, den der Nutzer bestätigt hat.
+    /// </summary>
+    private static decimal NormalizeAmount(decimal amount)
+    {
+        var rounded = Round(amount);
+
+        if (rounded <= 0m)
+            throw new BusinessRuleException("Der Betrag muss größer als 0 sein.");
+
+        return rounded;
+    }
+
+    /// <summary>
+    /// Ein Betrag ohne klare Richtung wäre in den Summen wertlos. Die Modellbindung fängt den
+    /// Fall bereits ab; hier steht die Regel unabhängig davon noch einmal.
+    /// </summary>
+    private static TransactionType RequireDirection(TransactionType direction)
+        => direction is TransactionType.Income or TransactionType.Expense
+            ? direction
+            : throw new BusinessRuleException(
+                "Ein Betrag muss entweder verliehen oder zurückgezahlt sein.");
+
+    /// <summary>Der heutige Tag als Vorbelegung — bewusst UTC, wie überall sonst im Dienst.</summary>
+    private static DateOnly Today() => DateOnly.FromDateTime(DateTime.UtcNow);
 
     private static decimal Round(decimal value)
         => decimal.Round(value, MoneyScale, MidpointRounding.AwayFromZero);

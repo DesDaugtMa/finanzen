@@ -26,7 +26,7 @@ export class ChangelogApiService {
   /** Jüngste veröffentlichte Version, sobald sie bekannt ist. */
   readonly currentVersion = this.currentVersionState.asReadonly();
 
-  /** Verhindert, dass jedes Öffnen des Kontomenüs eine neue Anfrage auslöst. */
+  /** Verhindert, dass mehrere Aufrufer je eine eigene Anfrage auslösen. */
   private versionRequested = false;
 
   /** Alle Versionen — offline der zuletzt geladene Stand samt Zeitpunkt. */
@@ -38,8 +38,8 @@ export class ChangelogApiService {
 
   /**
    * Holt die Versionsnummer für die Navigation, falls sie noch fehlt. Schlägt der Aufruf
-   * fehl, bleibt es beim Link ohne Version — ein nicht erreichbarer Changelog darf im
-   * Kontomenü keine Fehlermeldung erzeugen.
+   * fehl, bleibt es beim Link ohne Version — ein nicht erreichbarer Changelog darf in der
+   * Navigation keine Fehlermeldung erzeugen.
    */
   ensureVersionLoaded(): void {
     if (this.versionRequested || this.currentVersionState() !== null) return;

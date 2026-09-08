@@ -8,13 +8,41 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { Debt, DebtPayload } from '../../../../core/models/debt.model';
 import { ModalDialogComponent } from '../../../../shared/components/modal-dialog/modal-dialog.component';
+import { parseMoneyInput } from '../../../../shared/utils/money.util';
+import { toIsoDate } from '../../../../shared/utils/month.util';
 
 /**
- * Dialog zum Anlegen und Bearbeiten eines Schuldeintrags. Es gibt bewusst kein
- * Betragsfeld: Was offen ist, ergibt sich aus den zugeordneten Buchungen.
+ * Der Startbetrag ist freiwillig: leer ist gültig. Steht aber etwas darin, muss es ein
+ * Betrag größer 0 sein — eine unlesbare Eingabe stillschweigend zu verwerfen wäre
+ * schlimmer als sie abzuweisen.
+ */
+function optionalPositiveMoneyValidator(control: AbstractControl): ValidationErrors | null {
+  const value = (control.value as string | null)?.trim();
+  if (!value) return null;
+
+  const parsed = parseMoneyInput(value);
+  if (parsed === null) return { money: true };
+
+  return parsed > 0 ? null : { positive: true };
+}
+
+/**
+ * Dialog zum Anlegen und Bearbeiten eines Schuldeintrags.
+ *
+ * Beim Anlegen steht ein optionaler Startbetrag zur Verfügung — der häufigste Fall ist
+ * „ich habe gerade jemandem etwas geliehen“, und der soll nicht zwei Dialoge kosten. Beim
+ * Bearbeiten fehlt das Feld: dann gibt es bereits Positionen, und ein zweites Betragsfeld
+ * daneben wäre nicht mehr eindeutig zuzuordnen.
  */
 @Component({
   selector: 'app-debt-form-dialog',
@@ -76,6 +104,54 @@ import { ModalDialogComponent } from '../../../../shared/components/modal-dialog
           }
         </div>
 
+        @if (!isEditMode()) {
+          <div class="row g-3">
+            <div class="col-12 col-sm-6">
+              <label for="debtInitialAmount" class="form-label">
+                Betrag <span class="form-label__optional">(optional)</span>
+              </label>
+              <div class="input-group" [class.has-validation]="isInvalid('initialAmount')">
+                <input
+                  type="text"
+                  id="debtInitialAmount"
+                  formControlName="initialAmount"
+                  class="form-control fin-input-amount"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="0,00"
+                  [class.is-invalid]="isInvalid('initialAmount')"
+                  [attr.aria-describedby]="
+                    isInvalid('initialAmount') ? 'debtInitialAmountError' : 'debtInitialAmountHint'
+                  "
+                />
+                <span class="input-group-text" aria-hidden="true">€</span>
+                @if (isInvalid('initialAmount')) {
+                  <div id="debtInitialAmountError" class="invalid-feedback">
+                    Bitte gib einen Betrag größer als 0 ein, z. B. 50,00.
+                  </div>
+                }
+              </div>
+              @if (!isInvalid('initialAmount')) {
+                <div id="debtInitialAmountHint" class="form-text">
+                  Was du geliehen hast. Kannst du auch später erfassen.
+                </div>
+              }
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <label for="debtInitialDate" class="form-label">Datum</label>
+              <input
+                type="date"
+                id="debtInitialDate"
+                formControlName="initialDate"
+                class="form-control"
+                aria-describedby="debtInitialDateHint"
+              />
+              <div id="debtInitialDateHint" class="form-text">Wann das Geld geflossen ist.</div>
+            </div>
+          </div>
+        }
+
         <div>
           <label for="debtNote" class="form-label">
             Notiz <span class="form-label__optional">(optional)</span>
@@ -91,10 +167,7 @@ import { ModalDialogComponent } from '../../../../shared/components/modal-dialog
           <div id="debtNoteHint" class="form-text">Zum Beispiel eine vereinbarte Rückzahlung.</div>
         </div>
 
-        <p class="form-text mb-0">
-          Beträge trägst du nicht hier ein — du verknüpfst danach die Buchungen deiner
-          Geldkonten. So bleibt jeder Betrag durch eine echte Geldbewegung belegt.
-        </p>
+        <p class="form-text mb-0">{{ amountHint() }}</p>
       </form>
 
       <div dialogFooter class="fin-dialog-actions">
@@ -128,15 +201,38 @@ export class DebtFormDialogComponent implements OnInit {
     personName: ['', [Validators.required, Validators.maxLength(200)]],
     title: ['', [Validators.required, Validators.maxLength(200)]],
     note: [''],
+    initialAmount: ['', optionalPositiveMoneyValidator],
+    initialDate: [toIsoDate(new Date()), Validators.required],
   });
 
   protected readonly isEditMode = computed(() => this.debt() !== null);
+
+  /** Die Änderungen des Formulars als Signal — nur der Startbetrag wird beobachtet. */
+  private readonly initialAmountValue = toSignal(this.form.controls.initialAmount.valueChanges, {
+    initialValue: this.form.controls.initialAmount.value,
+  });
+
+  protected readonly hasInitialAmount = computed(() => this.initialAmountValue().trim().length > 0);
+
+  /**
+   * Der Schlusssatz erklärt, wie es weitergeht — und zwar unterschiedlich, je nachdem ob
+   * der Nutzer schon einen Betrag getippt hat.
+   */
+  protected readonly amountHint = computed(() => {
+    if (this.isEditMode()) {
+      return 'Beträge pflegst du direkt am Eintrag — als manuelle Position oder über eine verknüpfte Buchung.';
+    }
+
+    return this.hasInitialAmount()
+      ? 'Der Betrag wird als verliehen erfasst. Rückzahlungen trägst du danach am Eintrag nach.'
+      : 'Ohne Betrag entsteht nur der Eintrag. Beträge kannst du danach jederzeit erfassen oder eine Buchung verknüpfen.';
+  });
 
   ngOnInit(): void {
     const existing = this.debt();
     if (!existing) return;
 
-    this.form.setValue({
+    this.form.patchValue({
       personName: existing.personName,
       title: existing.title,
       note: existing.note ?? '',
@@ -162,10 +258,19 @@ export class DebtFormDialogComponent implements OnInit {
 
     const value = this.form.getRawValue();
 
+    // Der Startbetrag gilt nur beim Anlegen. Beim Bearbeiten wird er gar nicht erst
+    // gesendet, damit ein alter Formularwert nicht versehentlich eine Position erzeugt.
+    const initialAmount =
+      this.isEditMode() || !value.initialAmount.trim()
+        ? null
+        : parseMoneyInput(value.initialAmount);
+
     this.save.emit({
       personName: value.personName.trim(),
       title: value.title.trim(),
       note: value.note.trim() || null,
+      initialAmount,
+      initialDate: initialAmount === null ? null : value.initialDate,
     });
   }
 }

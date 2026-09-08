@@ -20,6 +20,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<FixedCost> FixedCosts => Set<FixedCost>();
     public DbSet<Debt> Debts => Set<Debt>();
+    public DbSet<DebtEntry> DebtEntries => Set<DebtEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
