@@ -4,9 +4,10 @@ namespace Backend.Services.Interfaces;
 
 /// <summary>
 /// Schuldeinträge des Nutzers — Geld, das er anderen geliehen hat. Ein Eintrag führt
-/// keinen eigenen Betrag: was offen ist, ergibt sich aus den zugeordneten Buchungen.
-/// Die Einträge hängen am Nutzer, nicht an einem Konto, denn Verleih und Rückzahlung
-/// laufen oft über verschiedene Geldkonten.
+/// keinen eigenen Betrag: was offen ist, ergibt sich aus seinen Positionen — den
+/// zugeordneten Buchungen und den manuell erfassten Beträgen. Die Einträge hängen am
+/// Nutzer, nicht an einem Konto, denn Verleih und Rückzahlung laufen oft über
+/// verschiedene Geldkonten — oder gar keines.
 /// </summary>
 public interface IDebtService
 {
@@ -19,8 +20,25 @@ public interface IDebtService
 
     Task<DebtDto> UpdateAsync(int userId, int debtId, SaveDebtRequest request, CancellationToken ct = default);
 
-    /// <summary>Löscht den Eintrag; zugeordnete Buchungen bleiben erhalten und verlieren nur die Zuordnung.</summary>
+    /// <summary>
+    /// Löscht den Eintrag. Zugeordnete Buchungen bleiben erhalten und verlieren nur die
+    /// Zuordnung; manuell erfasste Beträge gehören ausschließlich zu diesem Eintrag und
+    /// verschwinden mit ihm.
+    /// </summary>
     Task DeleteAsync(int userId, int debtId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Erfasst einen Betrag von Hand — für Geld, zu dem es keine Buchung gibt. Gibt den
+    /// neuen Gesamtstand zurück, damit die Oberfläche ohne zweiten Aufruf aktuell ist.
+    /// </summary>
+    Task<DebtOverviewDto> AddEntryAsync(
+        int userId, int debtId, SaveDebtEntryRequest request, CancellationToken ct = default);
+
+    Task<DebtOverviewDto> UpdateEntryAsync(
+        int userId, int debtId, int entryId, SaveDebtEntryRequest request, CancellationToken ct = default);
+
+    Task<DebtOverviewDto> DeleteEntryAsync(
+        int userId, int debtId, int entryId, CancellationToken ct = default);
 
     /// <summary>
     /// Buchungen, die sich zuordnen lassen: Buchungen aller Konten des Nutzers, die noch

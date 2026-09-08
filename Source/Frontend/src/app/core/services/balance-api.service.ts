@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { OfflineCacheService, Sourced } from './offline-cache.service';
-import { MonthBalance, YearBalance } from '../models/balance.model';
+import { MonthBalance, PeriodBalance, YearBalance } from '../models/balance.model';
 
 /**
  * Die konten-übergreifende Bilanz — die Datenquelle der Startseite.
@@ -18,6 +18,17 @@ export class BalanceApiService {
   private readonly cache = inject(OfflineCacheService);
 
   private readonly resource = 'balance';
+
+  /**
+   * Bilanz eines Zeitraums über alle Konten, nach Kontokategorie gruppiert.
+   * Der Schlüssel ist `yyyy-MM` für einen Monat oder `yyyy` für ein ganzes Jahr.
+   */
+  getPeriod(period: string): Observable<Sourced<PeriodBalance>> {
+    return this.cache.withFallback(
+      `balance.period.${period}`,
+      this.api.get<PeriodBalance>(`${this.resource}/period/${period}`),
+    );
+  }
 
   /** Bilanz eines Monats (`yyyy-MM`) über alle Konten, nach Kontokategorie gruppiert. */
   getMonth(month: string): Observable<Sourced<MonthBalance>> {

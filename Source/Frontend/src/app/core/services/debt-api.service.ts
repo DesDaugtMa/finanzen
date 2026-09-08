@@ -1,7 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Debt, DebtOverview, DebtPayload, DebtTransaction } from '../models/debt.model';
+import {
+  Debt,
+  DebtEntryPayload,
+  DebtOverview,
+  DebtPayload,
+  DebtTransaction,
+} from '../models/debt.model';
 
 /**
  * Schuldeinträge des angemeldeten Nutzers. Anders als die übrigen Finanz-Ressourcen
@@ -27,9 +33,32 @@ export class DebtApiService {
     return this.api.put<Debt>(`${this.resource}/${debtId}`, payload);
   }
 
-  /** Zugeordnete Buchungen bleiben erhalten und verlieren nur die Zuordnung. */
+  /**
+   * Zugeordnete Buchungen bleiben erhalten und verlieren nur die Zuordnung; manuell
+   * erfasste Beträge gehen mit dem Eintrag.
+   */
   delete(debtId: number): Observable<void> {
     return this.api.delete<void>(`${this.resource}/${debtId}`);
+  }
+
+  /**
+   * Erfasst einen Betrag von Hand — für Geld, zu dem es keine Buchung gibt. Antwortet mit
+   * dem neuen Gesamtstand, damit die Oberfläche ihn ohne zweiten Aufruf übernehmen kann.
+   */
+  addEntry(debtId: number, payload: DebtEntryPayload): Observable<DebtOverview> {
+    return this.api.post<DebtOverview>(`${this.resource}/${debtId}/entries`, payload);
+  }
+
+  updateEntry(
+    debtId: number,
+    entryId: number,
+    payload: DebtEntryPayload,
+  ): Observable<DebtOverview> {
+    return this.api.put<DebtOverview>(`${this.resource}/${debtId}/entries/${entryId}`, payload);
+  }
+
+  deleteEntry(debtId: number, entryId: number): Observable<DebtOverview> {
+    return this.api.delete<DebtOverview>(`${this.resource}/${debtId}/entries/${entryId}`);
   }
 
   /** Buchungen aller Geldkonten, die noch keinem Eintrag zugeordnet sind. */

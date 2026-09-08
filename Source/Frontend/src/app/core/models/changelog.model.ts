@@ -4,14 +4,14 @@
  * verstehen.
  */
 export interface Changelog {
-  /** Jüngste veröffentlichte Version ohne führendes `v`, z. B. `1.0.0`. */
+  /** Jüngste veröffentlichte Version ohne führendes `v`, z. B. `1.2`. */
   currentVersion: string | null;
   /** Neueste Version zuerst. */
   entries: ChangelogEntry[];
 }
 
 export interface ChangelogEntry {
-  /** Versionsnummer ohne führendes `v`, z. B. `1.0.0`. */
+  /** Versionsnummer ohne führendes `v`, z. B. `1.2` oder `1.2.1` bei einem wichtigen Bugfix. */
   version: string;
   /** Veröffentlichungsdatum als `yyyy-MM-dd`. */
   releaseDate: string;

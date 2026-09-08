@@ -161,6 +161,24 @@ Verbinde das entworfene UI mit dem neuen Endpunkt:
   (Pflichtfelder, Betrag > 0 wo sinnvoll, gültige Kategorie/Konto) **und** verlasse
   Dich auf die serverseitige Validierung als Wahrheit.
 
+## Phase 4 — Changelog (Pflicht, immer zuletzt)
+
+**Kein Feature und keine Änderung ist abgeschlossen, bevor sie im Changelog
+steht.** Rufe als letzten Schritt den Skill **`changelog-entry`** auf und lege
+den Eintrag in `./CHANGELOG.md` an:
+
+- Ordne jeden Punkt dem richtigen Abschnitt zu: komplett neu → `**Features:**`,
+  vorhandenes verändert → `**Changes:**`, Fehler behoben → `**Bugfixes:**`.
+- Jeder Punkt ist **ein neutraler Satz** aus Nutzersicht — z. B. „Depots wurden
+  hinzugefügt und können nun angelegt werden." Keine Du-Ansprache, keine
+  technischen Begriffe, keine Werbesprache.
+- **Frage vor dem Schreiben nach der Versionsnummer.** Vollwertige Versionen
+  heißen `v1.2`, `v1.3`; eine nachgereichte Bugfix-Version heißt `v1.2.1`.
+  Schlage die passende Nummer vor und warte die Bestätigung des Nutzers ab.
+- Hat die Arbeit **keine für Nutzer sichtbare Wirkung**, schreibe keinen
+  Eintrag — vermerke das aber ausdrücklich im Abschlussbericht, statt es
+  stillschweigend auszulassen.
+
 ## Definition of Done
 
 Bevor Du ein Feature als fertig bezeichnest, prüfe:
@@ -180,6 +198,9 @@ Bevor Du ein Feature als fertig bezeichnest, prüfe:
       strukturiert, einheitlich und leakt keine sensiblen Finanzdaten.
 - [ ] Frontend ist über einen typisierten Service angebunden, mit behandelten
       Loading- / Empty- / Error- / Success-States und Eingabe-Validierung.
+- [ ] Changelog-Eintrag über den Skill `changelog-entry` geschrieben (oder
+      ausdrücklich als „für Nutzer nicht sichtbar" begründet, warum keiner nötig
+      war).
 
 ## Anzunehmende Punkte zur Bestätigung
 

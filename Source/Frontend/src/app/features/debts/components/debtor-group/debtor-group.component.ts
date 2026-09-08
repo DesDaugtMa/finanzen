@@ -10,6 +10,15 @@ export interface DebtTransactionEvent {
 }
 
 /**
+ * Welcher manuelle Betrag welches Eintrags gemeint ist. Die Person gruppiert nur — die
+ * Aktion muss den Eintrag mitführen, sonst wäre die ID allein nicht zuzuordnen.
+ */
+export interface DebtEntryEvent {
+  debt: Debt;
+  entryId: number;
+}
+
+/**
  * Alle Einträge einer Person. Die Person ist die Einheit, in der die Frage gestellt wird
  * („Wer schuldet mir wie viel?“) — deshalb steht ihr Gesamtbetrag oben und die einzelnen
  * Vorgänge darunter.
@@ -46,6 +55,9 @@ export interface DebtTransactionEvent {
             (remove)="remove.emit(debt)"
             (assign)="assign.emit(debt)"
             (unlink)="unlink.emit({ debt, transactionId: $event })"
+            (addEntry)="addEntry.emit(debt)"
+            (editEntry)="editEntry.emit({ debt, entryId: $event })"
+            (removeEntry)="removeEntry.emit({ debt, entryId: $event })"
           />
         }
       </div>
@@ -97,6 +109,9 @@ export class DebtorGroupComponent {
   readonly remove = output<Debt>();
   readonly assign = output<Debt>();
   readonly unlink = output<DebtTransactionEvent>();
+  readonly addEntry = output<Debt>();
+  readonly editEntry = output<DebtEntryEvent>();
+  readonly removeEntry = output<DebtEntryEvent>();
 
   /** Eindeutig je Person, damit mehrere Gruppen gleichzeitig korrekt beschriftet sind. */
   protected readonly headingId = computed(
@@ -104,9 +119,7 @@ export class DebtorGroupComponent {
   );
 
   protected readonly initials = computed(() => {
-    const segments = this.debtor()
-      .personName.split(/\s+/)
-      .filter(Boolean);
+    const segments = this.debtor().personName.split(/\s+/).filter(Boolean);
 
     if (segments.length >= 2) {
       return (segments[0][0] + segments[1][0]).toUpperCase();

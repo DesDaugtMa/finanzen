@@ -38,13 +38,35 @@ public sealed class DebtsController(
         int debtId, [FromBody] SaveDebtRequest request, CancellationToken ct)
         => Ok(await debtService.UpdateAsync(UserId, debtId, request, ct));
 
-    /// <summary>Löscht den Eintrag; zugeordnete Buchungen bleiben erhalten.</summary>
+    /// <summary>
+    /// Löscht den Eintrag; zugeordnete Buchungen bleiben erhalten, manuell erfasste
+    /// Beträge gehen mit.
+    /// </summary>
     [HttpDelete("{debtId:int}")]
     public async Task<IActionResult> Delete(int debtId, CancellationToken ct)
     {
         await debtService.DeleteAsync(UserId, debtId, ct);
         return NoContent();
     }
+
+    /// <summary>
+    /// Erfasst einen Betrag von Hand — für Geld, zu dem es keine Buchung gibt. Antwortet mit
+    /// dem neuen Gesamtstand, damit die Oberfläche ihn ohne zweiten Aufruf übernehmen kann.
+    /// </summary>
+    [HttpPost("{debtId:int}/entries")]
+    public async Task<ActionResult<DebtOverviewDto>> AddEntry(
+        int debtId, [FromBody] SaveDebtEntryRequest request, CancellationToken ct)
+        => Ok(await debtService.AddEntryAsync(UserId, debtId, request, ct));
+
+    [HttpPut("{debtId:int}/entries/{entryId:int}")]
+    public async Task<ActionResult<DebtOverviewDto>> UpdateEntry(
+        int debtId, int entryId, [FromBody] SaveDebtEntryRequest request, CancellationToken ct)
+        => Ok(await debtService.UpdateEntryAsync(UserId, debtId, entryId, request, ct));
+
+    [HttpDelete("{debtId:int}/entries/{entryId:int}")]
+    public async Task<ActionResult<DebtOverviewDto>> DeleteEntry(
+        int debtId, int entryId, CancellationToken ct)
+        => Ok(await debtService.DeleteEntryAsync(UserId, debtId, entryId, ct));
 
     /// <summary>Buchungen aller Geldkonten, die sich dem Eintrag zuordnen lassen.</summary>
     /// <param name="accountId">Optionaler Filter auf ein Geldkonto.</param>

@@ -27,6 +27,10 @@ interface YearColumn {
  * dieser Achse liest man die Plus- und Minusmonate eines Jahres schneller ab als
  * an jeder Zahlenreihe. Ein Klick auf eine Säule wählt den Monat oben aus, damit
  * der Verlauf nicht nur Bild, sondern auch Navigation ist.
+ *
+ * Aktuell nicht eingebunden: mit dem neuen Aufbau der Startseite (Issue #25)
+ * zeigt der Reiter „Konten“ nur noch die Kontobereiche. Der Verlauf ist für den
+ * Reiter „Statistiken“ vorgesehen und bleibt dafür unverändert erhalten.
  */
 @Component({
   selector: 'app-year-balance-panel',

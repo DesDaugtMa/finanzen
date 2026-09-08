@@ -35,46 +35,66 @@ public sealed class BalanceService(
 
     public async Task<OverallMonthBalanceDto> GetMonthAsync(int userId, AccountingMonth month, CancellationToken ct = default)
     {
-        var accounts = await LoadAccountsAsync(userId, ct);
+        var result = await ComputeAsync(userId, BalancePeriod.ForMonth(month), ct);
 
-        if (accounts.Count == 0)
+        if (result is null)
         {
             logger.LogInformation("Monatsbilanz {Month} für Nutzer {UserId}: keine Konten vorhanden.", month, userId);
-            return EmptyMonth(month);
+            return new OverallMonthBalanceDto { Month = month.ToString(), Currency = DefaultCurrency };
         }
-
-        var accountIds = accounts.Select(a => a.AccountId).ToList();
-
-        var current = await LoadMonthTotalsPerAccountAsync(accountIds, month, ct);
-        var previousNet = await LoadNetAsync(accountIds, month.Previous(), ct);
-        var transferVolume = await LoadTransferVolumeAsync(accountIds, month, ct);
-
-        var entries = accounts
-            .Select(a => BuildAccountBalance(a, current.GetValueOrDefault(a.AccountId)))
-            .ToList();
-
-        var groups = BuildGroups(entries);
-        var currency = accounts[0].Currency;
 
         logger.LogDebug(
             "Monatsbilanz {Month} für Nutzer {UserId} über {AccountCount} Konten berechnet.",
-            month, userId, accounts.Count);
+            month, userId, result.Entries.Count);
 
         return new OverallMonthBalanceDto
         {
             Month = month.ToString(),
-            Currency = currency,
-            Income = Round(entries.Sum(e => e.Income)),
-            Expenses = Round(entries.Sum(e => e.Expenses)),
-            Net = Round(entries.Sum(e => e.Net)),
-            TransferVolume = Round(transferVolume),
-            PreviousNet = Round(previousNet),
-            NetWorth = Round(entries.Sum(e => e.CurrentBalance)),
-            SettledNetWorth = Round(entries.Sum(e => e.SettledBalance)),
-            PendingTotal = Round(entries.Sum(e => e.PendingTotal)),
-            PendingCount = entries.Sum(e => e.PendingCount),
-            TransactionCount = entries.Sum(e => e.TransactionCount),
-            Groups = groups
+            Currency = result.Currency,
+            Income = result.Income,
+            Expenses = result.Expenses,
+            Net = result.Net,
+            TransferVolume = result.TransferVolume,
+            PreviousNet = result.PreviousNet,
+            NetWorth = result.NetWorth,
+            SettledNetWorth = result.SettledNetWorth,
+            PendingTotal = result.PendingTotal,
+            PendingCount = result.PendingCount,
+            TransactionCount = result.TransactionCount,
+            Groups = result.Groups
+        };
+    }
+
+    public async Task<PeriodBalanceDto> GetPeriodAsync(int userId, BalancePeriod period, CancellationToken ct = default)
+    {
+        var result = await ComputeAsync(userId, period, ct);
+
+        if (result is null)
+        {
+            logger.LogInformation("Zeitraumbilanz {Period} für Nutzer {UserId}: keine Konten vorhanden.", period, userId);
+            return new PeriodBalanceDto { Period = period.ToString(), Kind = period.Kind, Currency = DefaultCurrency };
+        }
+
+        logger.LogDebug(
+            "Zeitraumbilanz {Period} für Nutzer {UserId} über {AccountCount} Konten berechnet.",
+            period, userId, result.Entries.Count);
+
+        return new PeriodBalanceDto
+        {
+            Period = period.ToString(),
+            Kind = period.Kind,
+            Currency = result.Currency,
+            Income = result.Income,
+            Expenses = result.Expenses,
+            Net = result.Net,
+            TransferVolume = result.TransferVolume,
+            PreviousNet = result.PreviousNet,
+            NetWorth = result.NetWorth,
+            SettledNetWorth = result.SettledNetWorth,
+            PendingTotal = result.PendingTotal,
+            PendingCount = result.PendingCount,
+            TransactionCount = result.TransactionCount,
+            Groups = result.Groups
         };
     }
 
@@ -96,7 +116,66 @@ public sealed class BalanceService(
         return BuildYear(year, currency, months);
     }
 
-    // --- Monat -----------------------------------------------------------
+    // --- Zeitraum (Monat oder Jahr) --------------------------------------
+
+    /// <summary>
+    /// Das fertig gerechnete Ergebnis eines Zeitraums, bevor es in das jeweilige
+    /// DTO gegossen wird. Monats- und Zeitraumbilanz unterscheiden sich nur in der
+    /// Hülle, nicht in der Rechnung — deshalb liegt sie genau einmal hier.
+    /// </summary>
+    private sealed record PeriodResult(
+        string Currency,
+        IReadOnlyList<AccountBalanceDto> Entries,
+        IReadOnlyList<AccountGroupBalanceDto> Groups,
+        decimal Income,
+        decimal Expenses,
+        decimal Net,
+        decimal TransferVolume,
+        decimal PreviousNet,
+        decimal NetWorth,
+        decimal SettledNetWorth,
+        decimal PendingTotal,
+        int PendingCount,
+        int TransactionCount);
+
+    /// <summary>
+    /// Berechnet die Bilanz eines Zeitraums samt Kontoaufschlüsselung.
+    /// Gibt <c>null</c> zurück, wenn der Nutzer noch kein Konto hat — dann gibt es
+    /// nichts zu rechnen und der Aufrufer liefert seine leere Hülle aus.
+    /// </summary>
+    private async Task<PeriodResult?> ComputeAsync(int userId, BalancePeriod period, CancellationToken ct)
+    {
+        var accounts = await LoadAccountsAsync(userId, ct);
+
+        if (accounts.Count == 0)
+            return null;
+
+        var accountIds = accounts.Select(a => a.AccountId).ToList();
+        var previous = period.Previous();
+
+        var current = await LoadTotalsPerAccountAsync(accountIds, period, ct);
+        var previousNet = await LoadNetAsync(accountIds, previous, ct);
+        var transferVolume = await LoadTransferVolumeAsync(accountIds, period, ct);
+
+        var entries = accounts
+            .Select(a => BuildAccountBalance(a, current.GetValueOrDefault(a.AccountId)))
+            .ToList();
+
+        return new PeriodResult(
+            Currency: accounts[0].Currency,
+            Entries: entries,
+            Groups: BuildGroups(entries),
+            Income: Round(entries.Sum(e => e.Income)),
+            Expenses: Round(entries.Sum(e => e.Expenses)),
+            Net: Round(entries.Sum(e => e.Net)),
+            TransferVolume: Round(transferVolume),
+            PreviousNet: Round(previousNet),
+            NetWorth: Round(entries.Sum(e => e.CurrentBalance)),
+            SettledNetWorth: Round(entries.Sum(e => e.SettledBalance)),
+            PendingTotal: Round(entries.Sum(e => e.PendingTotal)),
+            PendingCount: entries.Sum(e => e.PendingCount),
+            TransactionCount: entries.Sum(e => e.TransactionCount));
+    }
 
     private sealed record AccountRow(
         int AccountId,
@@ -111,10 +190,10 @@ public sealed class BalanceService(
         decimal PendingTotal,
         int PendingCount);
 
-    /// <summary>Summen eines Kontos in einem Monat, ohne Umbuchungen zwischen eigenen Konten.</summary>
-    private sealed record MonthTotals(decimal Income, decimal Expenses, int TransactionCount)
+    /// <summary>Summen eines Kontos in einem Zeitraum, ohne Umbuchungen zwischen eigenen Konten.</summary>
+    private sealed record FlowTotals(decimal Income, decimal Expenses, int TransactionCount)
     {
-        public static readonly MonthTotals Empty = new(0m, 0m, 0);
+        public static readonly FlowTotals Empty = new(0m, 0m, 0);
     }
 
     /// <summary>
@@ -147,11 +226,10 @@ public sealed class BalanceService(
                 a.Transactions.Count(t => t.IsPending)))
             .ToListAsync(ct);
 
-    private async Task<Dictionary<int, MonthTotals>> LoadMonthTotalsPerAccountAsync(
-        IReadOnlyCollection<int> accountIds, AccountingMonth month, CancellationToken ct)
+    private async Task<Dictionary<int, FlowTotals>> LoadTotalsPerAccountAsync(
+        IReadOnlyCollection<int> accountIds, BalancePeriod period, CancellationToken ct)
     {
-        var rows = await QueryBalanceRelevant(accountIds)
-            .Where(t => t.AccountingMonth == month.ToDateOnly())
+        var rows = await QueryInPeriod(accountIds, period)
             .GroupBy(t => t.AccountId)
             .Select(g => new
             {
@@ -162,13 +240,12 @@ public sealed class BalanceService(
             })
             .ToListAsync(ct);
 
-        return rows.ToDictionary(r => r.AccountId, r => new MonthTotals(r.Income, r.Expenses, r.Count));
+        return rows.ToDictionary(r => r.AccountId, r => new FlowTotals(r.Income, r.Expenses, r.Count));
     }
 
-    private async Task<decimal> LoadNetAsync(IReadOnlyCollection<int> accountIds, AccountingMonth month, CancellationToken ct)
+    private async Task<decimal> LoadNetAsync(IReadOnlyCollection<int> accountIds, BalancePeriod period, CancellationToken ct)
     {
-        var totals = await QueryBalanceRelevant(accountIds)
-            .Where(t => t.AccountingMonth == month.ToDateOnly())
+        var totals = await QueryInPeriod(accountIds, period)
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -186,13 +263,20 @@ public sealed class BalanceService(
     /// Seiten zu summieren würde jeden Betrag doppelt ausweisen.
     /// </summary>
     private async Task<decimal> LoadTransferVolumeAsync(
-        IReadOnlyCollection<int> accountIds, AccountingMonth month, CancellationToken ct)
+        IReadOnlyCollection<int> accountIds, BalancePeriod period, CancellationToken ct)
         => await context.Transactions
             .Where(t => accountIds.Contains(t.AccountId)
-                        && t.AccountingMonth == month.ToDateOnly()
+                        && t.AccountingMonth >= period.Start
+                        && t.AccountingMonth < period.EndExclusive
                         && t.LinkedTransactionId != null
                         && t.Type == TransactionType.Expense)
             .SumAsync(t => (decimal?)t.Amount, ct) ?? 0m;
+
+    /// <summary>Die bilanzrelevanten Buchungen innerhalb der Grenzen eines Zeitraums.</summary>
+    private IQueryable<Domain.Entities.Finance.Transaction> QueryInPeriod(
+        IReadOnlyCollection<int> accountIds, BalancePeriod period)
+        => QueryBalanceRelevant(accountIds)
+            .Where(t => t.AccountingMonth >= period.Start && t.AccountingMonth < period.EndExclusive);
 
     /// <summary>
     /// Die für eine konten-übergreifende Bilanz zählenden Buchungen: alles außer
@@ -202,9 +286,9 @@ public sealed class BalanceService(
     private IQueryable<Domain.Entities.Finance.Transaction> QueryBalanceRelevant(IReadOnlyCollection<int> accountIds)
         => context.Transactions.Where(t => accountIds.Contains(t.AccountId) && t.LinkedTransactionId == null);
 
-    private static AccountBalanceDto BuildAccountBalance(AccountRow account, MonthTotals? totals)
+    private static AccountBalanceDto BuildAccountBalance(AccountRow account, FlowTotals? totals)
     {
-        var month = totals ?? MonthTotals.Empty;
+        var flow = totals ?? FlowTotals.Empty;
 
         return new AccountBalanceDto
         {
@@ -222,15 +306,15 @@ public sealed class BalanceService(
             SettledBalance = Round(account.CurrentBalance + account.PendingTotal),
             PendingTotal = Round(account.PendingTotal),
             PendingCount = account.PendingCount,
-            Income = Round(month.Income),
-            Expenses = Round(month.Expenses),
-            Net = Round(month.Income - month.Expenses),
-            TransactionCount = month.TransactionCount
+            Income = Round(flow.Income),
+            Expenses = Round(flow.Expenses),
+            Net = Round(flow.Income - flow.Expenses),
+            TransactionCount = flow.TransactionCount
         };
     }
 
     /// <summary>Gruppiert die Konten nach Kategorie. Kategorien ohne Konto fallen heraus.</summary>
-    private static List<AccountGroupBalanceDto> BuildGroups(IReadOnlyCollection<AccountBalanceDto> entries)
+    private static IReadOnlyList<AccountGroupBalanceDto> BuildGroups(IReadOnlyCollection<AccountBalanceDto> entries)
         => GroupOrder
             .Select(type => new { Type = type, Accounts = entries.Where(e => e.Type == type).ToList() })
             .Where(g => g.Accounts.Count > 0)
@@ -249,13 +333,7 @@ public sealed class BalanceService(
             })
             .ToList();
 
-    private static OverallMonthBalanceDto EmptyMonth(AccountingMonth month) => new()
-    {
-        Month = month.ToString(),
-        Currency = DefaultCurrency
-    };
-
-    // --- Jahr ------------------------------------------------------------
+    // --- Jahresverlauf ---------------------------------------------------
 
     private async Task<string> LoadCurrencyAsync(int userId, CancellationToken ct)
         => await accountAccess.QueryOwned(userId)

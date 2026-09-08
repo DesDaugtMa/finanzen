@@ -174,6 +174,22 @@ Abschlussbericht belegt sind. Melde niemals „gefixt", solange einer offen ist.
    genau dort), ausgeführte Befehle mit Ergebnis, Regressionstest, offene
    Punkte — ehrlich und vollständig.
 
+### Schritt 7 — Changelog-Eintrag (Pflicht, immer zuletzt)
+
+**Kein Bugfix ist abgeschlossen, bevor er im Changelog steht.** Rufe nach der
+Verifikation den Skill **`changelog-entry`** auf und lege den Eintrag an:
+
+- Der Fix gehört in den Abschnitt `**Bugfixes:**`, formuliert als **ein
+  neutraler Satz** aus Nutzersicht — z. B. „Ein Bug, der das Erstellen neuer
+  Geldkonten verhinderte, wurde behoben." Keine Du-Ansprache, keine technischen
+  Begriffe, keine Werbesprache.
+- **Frage vor dem Schreiben nach der Versionsnummer.** Schlage sie vor
+  (wichtiger Bugfix zu einer veröffentlichten Version → Bugfix-Version wie
+  `v1.2.1`) und warte die Bestätigung des Nutzers ab.
+- Hat der Fix **keine für Nutzer sichtbare Wirkung**, schreibe keinen Eintrag —
+  vermerke das aber ausdrücklich im Abschlussbericht, statt es stillschweigend
+  auszulassen.
+
 ## Abgrenzung & Nachbarskills
 
 - **Grenzfall „Bug ist eigentlich ein fehlendes Feature":** Stellt sich in
@@ -182,5 +198,6 @@ Abschlussbericht belegt sind. Melde niemals „gefixt", solange einer offen ist.
   — dort gilt der Feature-Workflow (Datenbank → API → Frontend → Verifikation).
 - **Design-/Struktur-Konventionen** beim Anfassen von UI oder API: Skill
   `fitness-fullstack-feature` (nicht duplizieren, anwenden).
-- **Changelog:** Soll der Fix für Endnutzer dokumentiert werden → Skill
-  `changelog-entry` (Bugfixes-Sektion, nicht technisch formulieren).
+- **Changelog:** Skill `changelog-entry` — nicht optional, sondern der
+  verpflichtende Schritt 7 dieses Ablaufs (Bugfixes-Sektion, neutral und nicht
+  technisch formuliert, Versionsnummer beim Nutzer erfragen).

@@ -5,6 +5,10 @@ Schritt *Apply EF Core migrations*). Diese Skripte sind für den manuellen Weg �
 z. B. wenn die Datenbank vor einem Deploy hochgezogen werden soll oder der
 Runner nicht laufen kann.
 
+Den gesamten Deployment-Prozess — Migrationen erzeugen, Pipeline starten,
+Server-Einrichtung, Troubleshooting und Rollback — beschreibt
+[`Documentation/DEPLOYMENT.md`](../Documentation/DEPLOYMENT.md).
+
 ## 1. SQL-Skript erzeugen
 
 ```powershell

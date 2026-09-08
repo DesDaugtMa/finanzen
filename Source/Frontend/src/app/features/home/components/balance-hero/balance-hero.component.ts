@@ -13,6 +13,10 @@ import { addMonths, formatMonthLong } from '../../../../shared/utils/month.util'
  * Herleitung darunter — die Frage „bin ich diesen Monat im Plus?“ soll ohne
  * Rechnen und ohne Scrollen beantwortet sein. Das Gesamtvermögen sitzt daneben,
  * weil es die zweite Frage ist, nicht die erste.
+ *
+ * Aktuell nicht eingebunden: mit dem neuen Aufbau der Startseite (Issue #25)
+ * zeigt der Reiter „Konten“ nur noch die Kontobereiche. Diese Fläche ist für den
+ * Reiter „Statistiken“ vorgesehen und bleibt dafür unverändert erhalten.
  */
 @Component({
   selector: 'app-balance-hero',

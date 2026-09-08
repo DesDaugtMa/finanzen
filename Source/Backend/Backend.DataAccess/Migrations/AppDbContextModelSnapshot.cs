@@ -440,6 +440,45 @@ namespace Backend.Migrations
                     b.ToTable("Debts");
                 });
 
+            modelBuilder.Entity("Backend.Domain.Entities.Finance.DebtEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DebtId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("EntryDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DebtId", "EntryDate")
+                        .HasDatabaseName("IX_DebtEntries_Debt_EntryDate");
+
+                    b.ToTable("DebtEntries");
+                });
+
             modelBuilder.Entity("Backend.Domain.Entities.Finance.FixedCost", b =>
                 {
                     b.Property<int>("Id")
@@ -733,6 +772,17 @@ namespace Backend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Backend.Domain.Entities.Finance.DebtEntry", b =>
+                {
+                    b.HasOne("Backend.Domain.Entities.Finance.Debt", "Debt")
+                        .WithMany("Entries")
+                        .HasForeignKey("DebtId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Debt");
+                });
+
             modelBuilder.Entity("Backend.Domain.Entities.Finance.FixedCost", b =>
                 {
                     b.HasOne("Backend.Domain.Entities.Finance.Account", "Account")
@@ -835,6 +885,8 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Backend.Domain.Entities.Finance.Debt", b =>
                 {
+                    b.Navigation("Entries");
+
                     b.Navigation("Transactions");
                 });
 

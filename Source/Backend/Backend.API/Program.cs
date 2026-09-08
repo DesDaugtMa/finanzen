@@ -97,6 +97,7 @@ builder.Services.AddScoped<IFixedCostService, FixedCostService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IDebtService, DebtService>();
 builder.Services.AddScoped<IMonthSummaryService, MonthSummaryService>();
+builder.Services.AddScoped<IAccountStatisticsService, AccountStatisticsService>();
 builder.Services.AddScoped<IBalanceService, BalanceService>();
 
 // --- DI: Changelog ---
