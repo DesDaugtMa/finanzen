@@ -630,6 +630,8 @@ export class BankAccountDetailComponent {
       queryParams: { buchung: null },
       queryParamsHandling: 'merge',
       replaceUrl: true,
+      // Nur der Query-Param ändert sich, nicht die Seite — kein Scroll-to-Top.
+      scroll: 'manual',
     });
   }
 
@@ -740,6 +742,9 @@ export class BankAccountDetailComponent {
       relativeTo: this.route,
       queryParams: params,
       queryParamsHandling: 'merge',
+      // Tab- und Monatswechsel bleiben auf derselben Seite — der Sprung nach oben
+      // würde die gewählte Stelle verlieren.
+      scroll: 'manual',
     });
   }
 

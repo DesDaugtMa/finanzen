@@ -38,6 +38,8 @@ Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Übersi
 **Bugfixes:**
 - Ein Bug, der den Kalender zur Monatsauswahl abgeschnitten hat, wurde behoben.
 - Der Kalender zur Monatsauswahl bleibt nun auch auf kleinen Bildschirmen vollständig sichtbar.
+- Beim Wechseln zwischen den Bereichen eines Girokontos springt die Seite nicht mehr an den Anfang.
+- Das frei verfügbare Geld eines Girokontos wird nun anhand des aktuellen Kontostands berechnet, statt anhand der Bilanz des Monats.
 
 # v1.0 — 14.08.2026
 

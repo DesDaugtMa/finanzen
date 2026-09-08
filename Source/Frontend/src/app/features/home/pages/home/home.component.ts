@@ -324,6 +324,9 @@ export class HomeComponent {
       queryParams: params,
       queryParamsHandling: 'merge',
       replaceUrl: true,
+      // Tab- und Zeitraumwechsel bleiben auf derselben Seite — der Sprung nach oben
+      // würde die gewählte Stelle verlieren.
+      scroll: 'manual',
     });
   }
 }
