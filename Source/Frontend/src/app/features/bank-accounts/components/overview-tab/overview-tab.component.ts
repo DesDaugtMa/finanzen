@@ -67,14 +67,16 @@ import { formatMoney } from '../../../../shared/utils/money.util';
             [currency]="data.currency"
             [hint]="allowanceHint()"
           />
-          <app-stat-tile
-            size="sm"
-            label="Frei verfügbar"
-            icon="piggy-bank"
-            [amount]="data.disposable"
-            [currency]="data.currency"
-            [hint]="disposableHint()"
-          />
+          @if (stats.position === 'Current') {
+            <app-stat-tile
+              size="sm"
+              label="Frei verfügbar"
+              icon="piggy-bank"
+              [amount]="stats.dailyAllowance.available"
+              [currency]="data.currency"
+              [hint]="disposableHint()"
+            />
+          }
           <app-stat-tile
             size="sm"
             label="Prognose Monatsende"
@@ -254,27 +256,29 @@ export class AccountOverviewTabComponent {
   });
 
   /**
-   * Macht die Rechnung hinter „frei verfügbar“ sichtbar. Reichen die Einnahmen nicht,
-   * steht die Kennzahl bei 0 € — dann hat die Unterdeckung Vorrang vor der Erklärung,
-   * sonst verschwände sie hinter einer harmlos aussehenden Null.
+   * Macht die Rechnung hinter „frei verfügbar“ sichtbar: Kontostand abzüglich der noch
+   * offenen Fixkosten — bereits gebuchte Fixkosten haben den Kontostand schon gemindert
+   * und zählen daher nicht noch einmal. Deckt der Kontostand die offenen Fixkosten nicht,
+   * hat die Unterdeckung Vorrang vor der Erklärung, sonst verschwände sie hinter einer
+   * harmlos aussehenden Null.
    */
   protected readonly disposableHint = computed(() => {
+    const stats = this.statistics();
     const data = this.summary();
-    if (!data) return '';
+    if (!stats || !data) return '';
 
-    if (data.disposableShortfall > 0) {
-      return `${formatMoney(data.disposableShortfall, data.currency)} über den Einnahmen dieses Monats`;
+    const allowance = stats.dailyAllowance;
+
+    if (allowance.available < 0) {
+      return `Der Kontostand deckt die offenen Fixkosten nicht — es fehlen ${formatMoney(-allowance.available, data.currency)}`;
     }
 
     if (data.fixedCostCount === 0) {
       return 'Noch keine Fixkosten hinterlegt';
     }
 
-    const fixed = formatMoney(data.fixedCosts, data.currency);
-    const open = data.fixedCostOpenCount;
-
-    return open === 0
-      ? `nach ${fixed} Fixkosten und den variablen Ausgaben`
-      : `nach ${fixed} Fixkosten (davon ${open} offen) und den variablen Ausgaben`;
+    return allowance.openFixedCosts > 0
+      ? `nach ${formatMoney(allowance.openFixedCosts, data.currency)} noch offenen Fixkosten`
+      : 'alle Fixkosten dieses Monats sind bereits gebucht';
   });
 }
