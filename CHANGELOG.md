@@ -1,3 +1,10 @@
+# v1.2 — 11.09.2026
+
+Der störende Scrollbalken in der Buchungen-Übersicht wurde entfernt.
+
+**Bugfixes:**
+- Der stets sichtbare, kaum aussagekräftige Scrollbalken neben der Buchungsliste wird nicht mehr angezeigt.
+
 # v1.1 — 16.08.2026
 
 Diese Version bringt eine neu aufgebaute Startseite, eine überarbeitete Übersicht von Girokonten, eine überarbeitete Navigation und Schuldnerliste und behebt die fehlerhafte Darstellung der Monatsauswahl.

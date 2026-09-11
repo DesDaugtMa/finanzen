@@ -250,7 +250,13 @@ interface SortableColumn {
          Welche Form gerendert wird, entscheidet der ViewportService; hier steht
          nur noch die Gestaltung. */
       .transaction-table-wrap {
+        // overflow-y explizit auf hidden statt dem Default visible: sonst
+        // berechnet der Browser ihn automatisch als auto (CSS-Spec-Regel, wenn
+        // nur eine Achse gesetzt ist) — schon 1px Rundungs-Überlauf der Tabelle
+        // erzeugt dann einen eigenen, an die Tabelle geklebten Scrollbalken.
+        // Nur horizontales Scrollen ist hier beabsichtigt (schmale Viewports).
         overflow-x: auto;
+        overflow-y: hidden;
       }
 
       .sort-button {

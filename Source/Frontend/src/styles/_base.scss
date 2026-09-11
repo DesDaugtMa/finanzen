@@ -185,6 +185,21 @@ td {
   background-color: var(--fin-text-subtle);
 }
 
+// Der vertikale Seiten-Scrollbalken (auf `html`/`body`) bleibt unsichtbar: Ragt
+// der Inhalt nur wenige Pixel über den Viewport hinaus, wirkt der native Balken
+// wie ein unruhiges Extra-Element ohne echten Informationswert. Scrollen per
+// Mausrad, Touch und Tastatur funktioniert unverändert — nur der sichtbare
+// Balken selbst entfällt, auch bei tatsächlich langen Listen.
+html,
+body {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
 // -----------------------------------------------------------------------------
 // Touch-Verhalten
 // -----------------------------------------------------------------------------
