@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output, signal } fro
 import { BankAccountApiService } from '../../../../core/services/bank-account-api.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { BankAccountPayload } from '../../../../core/models/bank-account.model';
-import { AccountBalance, AccountGroupBalance } from '../../../../core/models/balance.model';
+import { AccountBalance, AccountGroupBalance, AccountType } from '../../../../core/models/balance.model';
 import { ConfirmDialogComponent } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { Period } from '../../../../shared/utils/period.util';
@@ -83,6 +83,7 @@ type DialogState =
             [period]="period()"
             (edit)="openEdit($event)"
             (remove)="openDelete($event)"
+            (reordered)="reorderAccounts($event)"
           />
         }
 
@@ -242,6 +243,22 @@ export class AccountsTabComponent {
       error: (err: Error) => {
         this.saving.set(false);
         this.toastService.error(err.message || 'Das Konto konnte nicht gespeichert werden.');
+      },
+    });
+  }
+
+  /**
+   * Speichert die neue Kontenreihenfolge im Hintergrund. Die Karte selbst steht dank
+   * `account-group` bereits optimistisch an der neuen Position; egal ob der Aufruf
+   * gelingt oder fehlschlägt, wird die Bilanz neu geladen — bei Erfolg bestätigt das
+   * die neue Reihenfolge, bei einem Fehler setzt es sie auf den Serverstand zurück.
+   */
+  protected reorderAccounts(event: { accountType: AccountType; accountIds: number[] }): void {
+    this.bankAccountApi.reorder(event).subscribe({
+      next: () => this.changed.emit(),
+      error: (err: Error) => {
+        this.toastService.error(err.message || 'Die Reihenfolge konnte nicht gespeichert werden.');
+        this.changed.emit();
       },
     });
   }

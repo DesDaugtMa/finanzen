@@ -13,6 +13,7 @@ namespace Backend.Services;
 public sealed partial class BankAccountService(
     AppDbContext context,
     ICategoryService categoryService,
+    IAccountAccess accountAccess,
     ILogger<BankAccountService> logger) : IBankAccountService
 {
     private const string DefaultCurrency = "EUR";
@@ -26,7 +27,7 @@ public sealed partial class BankAccountService(
         // in derselben Reihenfolge aufbauen kann wie jede andere Ansicht.
         var accounts = await QueryMine(userId)
             .OrderBy(a => a.Type)
-            .ThenBy(a => a.Name)
+            .ThenBy(a => a.SortOrder)
             .ThenBy(a => a.Id)
             .Select(ProjectToDto)
             .ToListAsync(ct);
@@ -52,6 +53,8 @@ public sealed partial class BankAccountService(
 
     public async Task<BankAccountDto> CreateAsync(int userId, CreateBankAccountRequest request, CancellationToken ct = default)
     {
+        var nextSortOrder = await NextSortOrderAsync(userId, AccountType.CheckingAccount, ct);
+
         var account = new Account
         {
             UserId = userId,
@@ -61,7 +64,8 @@ public sealed partial class BankAccountService(
             Iban = NormalizeIban(request.Iban),
             Color = NormalizeColor(request.Color),
             Currency = DefaultCurrency,
-            InitialBalance = request.InitialBalance
+            InitialBalance = request.InitialBalance,
+            SortOrder = nextSortOrder
         };
 
         context.Accounts.Add(account);
@@ -104,7 +108,53 @@ public sealed partial class BankAccountService(
         logger.LogInformation("Girokonto {AccountId} für Nutzer {UserId} gelöscht.", accountId, userId);
     }
 
+    /// <summary>
+    /// Weist der übergebenen Reihenfolge die neuen <see cref="Account.SortOrder"/>-Werte zu.
+    /// <paramref name="request"/> muss exakt die Menge der aktuell existierenden Konten der
+    /// angegebenen Kategorie enthalten — sonst würde die Neuzuweisung stillschweigend Konten
+    /// verlieren oder doppelt vergeben.
+    /// </summary>
+    public async Task ReorderAsync(int userId, ReorderBankAccountsRequest request, CancellationToken ct = default)
+    {
+        await accountAccess.RequireOwnedAsync(userId, request.AccountIds, ct);
+
+        var accounts = await QueryMine(userId)
+            .Where(a => a.Type == request.AccountType)
+            .ToListAsync(ct);
+
+        var accountsById = accounts.ToDictionary(a => a.Id);
+
+        if (accountsById.Count != request.AccountIds.Length
+            || !accountsById.Keys.ToHashSet().SetEquals(request.AccountIds))
+        {
+            logger.LogInformation(
+                "Reorder-Anfrage für Kategorie {AccountType} von Nutzer {UserId} deckt nicht exakt die vorhandenen Konten dieser Kategorie ab.",
+                request.AccountType, userId);
+            throw new BusinessRuleException(
+                "Die übergebenen Konten decken nicht exakt die Konten dieser Kontokategorie ab.");
+        }
+
+        for (var position = 0; position < request.AccountIds.Length; position++)
+            accountsById[request.AccountIds[position]].SortOrder = position;
+
+        await context.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Konten der Kategorie {AccountType} für Nutzer {UserId} neu sortiert.",
+            request.AccountType, userId);
+    }
+
     // --- Intern ---------------------------------------------------------
+
+    private async Task<int> NextSortOrderAsync(int userId, AccountType type, CancellationToken ct)
+    {
+        var maxSortOrder = await QueryMine(userId)
+            .Where(a => a.Type == type)
+            .Select(a => (int?)a.SortOrder)
+            .MaxAsync(ct);
+
+        return (maxSortOrder ?? -1) + 1;
+    }
 
     /// <summary>
     /// Alle Konten des Nutzers, unabhängig von der Kontokategorie. Die Übersicht gruppiert

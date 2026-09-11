@@ -2,7 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { OfflineCacheService, Sourced } from './offline-cache.service';
-import { BankAccount, BankAccountPayload } from '../models/bank-account.model';
+import {
+  BankAccount,
+  BankAccountPayload,
+  ReorderBankAccountsPayload,
+} from '../models/bank-account.model';
 import { MonthSummary } from '../models/month-summary.model';
 import { AccountStatistics } from '../models/account-statistics.model';
 
@@ -38,6 +42,11 @@ export class BankAccountApiService {
 
   delete(id: number): Observable<void> {
     return this.api.delete<void>(`${this.resource}/${id}`);
+  }
+
+  /** Setzt die Anzeigereihenfolge aller Konten einer Kontokategorie neu. */
+  reorder(payload: ReorderBankAccountsPayload): Observable<void> {
+    return this.api.put<void>(`${this.resource}/reorder`, payload);
   }
 
   /** Kennzahlen des Kontos für einen Abrechnungsmonat (`yyyy-MM`), mit Offline-Rückfall. */

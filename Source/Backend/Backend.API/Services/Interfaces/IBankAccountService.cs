@@ -14,4 +14,6 @@ public interface IBankAccountService
     Task<BankAccountDto> UpdateAsync(int userId, int accountId, UpdateBankAccountRequest request, CancellationToken ct = default);
 
     Task DeleteAsync(int userId, int accountId, CancellationToken ct = default);
+
+    Task ReorderAsync(int userId, ReorderBankAccountsRequest request, CancellationToken ct = default);
 }

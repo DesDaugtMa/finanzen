@@ -1,6 +1,9 @@
 # v1.2 — 11.09.2026
 
-Der störende Scrollbalken in der Buchungen-Übersicht wurde entfernt, die Fixkosten-Liste kompakter gestaltet und die Buchungsliste eines Girokontos beschleunigt.
+Konten lassen sich nun frei sortieren, der störende Scrollbalken in der Buchungen-Übersicht wurde entfernt, die Fixkosten-Liste kompakter gestaltet und die Buchungsliste eines Girokontos beschleunigt.
+
+**Features:**
+- Konten können innerhalb ihrer Kontoart per Ziehen und Ablegen in eine eigene Reihenfolge gebracht werden, die überall in der App erhalten bleibt.
 
 **Changes:**
 - Die Fixkosten-Positionen werden kompakter dargestellt und stehen auf breiteren Bildschirmen zu zweit nebeneinander statt nur untereinander.

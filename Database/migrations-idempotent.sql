@@ -720,3 +720,41 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260911092700_AddAccountSortOrder') THEN
+    ALTER TABLE "Accounts" ADD "SortOrder" integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260911092700_AddAccountSortOrder') THEN
+    UPDATE "Accounts" a
+    SET "SortOrder" = ranked."Rank" - 1
+    FROM (
+        SELECT "Id", ROW_NUMBER() OVER (PARTITION BY "UserId", "Type" ORDER BY "Name", "Id") AS "Rank"
+        FROM "Accounts"
+    ) AS ranked
+    WHERE a."Id" = ranked."Id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260911092700_AddAccountSortOrder') THEN
+    CREATE INDEX "IX_Accounts_UserId_Type_SortOrder" ON "Accounts" ("UserId", "Type", "SortOrder");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260911092700_AddAccountSortOrder') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260911092700_AddAccountSortOrder', '10.0.9');
+    END IF;
+END $EF$;
+COMMIT;
+

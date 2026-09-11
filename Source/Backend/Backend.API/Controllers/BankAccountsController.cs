@@ -91,4 +91,16 @@ public sealed class BankAccountsController(
         await bankAccountService.DeleteAsync(userId.Value, id, ct);
         return NoContent();
     }
+
+    /// <summary>Setzt die Anzeigereihenfolge aller Konten einer Kontokategorie neu.</summary>
+    [HttpPut("reorder")]
+    public async Task<IActionResult> Reorder([FromBody] ReorderBankAccountsRequest request, CancellationToken ct)
+    {
+        var userId = currentUser.UserId;
+        if (userId is null)
+            return Unauthorized();
+
+        await bankAccountService.ReorderAsync(userId.Value, request, ct);
+        return NoContent();
+    }
 }

@@ -1,3 +1,4 @@
+import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,7 +30,7 @@ import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/a
 @Component({
   selector: 'app-bank-account-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MoneyAmountComponent, SettledBalanceComponent],
+  imports: [CdkDragHandle, RouterLink, MoneyAmountComponent, SettledBalanceComponent],
   host: {
     '(document:click)': 'onDocumentClick($event)',
     '(document:keydown.escape)': 'closeMenu()',
@@ -73,6 +74,16 @@ import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/a
         </div>
 
         <div class="account-card__actions">
+          @if (sortable()) {
+            <button
+              type="button"
+              class="btn fin-btn-icon account-card__handle"
+              cdkDragHandle
+              [attr.aria-label]="'„' + item.name + '“ verschieben'"
+            >
+              <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+            </button>
+          }
           <button
             type="button"
             class="btn fin-btn-icon"
@@ -231,12 +242,23 @@ import { accountTypeIcon, accountTypeSingular } from '../../../../shared/utils/a
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      /* Über der stretched-link-Fläche, damit das Menü nicht zur Detailseite navigiert. */
+      /* Über der stretched-link-Fläche, damit weder Ziehgriff noch Menü zur
+         Detailseite navigieren. */
       .account-card__actions {
         position: relative;
         z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: var(--fin-space-1);
         flex-shrink: 0;
         margin: calc(-1 * var(--fin-space-1)) calc(-1 * var(--fin-space-2)) 0 0;
+      }
+      .account-card__handle {
+        cursor: grab;
+        touch-action: none;
+      }
+      .account-card__handle:active {
+        cursor: grabbing;
       }
       .account-card__menu {
         min-width: 11rem;
@@ -281,6 +303,8 @@ export class BankAccountCardComponent {
   readonly periodLabel = input.required<string>();
   /** Der Monat (`yyyy-MM`), mit dem die Detailseite geöffnet wird. */
   readonly detailMonth = input.required<string>();
+  /** Ob die Kontokategorie mindestens zwei Konten hat und der Ziehgriff daher etwas bewirkt. */
+  readonly sortable = input(false);
 
   readonly edit = output<AccountBalance>();
   readonly remove = output<AccountBalance>();

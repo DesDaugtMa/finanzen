@@ -38,3 +38,12 @@ export interface BankAccountPayload {
   color?: string | null;
   initialBalance: number;
 }
+
+/**
+ * Die vollständige, neue Reihenfolge aller Konten einer Kontokategorie, von oben
+ * nach unten. Spiegelt `ReorderBankAccountsRequest` des Backends.
+ */
+export interface ReorderBankAccountsPayload {
+  accountIds: number[];
+  accountType: AccountType;
+}

@@ -36,8 +36,14 @@ internal sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             .IsRequired()
             .HasPrecision(18, 4);
 
+        builder.Property(a => a.SortOrder)
+            .IsRequired();
+
         builder.HasIndex(a => new { a.UserId, a.Type })
             .HasDatabaseName("IX_Accounts_UserId_Type");
+
+        builder.HasIndex(a => new { a.UserId, a.Type, a.SortOrder })
+            .HasDatabaseName("IX_Accounts_UserId_Type_SortOrder");
 
         builder.HasOne(a => a.User)
             .WithMany(u => u.Accounts)

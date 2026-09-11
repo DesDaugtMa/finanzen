@@ -23,6 +23,13 @@ public class Account
     /// </summary>
     public decimal InitialBalance { get; set; }
 
+    /// <summary>
+    /// Position innerhalb der eigenen Kontokategorie (<see cref="Type"/>), von Nutzern per
+    /// Drag &amp; Drop frei wählbar. Bestimmt die Anzeigereihenfolge überall, wo Konten
+    /// aufgelistet werden.
+    /// </summary>
+    public int SortOrder { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedAt { get; set; }
 

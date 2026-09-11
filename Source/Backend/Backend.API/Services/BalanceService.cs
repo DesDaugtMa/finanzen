@@ -208,7 +208,7 @@ public sealed class BalanceService(
     private async Task<List<AccountRow>> LoadAccountsAsync(int userId, CancellationToken ct)
         => await accountAccess.QueryOwned(userId)
             .OrderBy(a => a.Type)
-            .ThenBy(a => a.Name)
+            .ThenBy(a => a.SortOrder)
             .ThenBy(a => a.Id)
             .Select(a => new AccountRow(
                 a.Id,
@@ -338,7 +338,7 @@ public sealed class BalanceService(
     private async Task<string> LoadCurrencyAsync(int userId, CancellationToken ct)
         => await accountAccess.QueryOwned(userId)
             .OrderBy(a => a.Type)
-            .ThenBy(a => a.Name)
+            .ThenBy(a => a.SortOrder)
             .ThenBy(a => a.Id)
             .Select(a => a.Currency)
             .FirstOrDefaultAsync(ct) ?? DefaultCurrency;
