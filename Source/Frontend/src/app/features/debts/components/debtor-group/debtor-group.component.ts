@@ -70,6 +70,7 @@ export interface DebtEntryEvent {
       }
       .debtor__header {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--fin-space-3);
         padding: var(--fin-space-4) var(--fin-space-5);
@@ -94,6 +95,9 @@ export interface DebtEntryEvent {
       }
       .debtor__total {
         flex: 0 0 auto;
+        // Rutscht der Betrag bei Platzmangel in eine eigene Zeile, bleibt er
+        // dort dennoch rechtsbündig statt an den Rand von Avatar/Name zu kleben.
+        margin-inline-start: auto;
         text-align: right;
       }
       .debtor__body {

@@ -199,6 +199,7 @@ interface DebtPosition {
 
       .debt-card__head {
         display: flex;
+        flex-wrap: wrap;
         align-items: flex-start;
         gap: var(--fin-space-2);
         margin-bottom: var(--fin-space-3);
@@ -227,6 +228,9 @@ interface DebtPosition {
       .debt-card__actions {
         display: flex;
         flex-shrink: 0;
+        // Rutschen die Aktionen bei schmaler Kartenbreite in eine eigene Zeile,
+        // bleiben sie dort dennoch rechtsbündig statt am Titel zu kleben.
+        margin-inline-start: auto;
         gap: var(--fin-space-1);
       }
       .debt-card__remove:hover {

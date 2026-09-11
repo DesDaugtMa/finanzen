@@ -68,7 +68,7 @@ const SEARCH_DEBOUNCE_MS = 300;
     AssignDebtTransactionDialogComponent,
   ],
   template: `
-    <div class="container">
+    <div class="container fin-container--wide">
       <header class="fin-page-header">
         <div class="fin-page-header__text">
           <span class="fin-eyebrow">Forderungen</span>
@@ -150,7 +150,7 @@ const SEARCH_DEBOUNCE_MS = 300;
               </button>
             </app-empty-state>
           } @else {
-            <div class="debts-list">
+            <div class="fin-grid fin-grid--cards">
               @for (debtor of overview.debtors; track debtor.personName) {
                 <app-debtor-group
                   [debtor]="debtor"
@@ -234,11 +234,6 @@ const SEARCH_DEBOUNCE_MS = 300;
       .debts-subtitle {
         color: var(--fin-text-muted);
         font-size: var(--fin-text-sm);
-      }
-      .debts-list {
-        display: flex;
-        flex-direction: column;
-        gap: var(--fin-space-4);
       }
       .debts-skeleton {
         display: flex;

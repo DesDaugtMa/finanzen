@@ -170,8 +170,11 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
 }
 
+// `auto-fill` statt `auto-fit`: leere, überzählige Spalten bleiben erhalten statt
+// zu kollabieren — sonst würde ihr freier Platz komplett den wenigen vorhandenen
+// Karten zufallen und eine einzelne oder wenige Karten unnatürlich breit ziehen.
 .fin-grid--cards {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
 }
 
 // Kompakte Kennzahlen: auf dem Handy bewusst feste zwei Spalten statt `auto-fit`.

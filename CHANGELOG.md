@@ -6,6 +6,7 @@ Der störende Scrollbalken in der Buchungen-Übersicht wurde entfernt, die Fixko
 - Die Fixkosten-Positionen werden kompakter dargestellt und stehen auf breiteren Bildschirmen zu zweit nebeneinander statt nur untereinander.
 - Suche, Filter und Sortierung der Buchungsliste eines Girokontos wirken jetzt sofort, ohne Wartezeit.
 - Die Seitenblätterei unterhalb der Buchungsliste entfällt, da alle Buchungen des Monats auf einmal angezeigt werden.
+- Die Schuldner-Übersicht zeigt die einzelnen Personen ab Tablet-Breite nebeneinander in einem Raster statt einzeln untereinander und nutzt auf sehr breiten Bildschirmen mehr Platz.
 
 **Bugfixes:**
 - Der stets sichtbare, kaum aussagekräftige Scrollbalken neben der Buchungsliste wird nicht mehr angezeigt.
