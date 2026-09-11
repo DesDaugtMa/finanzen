@@ -13,10 +13,12 @@ public sealed class TransactionsController(
     ITransactionService transactionService,
     ICurrentUser currentUser) : FinanceControllerBase(currentUser)
 {
+    /// <summary>Alle Buchungen eines Abrechnungsmonats. Filterung und Sortierung laufen im Frontend.</summary>
+    /// <param name="month">Monat im Format <c>yyyy-MM</c>, z. B. <c>2026-07</c>.</param>
     [HttpGet]
-    public async Task<ActionResult<PagedResult<TransactionDto>>> GetPage(
-        int accountId, [FromQuery] TransactionQuery query, CancellationToken ct)
-        => Ok(await transactionService.ListAsync(UserId, accountId, query, ct));
+    public async Task<ActionResult<IReadOnlyList<TransactionDto>>> GetMonth(
+        int accountId, [FromQuery] string month, CancellationToken ct)
+        => Ok(await transactionService.ListAsync(UserId, accountId, ParseMonth(month), ct));
 
     [HttpGet("{transactionId:int}")]
     public async Task<ActionResult<TransactionDto>> GetById(int accountId, int transactionId, CancellationToken ct)

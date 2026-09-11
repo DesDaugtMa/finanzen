@@ -21,7 +21,7 @@ import { Category } from '../../../../core/models/category.model';
 import { FixedCost } from '../../../../core/models/fixed-cost.model';
 import {
   LinkedTransaction,
-  PagedResult,
+  SortDirection,
   Transaction,
   TransactionFilter,
   TransactionSort,
@@ -51,15 +51,14 @@ type DialogState =
   /** Die Gegenbuchung von `transaction`, aufgerufen über das Kennzeichen in der Liste. */
   | { kind: 'link'; transaction: Transaction };
 
-const DEFAULT_PAGE_SIZE = 25;
-
 /** Wie lange die angesprungene Buchung hervorgehoben bleibt. */
 const HIGHLIGHT_DURATION_MS = 2600;
 
 /**
- * Buchungen des gewählten Monats: Suche, Filter, Sortierung und Seitenwechsel laufen
- * serverseitig. Jede Buchung lässt sich 1-zu-1 mit einer Buchung eines anderen Kontos
- * verknüpfen — etwa die beiden Seiten einer Umbuchung.
+ * Buchungen des gewählten Monats: Ein Request pro Monatswechsel lädt alle Buchungen,
+ * Suche, Filter und Sortierung laufen danach clientseitig auf der geladenen Liste.
+ * Jede Buchung lässt sich 1-zu-1 mit einer Buchung eines anderen Kontos verknüpfen —
+ * etwa die beiden Seiten einer Umbuchung.
  */
 @Component({
   selector: 'app-transactions-tab',
@@ -191,32 +190,6 @@ const HIGHLIGHT_DURATION_MS = 2600;
             (settle)="settleOne($event)"
             (openLink)="openLink($event)"
           />
-
-          @if (totalPages() > 1) {
-            <nav class="pager" aria-label="Seiten">
-              <span class="pager__status"> Seite {{ filter().page }} von {{ totalPages() }} </span>
-              <div class="pager__buttons">
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm"
-                  [disabled]="filter().page <= 1"
-                  (click)="goToPage(filter().page - 1)"
-                >
-                  <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                  <span>Zurück</span>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary btn-sm"
-                  [disabled]="filter().page >= totalPages()"
-                  (click)="goToPage(filter().page + 1)"
-                >
-                  <span>Weiter</span>
-                  <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                </button>
-              </div>
-            </nav>
-          }
         }
       </div>
     </section>
@@ -355,26 +328,6 @@ const HIGHLIGHT_DURATION_MS = 2600;
         gap: var(--fin-space-3);
       }
 
-      .pager {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--fin-space-3);
-        margin-top: var(--fin-space-4);
-        padding-top: var(--fin-space-4);
-        border-top: 1px solid var(--fin-border-subtle);
-      }
-      .pager__status {
-        color: var(--fin-text-muted);
-        font-size: var(--fin-text-sm);
-        font-variant-numeric: tabular-nums;
-      }
-      .pager__buttons {
-        display: flex;
-        gap: var(--fin-space-2);
-      }
-
       .action-bar {
         position: sticky;
         /* Sitzt direkt über der Tab-Bar; deren Höhe steckt inklusive
@@ -428,8 +381,8 @@ export class TransactionsTabComponent {
 
   /**
    * Die Buchung, zu der ein Sprung von ihrer Gegenbuchung geführt hat. Sie wird auf
-   * jeden Fall angezeigt — Filter werden dafür zurückgesetzt, und der Server liefert
-   * die Seite, auf der sie steht.
+   * jeden Fall angezeigt — Filter werden dafür zurückgesetzt und die Buchung im
+   * bereits geladenen Monat gesucht und hervorgehoben.
    */
   readonly focusTransactionId = input<number | null>(null);
 
@@ -446,7 +399,10 @@ export class TransactionsTabComponent {
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
 
-  protected readonly result = signal<PagedResult<Transaction> | null>(null);
+  /** Alle Buchungen des gewählten Monats, ungefiltert wie vom Server geladen. */
+  protected readonly rawTransactions = signal<Transaction[]>([]);
+  /** True, sobald der erste Ladevorgang abgeschlossen ist — verhindert eine falsche „Keine Buchungen“-Anzeige vor dem ersten Laden. */
+  protected readonly loadedOnce = signal(false);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly saving = signal(false);
@@ -478,12 +434,22 @@ export class TransactionsTabComponent {
     type: null,
     sort: 'BookingDate',
     direction: 'Descending',
-    page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  protected readonly transactions = computed(() => this.result()?.items ?? []);
-  protected readonly totalPages = computed(() => this.result()?.totalPages ?? 0);
+  /** Die geladene Liste, gefiltert und sortiert nach dem aktuellen Filterzustand. */
+  protected readonly transactions = computed(() => {
+    const filter = this.filter();
+    const search = filter.search.trim().toLocaleLowerCase('de');
+
+    const filtered = this.rawTransactions().filter((item) => {
+      if (search && !matchesSearch(item, search)) return false;
+      if (filter.type !== null && item.type !== filter.type) return false;
+      return matchesCategory(item, filter);
+    });
+
+    return filtered.sort((a, b) => compareTransactions(a, b, filter.sort, filter.direction));
+  });
+
   protected readonly monthLabel = computed(() => formatMonthLong(this.month()));
 
   /** Anzahl der Platzhalter-Zeilen während des Ladens. */
@@ -517,21 +483,20 @@ export class TransactionsTabComponent {
   });
 
   protected readonly resultLabel = computed(() => {
-    const result = this.result();
-    if (!result) return '';
+    if (!this.loadedOnce()) return '';
 
-    const count = result.totalCount;
+    const count = this.transactions().length;
     if (count === 0) return 'Keine Buchungen';
 
     return count === 1 ? '1 Buchung' : `${count} Buchungen`;
   });
 
   constructor() {
-    // Beim Monatswechsel beginnt die Liste wieder auf Seite 1.
+    // Beim Monatswechsel wird die Liste komplett neu geladen.
     effect(() => {
       const month = this.month();
       untracked(() => {
-        this.filter.update((filter) => ({ ...filter, month, page: 1 }));
+        this.filter.update((filter) => ({ ...filter, month }));
         this.load();
         this.loadRemainingBudgets();
         this.loadFixedCosts();
@@ -540,6 +505,8 @@ export class TransactionsTabComponent {
 
     // Ein Sprung von der Gegenbuchung setzt die Filter zurück: Bliebe ein Filter
     // stehen, könnte er genau die Buchung ausblenden, für die der Sprung gedacht war.
+    // Die Buchungen des Monats sind ohnehin bereits geladen (oder werden es durch den
+    // Monatswechsel-Effect gerade) — ein eigener Ladevorgang ist dafür nicht nötig.
     effect(() => {
       const focusId = this.focusTransactionId();
       if (focusId === null) return;
@@ -551,26 +518,22 @@ export class TransactionsTabComponent {
           type: null,
           categoryIds: [],
           includeUncategorized: false,
-          page: 1,
         }));
-        this.load(focusId);
+        this.resolveFocus();
       });
     });
   }
 
-  protected load(focusTransactionId: number | null = null): void {
+  protected load(): void {
     this.loading.set(true);
     this.error.set('');
 
-    this.transactionApi.list(this.accountId(), this.filter(), focusTransactionId).subscribe({
-      next: (result) => {
-        // Der Server kann eine andere Seite liefern, wenn die gesuchte Buchung
-        // woanders steht — die Seitenanzeige muss dem folgen.
-        this.filter.update((filter) => ({ ...filter, page: result.page }));
-        this.result.set(result);
+    this.transactionApi.list(this.accountId(), this.month()).subscribe({
+      next: (items) => {
+        this.rawTransactions.set(items);
+        this.loadedOnce.set(true);
         this.loading.set(false);
-
-        if (focusTransactionId !== null) this.highlight(focusTransactionId);
+        this.resolveFocus();
       },
       error: (err: Error) => {
         this.error.set(err.message || 'Die Buchungen konnten nicht geladen werden.');
@@ -580,8 +543,7 @@ export class TransactionsTabComponent {
   }
 
   protected applyFilter(change: TransactionFilterChange): void {
-    this.filter.update((filter) => ({ ...filter, ...change, page: 1 }));
-    this.load();
+    this.filter.update((filter) => ({ ...filter, ...change }));
   }
 
   protected resetFilters(): void {
@@ -591,9 +553,7 @@ export class TransactionsTabComponent {
       type: null,
       categoryIds: [],
       includeUncategorized: false,
-      page: 1,
     }));
-    this.load();
   }
 
   /** Erneutes Klicken auf dieselbe Spalte dreht die Richtung um. */
@@ -607,14 +567,21 @@ export class TransactionsTabComponent {
             ? 'Descending'
             : 'Ascending'
           : 'Descending',
-      page: 1,
     }));
-    this.load();
   }
 
-  protected goToPage(page: number): void {
-    this.filter.update((filter) => ({ ...filter, page }));
-    this.load();
+  /**
+   * Sucht die angesprungene Buchung im bereits geladenen Monat und hebt sie hervor.
+   * Steht sie (noch) nicht in der aktuell geladenen Liste — etwa weil ein Monatswechsel
+   * parallel noch lädt —, bleibt der Versuch folgenlos; `load()` ruft nach dem nächsten
+   * Ladevorgang erneut auf.
+   */
+  private resolveFocus(): void {
+    const focusId = this.focusTransactionId();
+    if (focusId === null) return;
+
+    const target = this.rawTransactions().some((item) => item.id === focusId);
+    if (target) this.highlight(focusId);
   }
 
   protected openTransaction(transaction: Transaction | null): void {
@@ -856,4 +823,67 @@ export class TransactionsTabComponent {
       error: () => this.fixedCosts.set([]),
     });
   }
+}
+
+/** Case-insensitive Volltextsuche über Bezeichnung und Notiz. */
+function matchesSearch(item: Transaction, search: string): boolean {
+  const haystack = `${item.title} ${item.note ?? ''}`.toLocaleLowerCase('de');
+  return haystack.includes(search);
+}
+
+/**
+ * Kategorie-Filter: Ist sowohl eine Kategorie als auch „Ohne Kategorie“ gewählt, zählt
+ * eine passende Kategorie oder das Fehlen einer Kategorie. Die Filterleiste selbst
+ * erlaubt aktuell nur eine der beiden Auswahlen gleichzeitig — die Kombination bleibt
+ * hier trotzdem korrekt behandelt.
+ */
+function matchesCategory(item: Transaction, filter: TransactionFilter): boolean {
+  const { categoryIds, includeUncategorized } = filter;
+
+  if (categoryIds.length > 0 && includeUncategorized)
+    return item.categoryId === null || categoryIds.includes(item.categoryId);
+
+  if (categoryIds.length > 0) return item.categoryId !== null && categoryIds.includes(item.categoryId);
+
+  if (includeUncategorized) return item.categoryId === null;
+
+  return true;
+}
+
+/**
+ * Vergleicht zwei Buchungen nach dem gewählten Kriterium, mit der Id als stabilem
+ * Tie-Breaker in derselben Richtung — spiegelt die bisherige Server-Sortierung.
+ */
+function compareTransactions(
+  a: Transaction,
+  b: Transaction,
+  sort: TransactionSort,
+  direction: SortDirection,
+): number {
+  const factor = direction === 'Ascending' ? 1 : -1;
+  const primary = comparePrimary(a, b, sort, factor);
+
+  return primary !== 0 ? primary : (a.id - b.id) * factor;
+}
+
+function comparePrimary(a: Transaction, b: Transaction, sort: TransactionSort, factor: number): number {
+  switch (sort) {
+    case 'Amount':
+      return (a.amount - b.amount) * factor;
+    case 'Title':
+      return a.title.localeCompare(b.title, 'de', { sensitivity: 'base' }) * factor;
+    case 'Category':
+      return compareCategory(a, b, factor);
+    default:
+      return (a.bookingDate < b.bookingDate ? -1 : a.bookingDate > b.bookingDate ? 1 : 0) * factor;
+  }
+}
+
+/** Buchungen ohne Kategorie landen unabhängig von der Sortierrichtung immer am Ende. */
+function compareCategory(a: Transaction, b: Transaction, factor: number): number {
+  if (a.categoryName === null && b.categoryName === null) return 0;
+  if (a.categoryName === null) return 1;
+  if (b.categoryName === null) return -1;
+
+  return a.categoryName.localeCompare(b.categoryName, 'de', { sensitivity: 'base' }) * factor;
 }

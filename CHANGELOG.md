@@ -1,9 +1,11 @@
 # v1.2 — 11.09.2026
 
-Der störende Scrollbalken in der Buchungen-Übersicht wurde entfernt und die Fixkosten-Liste kompakter gestaltet.
+Der störende Scrollbalken in der Buchungen-Übersicht wurde entfernt, die Fixkosten-Liste kompakter gestaltet und die Buchungsliste eines Girokontos beschleunigt.
 
 **Changes:**
 - Die Fixkosten-Positionen werden kompakter dargestellt und stehen auf breiteren Bildschirmen zu zweit nebeneinander statt nur untereinander.
+- Suche, Filter und Sortierung der Buchungsliste eines Girokontos wirken jetzt sofort, ohne Wartezeit.
+- Die Seitenblätterei unterhalb der Buchungsliste entfällt, da alle Buchungen des Monats auf einmal angezeigt werden.
 
 **Bugfixes:**
 - Der stets sichtbare, kaum aussagekräftige Scrollbalken neben der Buchungsliste wird nicht mehr angezeigt.

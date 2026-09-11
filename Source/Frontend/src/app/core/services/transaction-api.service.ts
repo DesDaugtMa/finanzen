@@ -4,9 +4,7 @@ import { ApiService } from './api.service';
 import {
   LinkCandidateQuery,
   LinkedTransaction,
-  PagedResult,
   Transaction,
-  TransactionFilter,
   SettleResult,
   TransactionPayload,
 } from '../models/transaction.model';
@@ -20,19 +18,9 @@ export class TransactionApiService {
     return `bankaccounts/${accountId}/transactions`;
   }
 
-  /**
-   * Buchungen eines Monats. Ist `focusTransactionId` gesetzt, liefert der Server die
-   * Seite, auf der diese Buchung steht — sonst die angeforderte.
-   */
-  list(
-    accountId: number,
-    filter: TransactionFilter,
-    focusTransactionId: number | null = null,
-  ): Observable<PagedResult<Transaction>> {
-    const params = buildParams(filter);
-    if (focusTransactionId !== null) params['focusTransactionId'] = focusTransactionId;
-
-    return this.api.get<PagedResult<Transaction>>(this.resource(accountId), { params });
+  /** Alle Buchungen eines Monats. Filterung und Sortierung laufen im Frontend. */
+  list(accountId: number, month: string): Observable<Transaction[]> {
+    return this.api.get<Transaction[]>(this.resource(accountId), { params: { month } });
   }
 
   create(accountId: number, payload: TransactionPayload): Observable<Transaction> {
@@ -105,28 +93,4 @@ export class TransactionApiService {
   unlink(accountId: number, transactionId: number): Observable<void> {
     return this.api.delete<void>(`${this.resource(accountId)}/${transactionId}/link`);
   }
-}
-
-/**
- * Baut die Query-Parameter der Liste. Leere Filter werden weggelassen, damit die
- * URL kurz bleibt und der Server seine Defaults verwendet.
- */
-function buildParams(
-  filter: TransactionFilter,
-): Record<string, string | number | boolean | readonly string[]> {
-  const params: Record<string, string | number | boolean | readonly string[]> = {
-    month: filter.month,
-    sort: filter.sort,
-    direction: filter.direction,
-    page: filter.page,
-    pageSize: filter.pageSize,
-  };
-
-  const search = filter.search.trim();
-  if (search) params['search'] = search;
-  if (filter.type) params['type'] = filter.type;
-  if (filter.includeUncategorized) params['includeUncategorized'] = true;
-  if (filter.categoryIds.length > 0) params['categoryIds'] = filter.categoryIds.map(String);
-
-  return params;
 }

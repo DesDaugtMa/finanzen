@@ -17,31 +17,18 @@ public sealed class TransactionService(
 {
     private const int MoneyScale = 2;
 
-    public async Task<PagedResult<TransactionDto>> ListAsync(int userId, int accountId, TransactionQuery query, CancellationToken ct = default)
+    public async Task<IReadOnlyList<TransactionDto>> ListAsync(int userId, int accountId, AccountingMonth month, CancellationToken ct = default)
     {
         await accountAccess.RequireOwnedAsync(userId, accountId, ct);
 
-        var month = AccountingMonth.Parse(query.Month);
-        var filtered = ApplyFilters(QueryOfAccount(accountId).Where(t => t.AccountingMonth == month.ToDateOnly()), query);
-
-        var totalCount = await filtered.CountAsync(ct);
-
-        var pageSize = Math.Clamp(query.PageSize, 1, TransactionQuery.MaxPageSize);
-        var page = await ResolvePageAsync(filtered, query, pageSize, ct);
-
-        var items = await ApplySorting(filtered, query)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+        var items = await QueryOfAccount(accountId)
+            .Where(t => t.AccountingMonth == month.ToDateOnly())
+            .OrderByDescending(t => t.BookingDate)
+            .ThenByDescending(t => t.Id)
             .Select(ProjectToDto)
             .ToListAsync(ct);
 
-        return new PagedResult<TransactionDto>
-        {
-            Items = items.Select(RoundAmount).ToList(),
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = totalCount
-        };
+        return items.Select(RoundAmount).ToList();
     }
 
     public async Task<TransactionDto> GetAsync(int userId, int accountId, int transactionId, CancellationToken ct = default)
@@ -292,71 +279,6 @@ public sealed class TransactionService(
 
     private IQueryable<Transaction> QueryOfAccount(int accountId)
         => context.Transactions.Where(t => t.AccountId == accountId);
-
-    private static IQueryable<Transaction> ApplyFilters(IQueryable<Transaction> query, TransactionQuery filter)
-    {
-        if (!string.IsNullOrWhiteSpace(filter.Search))
-        {
-            var pattern = $"%{filter.Search.Trim()}%";
-            query = query.Where(t => EF.Functions.ILike(t.Title, pattern)
-                                     || (t.Note != null && EF.Functions.ILike(t.Note, pattern)));
-        }
-
-        if (filter.Type is not null)
-            query = query.Where(t => t.Type == filter.Type);
-
-        var categoryIds = filter.CategoryIds?.Where(id => id > 0).Distinct().ToArray() ?? [];
-
-        if (categoryIds.Length > 0 && filter.IncludeUncategorized)
-            query = query.Where(t => t.CategoryId == null || categoryIds.Contains(t.CategoryId.Value));
-        else if (categoryIds.Length > 0)
-            query = query.Where(t => t.CategoryId != null && categoryIds.Contains(t.CategoryId.Value));
-        else if (filter.IncludeUncategorized)
-            query = query.Where(t => t.CategoryId == null);
-
-        return query;
-    }
-
-    /// <summary>
-    /// Sortiert nach dem gewählten Kriterium und immer zusätzlich nach Id, damit die
-    /// Reihenfolge über Seitengrenzen hinweg stabil bleibt.
-    /// </summary>
-    private static IQueryable<Transaction> ApplySorting(IQueryable<Transaction> query, TransactionQuery filter)
-    {
-        var descending = filter.Direction == SortDirection.Descending;
-
-        Expression<Func<Transaction, object?>> key = filter.Sort switch
-        {
-            TransactionSort.Amount => t => t.Amount,
-            TransactionSort.Category => t => t.Category!.Name,
-            TransactionSort.Title => t => t.Title,
-            _ => t => t.BookingDate
-        };
-
-        var ordered = descending ? query.OrderByDescending(key) : query.OrderBy(key);
-
-        return descending ? ordered.ThenByDescending(t => t.Id) : ordered.ThenBy(t => t.Id);
-    }
-
-    /// <summary>
-    /// Bestimmt die auszuliefernde Seite. Ist eine Buchung angefordert, die sichtbar sein
-    /// soll, gewinnt ihre Position — nur so landet ein Sprung von der Gegenbuchung auch
-    /// dann auf der richtigen Seite, wenn die Buchung weit unten in der Liste steht.
-    /// Geladen werden dafür nur die IDs des Monats, nicht die Buchungen selbst.
-    /// </summary>
-    private async Task<int> ResolvePageAsync(
-        IQueryable<Transaction> filtered, TransactionQuery query, int pageSize, CancellationToken ct)
-    {
-        var requestedPage = Math.Max(query.Page, 1);
-
-        if (query.FocusTransactionId is not { } focusId)
-            return requestedPage;
-
-        var orderedIds = await ApplySorting(filtered, query).Select(t => t.Id).ToListAsync(ct);
-        var index = orderedIds.IndexOf(focusId);
-
-        return index < 0 ? requestedPage : (index / pageSize) + 1;
-    }
 
     private async Task<Transaction> FindAsync(int accountId, int transactionId, CancellationToken ct)
     {

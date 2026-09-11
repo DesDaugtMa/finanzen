@@ -108,7 +108,7 @@ export interface SettleResult {
 export type TransactionSort = 'BookingDate' | 'Amount' | 'Category' | 'Title';
 export type SortDirection = 'Ascending' | 'Descending';
 
-/** Filter, Sortierung und Seitenausschnitt der Transaktionsliste. */
+/** Filter und Sortierung der Transaktionsliste. Wird clientseitig auf die geladene Liste angewendet. */
 export interface TransactionFilter {
   month: string;
   search: string;
@@ -117,15 +117,4 @@ export interface TransactionFilter {
   type: TransactionType | null;
   sort: TransactionSort;
   direction: SortDirection;
-  page: number;
-  pageSize: number;
-}
-
-/** Ein serverseitig paginierter Ausschnitt einer Liste. */
-export interface PagedResult<T> {
-  items: T[];
-  page: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
 }

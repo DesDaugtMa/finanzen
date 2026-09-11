@@ -10,7 +10,8 @@ namespace Backend.Services.Interfaces;
 /// </summary>
 public interface ITransactionService
 {
-    Task<PagedResult<TransactionDto>> ListAsync(int userId, int accountId, TransactionQuery query, CancellationToken ct = default);
+    /// <summary>Alle Buchungen eines Abrechnungsmonats, sortiert nach Buchungsdatum absteigend, dann Id absteigend.</summary>
+    Task<IReadOnlyList<TransactionDto>> ListAsync(int userId, int accountId, AccountingMonth month, CancellationToken ct = default);
 
     Task<TransactionDto> GetAsync(int userId, int accountId, int transactionId, CancellationToken ct = default);
 
