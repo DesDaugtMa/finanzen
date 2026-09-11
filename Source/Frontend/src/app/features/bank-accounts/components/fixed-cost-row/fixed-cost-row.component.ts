@@ -135,24 +135,30 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
   `,
   styles: [
     `
+      /* Jede Position ist eine eigenständige Karte — dadurch braucht es keine
+         Sonderregel mehr für "erste Zeile ohne Trennlinie" wie in der früheren
+         vertikalen Liste, was im Grid-Layout ohnehin keine natürliche erste
+         Zeile mehr hätte. */
       :host {
         display: block;
+        height: 100%;
       }
       .cost-row {
-        padding: var(--fin-space-4) 0;
-        border-top: 1px solid var(--fin-border-subtle);
-      }
-      /* Die erste Zeile schließt direkt an die Überschrift an. */
-      :host(:first-of-type) .cost-row {
-        border-top: none;
-        padding-top: var(--fin-space-2);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: var(--fin-space-3);
+        background-color: var(--fin-surface);
+        border: 1px solid var(--fin-border-subtle);
+        border-radius: var(--fin-radius-lg);
+        box-shadow: var(--fin-shadow-sm);
       }
 
       .cost-row__head {
         display: flex;
         align-items: flex-start;
         gap: var(--fin-space-2);
-        margin-bottom: var(--fin-space-3);
+        margin-bottom: var(--fin-space-2);
       }
       .cost-row__ident {
         flex: 1 1 auto;
@@ -160,7 +166,7 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
       }
       .cost-row__name {
         margin: 0;
-        font-size: var(--fin-text-base);
+        font-size: var(--fin-text-sm);
         font-weight: 650;
       }
       .cost-row__meta {
@@ -168,12 +174,12 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
         flex-wrap: wrap;
         align-items: center;
         gap: var(--fin-space-2);
-        margin-top: var(--fin-space-2);
+        margin-top: var(--fin-space-1);
         min-width: 0;
       }
       .cost-row__category {
         min-width: 0;
-        font-size: var(--fin-text-sm);
+        font-size: var(--fin-text-xs);
       }
       .cost-row__actions {
         display: flex;
@@ -189,16 +195,19 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
         display: grid;
         /* Drei Werte nebeneinander; auf sehr schmalen Displays bricht das Raster
            um, statt die Beträge zu quetschen. */
-        grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
-        gap: var(--fin-space-3);
-        margin: 0 0 var(--fin-space-3);
+        grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
+        gap: var(--fin-space-2);
+        margin: 0 0 var(--fin-space-2);
+      }
+      .cost-row__figures dt {
+        font-size: var(--fin-text-2xs);
       }
       .cost-row__figures dd {
-        margin: 0.15rem 0 0;
+        margin: 0.1rem 0 0;
       }
 
       .cost-row__details {
-        margin-top: var(--fin-space-3);
+        margin-top: var(--fin-space-2);
       }
       .cost-row__transactions {
         display: flex;
@@ -206,6 +215,11 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
         gap: var(--fin-space-2);
         margin: 0;
         padding: 0;
+        /* Bei vielen zugeordneten Buchungen soll eine aufgeklappte Karte im
+           mehrspaltigen Grid nicht beliebig hoch werden und damit die
+           Nachbarkarte in der gleichen Zeile unlesbar in die Länge ziehen. */
+        max-height: 16rem;
+        overflow-y: auto;
         list-style: none;
       }
       .cost-row__transaction {
@@ -229,9 +243,9 @@ import { FixedCostStatusComponent } from '../fixed-cost-status/fixed-cost-status
       }
 
       .cost-row__hint {
-        margin: var(--fin-space-3) 0 0;
+        margin: var(--fin-space-2) 0 0;
         color: var(--fin-text-muted);
-        font-size: var(--fin-text-sm);
+        font-size: var(--fin-text-xs);
         line-height: var(--fin-leading-snug);
       }
     `,

@@ -147,15 +147,17 @@ const SEARCH_DEBOUNCE_MS = 300;
               </div>
             </app-empty-state>
           } @else {
-            @for (item of month.items; track item.id) {
-              <app-fixed-cost-row
-                [fixedCost]="item"
-                (edit)="openEdit(item)"
-                (remove)="openDelete(item)"
-                (assign)="openAssign(item)"
-                (unlink)="unlinkTransaction(item, $event)"
-              />
-            }
+            <div class="costs-grid">
+              @for (item of month.items; track item.id) {
+                <app-fixed-cost-row
+                  [fixedCost]="item"
+                  (edit)="openEdit(item)"
+                  (remove)="openDelete(item)"
+                  (assign)="openAssign(item)"
+                  (unlink)="unlinkTransaction(item, $event)"
+                />
+              }
+            </div>
           }
         </div>
       </section>
@@ -264,6 +266,23 @@ const SEARCH_DEBOUNCE_MS = 300;
         flex-wrap: wrap;
         justify-content: center;
         gap: var(--fin-space-2);
+      }
+
+      /* Unter 768px eine Spalte (bewusst eine feste Grenze statt auto-fit/
+         minmax, damit auf schmalen Viewports niemals zwei Karten reinpassen);
+         ab 768px — der gleichen Breite, ab der die App auf die Sidebar-
+         Navigation wechselt — zwei Karten nebeneinander. */
+      .costs-grid {
+        display: flex;
+        flex-direction: column;
+        gap: var(--fin-space-3);
+      }
+      @media (min-width: 768px) {
+        .costs-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: var(--fin-space-4);
+        }
       }
 
       .costs-skeleton {
