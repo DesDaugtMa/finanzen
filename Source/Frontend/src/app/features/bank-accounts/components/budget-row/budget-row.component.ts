@@ -31,6 +31,7 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
           [name]="line.categoryName"
           [color]="line.categoryColor"
           [icon]="line.categoryIcon"
+          [attr.title]="line.categoryName"
         />
 
         <div class="budget-input">
@@ -84,22 +85,27 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
   `,
   styles: [
     `
+      /* Anordnung und Trennung übernimmt die umgebende Liste. Die Zeile füllt die
+         Höhe, die sie bekommt, und schiebt den Fortschritt nach unten — so stehen
+         die Balken nebeneinanderliegender Karten auf einer Linie, auch wenn eine
+         davon zusätzlich einen Vorschlag oder Fehler zeigt. */
       :host {
-        display: block;
+        display: flex;
+        flex-direction: column;
       }
       .budget-row {
-        padding: var(--fin-space-4) 0;
-        border-top: 1px solid var(--fin-border-subtle);
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
       }
-      /* Erste Zeile ohne Linie: sie schließt direkt an die Überschrift an. */
-      :host(:first-of-type) .budget-row {
-        border-top: none;
-        padding-top: var(--fin-space-2);
+      .budget-row app-budget-progress {
+        margin-top: auto;
       }
       /* Auf Mobil stehen Kategorie und Betragsfeld untereinander: nebeneinander
          blieben dem Kategorienamen auf einem schmalen Display nur rund 90px,
          womit er auf ein paar Zeichen gekürzt würde. Ab Tablet ist genug Breite
-         für eine Zeile — dort sitzt das Feld rechts. */
+         für eine Zeile — dort sitzt das Feld rechts, und ein langer Name wird
+         gekürzt, statt das Feld in schmalen Karten unter sich zu schieben. */
       .budget-row__head {
         display: flex;
         flex-direction: column;
@@ -113,7 +119,6 @@ import { formatMoney, parseMoneyInput } from '../../../../shared/utils/money.uti
       @media (min-width: 34rem) {
         .budget-row__head {
           flex-direction: row;
-          flex-wrap: wrap;
           align-items: center;
         }
         .budget-row__category {

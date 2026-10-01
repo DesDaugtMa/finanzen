@@ -123,14 +123,18 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
               diesen Monat.
             </p>
 
-            @for (line of month.items; track line.categoryId) {
-              <app-budget-row
-                [budget]="line"
-                [currency]="month.currency"
-                [saving]="savingCategoryId() === line.categoryId"
-                (save)="setBudget(line.categoryId, $event)"
-              />
-            }
+            <ul class="budget-list">
+              @for (line of month.items; track line.categoryId) {
+                <li class="budget-list__item">
+                  <app-budget-row
+                    [budget]="line"
+                    [currency]="month.currency"
+                    [saving]="savingCategoryId() === line.categoryId"
+                    (save)="setBudget(line.categoryId, $event)"
+                  />
+                </li>
+              }
+            </ul>
           </div>
         </section>
       }
@@ -176,6 +180,49 @@ import { BudgetRowComponent } from '../budget-row/budget-row.component';
         margin: 0 0 var(--fin-space-4);
         color: var(--fin-text-muted);
         font-size: var(--fin-text-sm);
+      }
+      .budget-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      /* Mobil: eine Liste mit Trennlinien — die volle Breite gehört jeder Zeile.
+         :where() hält die Spezifität flach, damit die Kartendarstellung ab Tablet
+         diese Regeln schlicht ablöst. */
+      .budget-list__item {
+        padding-block: var(--fin-space-4);
+      }
+      .budget-list__item:where(:first-child) {
+        padding-top: var(--fin-space-2);
+      }
+      .budget-list__item:where(:not(:first-child)) {
+        border-top: 1px solid var(--fin-border-subtle);
+      }
+      /* Ab Tablet: eingesenkte Karten im Raster. Eine Trennlinie hätte dort keine
+         Bedeutung mehr, sie verbände nur Nachbarn statt Vorgänger. Die Spaltenzahl
+         folgt der Breite statt festen Stufen, weil die Seitenleiste ab 62rem den
+         Platz verringert; die Mindestbreite hält Kategorie und Betragsfeld
+         nebeneinander. Die Kartenoptik entspricht .fin-panel--sunken, steht aber
+         hier, weil sie nur ab Tablet gelten darf. auto-fill statt auto-fit: eine
+         einzelne Karte bleibt spaltenbreit, statt sich über die ganze Fläche zu ziehen. */
+      @media (min-width: 48rem) {
+        .budget-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+          gap: var(--fin-space-4);
+        }
+        .budget-list__item {
+          display: flex;
+          flex-direction: column;
+          padding: var(--fin-space-4);
+          background-color: var(--fin-surface-sunken);
+          border: 1px solid var(--fin-border-subtle);
+          border-radius: var(--fin-radius-md);
+        }
+        /* Füllt die Karte, damit die Fortschrittsbalken einer Reihe auf einer Linie stehen. */
+        .budget-list__item > app-budget-row {
+          flex: 1 1 auto;
+        }
       }
       .budget-totals {
         display: grid;

@@ -10,6 +10,7 @@ Konten lassen sich nun frei sortieren, der störende Scrollbalken in der Buchung
 - Suche, Filter und Sortierung der Buchungsliste eines Girokontos wirken jetzt sofort, ohne Wartezeit.
 - Die Seitenblätterei unterhalb der Buchungsliste entfällt, da alle Buchungen des Monats auf einmal angezeigt werden.
 - Die Schuldner-Übersicht zeigt die einzelnen Personen ab Tablet-Breite nebeneinander in einem Raster statt einzeln untereinander und nutzt auf sehr breiten Bildschirmen mehr Platz.
+- Die Budgets je Kategorie eines Girokontos stehen ab Tablet-Breite als einzelne Karten zu zweit nebeneinander statt nur untereinander.
 
 **Bugfixes:**
 - Der stets sichtbare, kaum aussagekräftige Scrollbalken neben der Buchungsliste wird nicht mehr angezeigt.
