@@ -1,5 +1,3 @@
-using Backend.Domain.Entities.Finance;
-
 namespace Backend.Domain.Entities.Auth;
 
 public class User
@@ -25,6 +23,4 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedAt { get; set; }
 
-    public ICollection<UserSession> Sessions { get; set; } = [];
-    public ICollection<Account> Accounts { get; set; } = [];
-}
+    public ICollection<UserSession> Sessions { get; set; } = [];}

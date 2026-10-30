@@ -31,17 +31,17 @@ gewinnt die `CLAUDE.md`. Lies sie zuerst.
 
 ## 1. Mobile-first, dashboard-tauglich
 
-Persönliche Finanzen werden zweigeteilt genutzt: **schnelles Erfassen unterwegs**
-(Ausgabe eintippen am Smartphone) und **prüfendes Lesen am Desktop** (Budgets,
-Berichte, lange Transaktionslisten). Daraus folgt:
+Die App wird zweigeteilt genutzt: **schnelles Erfassen unterwegs** (am
+Smartphone) und **prüfendes Lesen am Desktop** (Auswertungen, lange Listen).
+Daraus folgt:
 
 1. Style zuerst das **Mobile-Layout** (eine Spalte, große Touch-Targets,
-   Daumen-erreichbare Primäraktionen, z. B. „+ Transaktion").
+   Daumen-erreichbare Primäraktionen, z. B. „+ Neu").
 2. Skaliere mit `min-width`-Media-Queries hoch: mehrspaltige Karten-Layouts,
-   echte Tabellen für Transaktionen, breitere Charts. Nie umgekehrt
+   echte Tabellen für lange Listen, breitere Charts. Nie umgekehrt
    (`max-width`-„Reparaturen") arbeiten.
-3. Wichtige Kennzahlen (aktueller Saldo, Budget-Rest) müssen ohne Scrollen
-   sichtbar sein — „above the fold" auf Mobile.
+3. Wichtige Kennzahlen müssen ohne Scrollen sichtbar sein — „above the fold"
+   auf Mobile.
 
 Empfohlene Breakpoints als SCSS-Variablen/-Tokens (an Vorhandenes anpassen):
 
@@ -58,8 +58,8 @@ Das globale SCSS liegt in `src/styles.scss`. **Erst dort nach existierenden
 Tokens suchen**, dann verwenden. Keine Einmal-Werte (hardcodierte Hex-Farben,
 px-Abstände, Font-Größen) in Komponenten.
 
-Tokens, die eine Finanz-App typischerweise braucht (anlegen, falls nicht
-vorhanden — als CSS Custom Properties, damit Theming/Dark-Mode möglich bleibt):
+Typische Tokens (anlegen, falls nicht vorhanden — als CSS Custom Properties,
+damit Theming/Dark-Mode möglich bleibt):
 
 ```scss
 :root {
@@ -69,10 +69,9 @@ vorhanden — als CSS Custom Properties, damit Theming/Dark-Mode möglich bleibt
   --color-text;
   --color-text-muted;
   --color-primary;        // Primäraktion
-  --color-income;         // Einnahmen / positiv
-  --color-expense;        // Ausgaben / negativ
-  --color-warning;        // Budget fast erschöpft
-  --color-danger;         // Budget überschritten / Fehler
+  --color-success;        // positiv / erfolgreich
+  --color-warning;        // Achtung / Grenze fast erreicht
+  --color-danger;         // Fehler / Grenze überschritten
   --color-border;
 
   // Spacing-Skala (4er- oder 8er-Raster)
@@ -85,9 +84,8 @@ vorhanden — als CSS Custom Properties, damit Theming/Dark-Mode möglich bleibt
 }
 ```
 
-**Geldfarben sind nie der einzige Bedeutungsträger.** Einnahme/Ausgabe immer
-zusätzlich über Vorzeichen, Symbol oder Label kennzeichnen (Kontrast +
-Farbenblindheit, WCAG).
+**Farbe ist nie der einzige Bedeutungsträger.** Zustände immer zusätzlich über
+Vorzeichen, Symbol oder Label kennzeichnen (Kontrast + Farbenblindheit, WCAG).
 
 ## 3. Wiederverwendbare Komponenten
 
@@ -100,11 +98,8 @@ Typischer Baukasten für diese App:
 | `AppButton`           | Primär/Sekundär/Ghost/Danger, Loading-State, Icon-Slot    |
 | `AppCard`             | Surface-Container mit konsistentem Padding/Radius/Schatten |
 | `AppInput` / `AppSelect` | Form-Control mit Label, Fehlertext, ARIA-Verknüpfung   |
-| `MoneyInput`          | Betragseingabe (Dezimal, Währung, Validierung > 0)        |
-| `MoneyAmount`         | **Anzeige** eines Betrags (s. u., zentrale Formatierung)  |
-| `TransactionRow`      | Eine Transaktion (Kategorie-Icon, Beschreibung, Betrag)   |
-| `CategoryBadge`       | Kategorie mit Farbe/Icon                                   |
-| `BudgetProgressBar`   | Ausgegeben vs. Budget, mit Warning/Danger-Schwellen       |
+| `ListRow`             | Eine Zeile einer Liste (Icon, Titel, Meta, Aktion)        |
+| `Badge`               | Kurzes Label mit Farbe/Icon                                |
 | `EmptyState`          | Leerer Zustand mit Call-to-Action                         |
 | `ErrorState`          | Einheitliche Fehlermeldung (aus ProblemDetails)           |
 | `LoadingSkeleton`     | Skeleton-Platzhalter beim Laden                           |
@@ -112,26 +107,14 @@ Typischer Baukasten für diese App:
 Eine Komponente einmal bauen, überall wiederverwenden — das erzwingt eine
 einheitliche Designsprache.
 
-## 4. Geld korrekt darstellen
+## 4. Werte korrekt darstellen
 
-- **Eine zentrale Formatierungsstelle** (z. B. `MoneyAmount`-Komponente oder eine
-  `formatMoney()`-Util / Pipe), die alle Beträge gleich rendert.
-- Locale-/Währungs-korrekt über `Intl.NumberFormat` bzw. Angulars `CurrencyPipe`.
-  Default-Locale **de-DE**, Default-Währung **EUR**, sofern nichts anderes
-  konfiguriert ist. Locale ggf. via `LOCALE_ID` / `registerLocaleData` setzen.
-- Beträge kommen als **String oder Integer-Minor-Units** vom Backend (nicht als
-  JS-`number`-Float weiterrechnen). Keine clientseitige Geld-Arithmetik mit
-  Floats; wenn gerechnet werden muss, in Cent/Minor-Units rechnen.
-- Vorzeichen klar: Ausgaben negativ/rot/„−", Einnahmen positiv/grün/„+",
-  zusätzlich mit Label.
-
-```ts
-// Beispiel-Util — an Projekt anpassen
-export function formatMoney(value: string | number, currency = 'EUR'): string {
-  const amount = typeof value === 'string' ? Number(value) : value;
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(amount);
-}
-```
+- **Eine zentrale Formatierungsstelle** je Werteart (Zahl, Datum, …) als
+  Komponente, Util oder Pipe, damit alle Stellen gleich rendern.
+- Locale-korrekt über `Intl.NumberFormat` / `Intl.DateTimeFormat` bzw. Angular-Pipes.
+  Default-Locale **de-DE**, sofern nichts anderes konfiguriert ist.
+- Keine clientseitige Arithmetik mit Floats, wo exakte Werte gefragt sind —
+  rechnen gehört ins Backend.
 
 ## 5. Zustände — immer alle vier behandeln
 
@@ -140,25 +123,25 @@ halbe UX ist nicht fertig.
 
 ```ts
 @Component({
-  selector: 'app-transactions',
+  selector: 'app-items',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (transactions.isLoading()) {
+    @if (items.isLoading()) {
       <app-loading-skeleton />
-    } @else if (transactions.error()) {
-      <app-error-state [error]="transactions.error()" (retry)="transactions.reload()" />
-    } @else if (transactions.value()?.length === 0) {
-      <app-empty-state message="Noch keine Transaktionen" cta="Erste Transaktion erfassen" />
+    } @else if (items.error()) {
+      <app-error-state [error]="items.error()" (retry)="items.reload()" />
+    } @else if (items.value()?.length === 0) {
+      <app-empty-state message="Noch keine Einträge" cta="Ersten Eintrag erfassen" />
     } @else {
-      @for (t of transactions.value(); track t.id) {
-        <app-transaction-row [transaction]="t" />
+      @for (item of items.value(); track item.id) {
+        <app-list-row [item]="item" />
       }
     }
   `,
 })
-export class TransactionsComponent {
-  private readonly api = inject(TransactionApiService);
-  protected readonly transactions = this.api.getTransactionsResource();
+export class ItemsComponent {
+  private readonly api = inject(ItemApiService);
+  protected readonly items = this.api.getItemsResource();
 }
 ```
 
@@ -167,12 +150,12 @@ Nutze das State-Muster, das die Codebase bereits verwendet (`resource()`,
 
 ## 6. Forms (Reactive)
 
-- Reactive Forms, getypt. Validierung deklarativ (Pflichtfeld, Betrag > 0,
-  gültige Kategorie/Konto, gültiges Datum).
+- Reactive Forms, getypt. Validierung deklarativ (Pflichtfeld, Wertebereich,
+  gültige Auswahl, gültiges Datum).
 - Fehlermeldungen sind mit dem Control per `aria-describedby` verknüpft, sichtbar
   und verständlich.
 - Submit-Button zeigt Loading-State und ist während des Requests deaktiviert
-  (kein Doppel-Buchen).
+  (kein doppeltes Absenden).
 - Serverseitige Validierung (ProblemDetails) ist die Wahrheit; Client-Validierung
   ist nur UX-Komfort. Mappe Server-Validierungsfehler zurück auf die Felder.
 
@@ -205,7 +188,7 @@ den Backend-DTOs.
       Flow, Reactive Forms, kein `any`).
 - [ ] Mobile-first gestylt, sauber zu Desktop hochskaliert.
 - [ ] Nur Design-Tokens, keine Einmal-Werte.
-- [ ] Geld über zentrale Formatierung, locale-korrekt, Vorzeichen nicht nur per
+- [ ] Werte über zentrale Formatierung, locale-korrekt, Bedeutung nicht nur per
       Farbe.
 - [ ] Loading / Empty / Error / Success behandelt.
 - [ ] AXE/WCAG-AA bestanden; Touch-Targets groß genug.

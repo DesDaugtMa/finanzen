@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { ChangelogEntry } from '../../../../core/models/changelog.model';
-import { MONTH_LOCALE } from '../../../../shared/utils/month.util';
 
 /** Eine Rubrik innerhalb einer Version, so wie sie angezeigt wird. */
 interface EntryGroup {
@@ -188,7 +187,7 @@ function formatReleaseDate(value: string): string {
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return value;
 
-  return new Intl.DateTimeFormat(MONTH_LOCALE, {
+  return new Intl.DateTimeFormat('de-DE', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

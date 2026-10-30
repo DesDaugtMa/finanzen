@@ -209,7 +209,7 @@ den Eintrag an:
 - Ordne jeden Punkt dem richtigen Abschnitt zu: komplett neu →
   `**Features:**`, vorhandenes verändert → `**Changes:**`, Fehler behoben →
   `**Bugfixes:**`.
-- Jeder Punkt ist **ein neutraler Satz** aus Nutzersicht — z. B. „Depots wurden
+- Jeder Punkt ist **ein neutraler Satz** aus Nutzersicht — z. B. „Einladungen wurden
   hinzugefügt und können nun angelegt werden." Keine Du-Ansprache, keine
   technischen Begriffe, keine Werbesprache.
 - **Frage vor dem Schreiben nach der Versionsnummer.** Schlage sie vor

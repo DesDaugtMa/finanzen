@@ -88,18 +88,6 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IRegistrationTokenService, RegistrationTokenService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 
-// --- DI: Finanz-Dienste ---
-builder.Services.AddScoped<IAccountAccess, AccountAccess>();
-builder.Services.AddScoped<IBankAccountService, BankAccountService>();
-builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IBudgetService, BudgetService>();
-builder.Services.AddScoped<IFixedCostService, FixedCostService>();
-builder.Services.AddScoped<ITransactionService, TransactionService>();
-builder.Services.AddScoped<IDebtService, DebtService>();
-builder.Services.AddScoped<IMonthSummaryService, MonthSummaryService>();
-builder.Services.AddScoped<IAccountStatisticsService, AccountStatisticsService>();
-builder.Services.AddScoped<IBalanceService, BalanceService>();
-
 // --- DI: Changelog ---
 // Singleton: die Datei ändert sich nur mit einer neuen Auslieferung, der Dienst hält
 // das Ergebnis deshalb bis zur nächsten Dateiänderung im Speicher.

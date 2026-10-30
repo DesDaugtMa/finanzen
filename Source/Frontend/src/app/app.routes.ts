@@ -52,22 +52,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'girokonten/:id',
-    loadComponent: () =>
-      import('./features/bank-accounts/pages/bank-account-detail/bank-account-detail.component').then(
-        (m) => m.BankAccountDetailComponent,
-      ),
-    canActivate: [authGuard],
-  },
-  {
-    path: 'schuldner',
-    loadComponent: () =>
-      import('./features/debts/pages/debt-overview/debt-overview.component').then(
-        (m) => m.DebtOverviewComponent,
-      ),
-    canActivate: [authGuard],
-  },
-  {
     path: 'konto',
     loadComponent: () =>
       import('./features/account/pages/account/account.component').then((m) => m.AccountComponent),

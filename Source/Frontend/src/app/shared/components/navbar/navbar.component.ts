@@ -11,7 +11,6 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ChangelogApiService } from '../../../core/services/changelog-api.service';
-import { DebtStateService } from '../../../core/services/debt-state.service';
 import { LogoutButtonComponent } from '../logout-button/logout-button.component';
 
 interface NavTarget {
@@ -178,8 +177,6 @@ export class NavbarComponent {
 
   private readonly changelogApi = inject(ChangelogApiService);
 
-  private readonly debtState = inject(DebtStateService);
-
   private readonly document = inject(DOCUMENT);
 
   /** Trennlinie der Kopfzeile erscheint erst, wenn tatsächlich gescrollt wurde. */
@@ -193,18 +190,6 @@ export class NavbarComponent {
       icon: 'house',
       iconActive: 'house-fill',
       exact: true,
-    },
-    {
-      path: '/schuldner',
-      label: 'Schuldner',
-      shortLabel: 'Schuldner',
-      icon: 'people',
-      iconActive: 'people-fill',
-      exact: false,
-      // Die Zahl kommt aus dem gemeinsamen Stand der Schuldnerliste. Jede Änderung dort
-      // schreibt ihn neu, deshalb steht sie ohne eigenes Nachladen sofort richtig.
-      badge: this.debtState.openCount,
-      badgeLabel: (count) => (count === 1 ? '1 offene Forderung' : `${count} offene Forderungen`),
     },
     // „Sitzungen“ steht bewusst nicht hier: es ist eine Sicherheitseinstellung,
     // kein täglich genutztes Ziel. Erreichbar bleibt es über die Profilseite.
@@ -257,10 +242,6 @@ export class NavbarComponent {
     // beim Aufbau geholt. Der Dienst liest offline aus dem Zwischenspeicher und
     // lässt den Link im Fehlerfall schlicht ohne Version stehen.
     this.changelogApi.ensureVersionLoaded();
-
-    // Der Zähler soll auf jeder Seite stimmen, nicht erst nach einem Besuch der
-    // Schuldnerliste. Danach hält ihn jede Änderung von selbst aktuell.
-    this.debtState.ensureLoaded();
 
     const view = this.document.defaultView;
     if (!view) return;

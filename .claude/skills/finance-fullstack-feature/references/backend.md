@@ -1,14 +1,14 @@
 # Backend-Referenz — .NET 10 Web API, Clean Architecture
 
-Diese Referenz gilt für `./Source/Backend/` (Solution `Backend.slnx`, Projekt
-`Backend/`, **net10.0**, `Nullable` + `ImplicitUsings` aktiviert, ASP.NET-Core
-Controller). Sieh Dir immer zuerst `Program.cs` und einen bestehenden Controller
-an und übernimm den etablierten Stil.
+Diese Referenz gilt für `./Source/Backend/` (Solution `Backend.slnx`, Projekte
+`Backend.API/` und `Backend.DataAccess/`, **net10.0**, `Nullable` +
+`ImplicitUsings` aktiviert, ASP.NET-Core Controller). Sieh Dir immer zuerst
+`Program.cs` und einen bestehenden Controller an und übernimm den etablierten Stil.
 
-> **Hinweis zum Ist-Zustand:** Das Projekt ist evtl. noch nah am Web-API-Template
-> (z. B. `WeatherForecastController`). Wo noch keine Layer existieren, etabliere
-> die unten beschriebene Struktur sauber; schreibe keine Geschäftslogik als
-> Wegwerf-Code in den Controller.
+> **Hinweis zum Ist-Zustand:** Das Projekt enthält derzeit nur die Basis
+> (Benutzerverwaltung, Logging, Settings, Datenbankzugriff). Wo für neue
+> Fachbereiche noch keine Layer existieren, etabliere die unten beschriebene
+> Struktur sauber; schreibe keine Geschäftslogik als Wegwerf-Code in den Controller.
 
 ## 1. Layer & Abhängigkeitsrichtung
 
@@ -16,7 +16,7 @@ Abhängigkeiten zeigen **nach innen**: API → Application → Domain. Infrastru
 implementiert Interfaces, die weiter innen definiert sind.
 
 ```
-Domain          Entities, Value Objects (Money!), Domain-Exceptions, Interfaces
+Domain          Entities, Value Objects, Domain-Exceptions, Interfaces
    ▲
 Application     Use Cases / Application-Services, DTOs, Validierung, Orchestrierung
    ▲
@@ -34,67 +34,42 @@ Struktur immer respektieren.
 - Keine Geschäftslogik in Controllern. Controller: Request annehmen → Use Case
   aufrufen → Ergebnis/Status zurückgeben.
 - Domain hat keine Abhängigkeiten nach außen (kein EF, kein ASP.NET).
-- Programmiere gegen Interfaces (z. B. `IKontoRepository`,
-  `ITransactionService`), registriert im Composition Root (`Program.cs`).
+- Programmiere gegen Interfaces (z. B. `IItemService`), registriert im
+  Composition Root (`Program.cs`).
 
-## 2. Geld korrekt behandeln — kritisch
+## 2. Datentypen & Präzision
 
-- Geld ist **immer `decimal`**, niemals `double`/`float`. Floats verursachen
-  Rundungsfehler und sind in einer Finanz-App ein Bug.
-- Bevorzugt ein `Money`-Value-Object (Betrag + Währung) in der Domain, das
-  Vergleiche/Arithmetik kapselt und Währungs-Mismatches verhindert.
-- Runde bewusst und einheitlich (`MidpointRounding.ToEven` oder fachlich
-  vorgegeben), und nur an definierten Stellen.
+- Exakte Werte (Beträge, Mengen mit Nachkommastellen) sind **immer `decimal`**,
+  niemals `double`/`float` — Floats verursachen Rundungsfehler.
+- Fachlich zusammengehörige Werte bevorzugt als Value Object in der Domain
+  kapseln, das Vergleiche/Arithmetik und Invarianten schützt.
+- Runde bewusst und einheitlich, und nur an definierten Stellen.
 - Persistenz: passende Präzision/Scale konfigurieren (z. B. EF Core
-  `HasPrecision(18, 2)` bzw. `decimal(18,2)`), damit die DB nicht still rundet.
-- Aggregationen (Summe je Kategorie, Budget-Rest, Kontosaldo) müssen
-  deterministisch und exakt sein. In DTOs Beträge als `decimal` führen; bei der
-  JSON-Serialisierung darauf achten, dass keine Float-Repräsentation entsteht
-  (ggf. als String oder mit definierter Präzision serialisieren — konsistent mit
-  dem, was das Frontend erwartet).
-
-```csharp
-public readonly record struct Money(decimal Amount, string Currency)
-{
-    public static Money Euro(decimal amount) => new(amount, "EUR");
-
-    public Money Add(Money other)
-    {
-        EnsureSameCurrency(other);
-        return this with { Amount = Amount + other.Amount };
-    }
-
-    private void EnsureSameCurrency(Money other)
-    {
-        if (Currency != other.Currency)
-            throw new CurrencyMismatchException(Currency, other.Currency);
-    }
-}
-```
+  `HasPrecision(18, 2)`), damit die DB nicht still rundet.
+- Aggregationen müssen deterministisch und exakt sein.
 
 ## 3. Controller — schlank halten
 
 ```csharp
 [ApiController]
 [Route("api/[controller]")]
-public sealed class TransactionsController(ITransactionService transactions) : ControllerBase
+public sealed class ItemsController(IItemService items) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<TransactionDto>>> GetAll(
-        [FromQuery] Guid accountId, CancellationToken ct)
-        => Ok(await transactions.GetForAccountAsync(accountId, ct));
+    public async Task<ActionResult<IReadOnlyList<ItemDto>>> GetAll(CancellationToken ct)
+        => Ok(await items.GetAllAsync(ct));
 
     [HttpPost]
-    public async Task<ActionResult<TransactionDto>> Create(
-        CreateTransactionRequest request, CancellationToken ct)
+    public async Task<ActionResult<ItemDto>> Create(
+        CreateItemRequest request, CancellationToken ct)
     {
-        var created = await transactions.CreateAsync(request, ct);
+        var created = await items.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<TransactionDto>> GetById(Guid id, CancellationToken ct)
-        => Ok(await transactions.GetByIdAsync(id, ct));
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ItemDto>> GetById(int id, CancellationToken ct)
+        => Ok(await items.GetByIdAsync(id, ct));
 }
 ```
 
@@ -110,8 +85,8 @@ public sealed class TransactionsController(ITransactionService transactions) : C
   Verantwortung. Geteilte Logik auslagern, nicht kopieren.
 - Default ist **Application-Services** (kein MediatR/CQRS), außer das Repo nutzt
   bereits ein anderes Muster.
-- Validierung fachlicher Regeln hier oder in der Domain (z. B. „Transaktion
-  braucht existierendes Konto", „Budget-Periode gültig"). Format-/Pflichtfeld-
+- Validierung fachlicher Regeln hier oder in der Domain (z. B. „Eintrag braucht
+  einen existierenden Besitzer", „Zeitraum gültig"). Format-/Pflichtfeld-
   Validierung kann via DataAnnotations/Validator am DTO erfolgen.
 - Mapping Domain ↔ DTO explizit (manuell oder etabliertes Mapping-Tool des Repos).
 
@@ -141,7 +116,6 @@ public sealed class DomainExceptionHandler(IProblemDetailsService problemDetails
         {
             NotFoundException        => (StatusCodes.Status404NotFound, "Nicht gefunden"),
             BusinessRuleException    => (StatusCodes.Status422UnprocessableEntity, "Regel verletzt"),
-            CurrencyMismatchException=> (StatusCodes.Status422UnprocessableEntity, "Währungskonflikt"),
             _                        => (StatusCodes.Status500InternalServerError, "Interner Fehler"),
         };
 
@@ -162,9 +136,6 @@ Domain-Exception-Basis (Beispiele für diese App):
 public abstract class DomainException(string message) : Exception(message);
 public sealed class NotFoundException(string what) : DomainException($"{what} nicht gefunden.");
 public sealed class BusinessRuleException(string message) : DomainException(message);
-public sealed class CurrencyMismatchException(string a, string b)
-    : DomainException($"Währungskonflikt: {a} vs. {b}.");
-// z. B. KontoNotFoundException, BudgetUeberschrittenException als Spezialisierungen
 ```
 
 > **Detail nicht leaken:** Bei `500` keine internen Details/Stacktraces in
@@ -176,15 +147,14 @@ public sealed class CurrencyMismatchException(string a, string b)
   (nicht String-Interpolation):
 
 ```csharp
-logger.LogInformation("Transaktion {TransactionId} für Konto {AccountId} erstellt",
-    created.Id, request.AccountId);
+logger.LogInformation("Eintrag {ItemId} für Benutzer {UserId} erstellt",
+    created.Id, userId);
 ```
 
-- **Niemals sensible Finanzdaten im Klartext loggen:** vollständige
-  Konto-/IBAN-Nummern, personenbezogene Daten. IDs sind ok; Beträge nur, wenn
-  fachlich nötig und unkritisch. Im Zweifel maskieren/weglassen.
+- **Niemals sensible Daten im Klartext loggen:** Passwörter, Tokens,
+  personenbezogene Daten. IDs sind ok. Im Zweifel maskieren/weglassen.
 - Log-Level sinnvoll: `Information` für fachliche Ereignisse, `Warning` für
-  erwartbare Fehlersituationen (z. B. Budget überschritten), `Error` für
+  erwartbare Fehlersituationen (z. B. Regel verletzt), `Error` für
   unerwartete Exceptions.
 - Falls Serilog bereits konfiguriert ist, dessen Konventionen übernehmen;
   ansonsten der Default-`ILogger<T>`.
@@ -194,8 +164,8 @@ logger.LogInformation("Transaktion {TransactionId} für Konto {AccountId} erstel
 - Request-/Response-DTOs sind getrennt von Domain-Entities und stabil — das
   Frontend spiegelt sie in TypeScript-Interfaces. Änderungen am Vertrag bewusst
   und konsistent.
-- Beträge als `decimal` mit definierter Präzision; Datumsangaben als ISO-8601;
-  IDs als `Guid` (oder was das Repo nutzt).
+- Exakte Werte als `decimal` mit definierter Präzision; Datumsangaben als
+  ISO-8601; IDs wie im Repo üblich (derzeit `int`).
 - Eingaben validieren (DataAnnotations am Request oder Validator im Application-
   Layer); ungültige Eingaben → `400/422` mit `(Validation)ProblemDetails`.
 
@@ -203,11 +173,11 @@ logger.LogInformation("Transaktion {TransactionId} für Konto {AccountId} erstel
 
 - [ ] Layer respektiert; Abhängigkeiten zeigen nach innen; keine Logik im
       Controller.
-- [ ] Geld ist `decimal` (idealerweise `Money`-Value-Object); Persistenz-Präzision
-      gesetzt; Aggregationen exakt.
+- [ ] Exakte Werte sind `decimal`; Persistenz-Präzision gesetzt; Aggregationen
+      exakt.
 - [ ] Controller schlank; DTOs rein/raus; korrekte Statuscodes; `CancellationToken`
       durchgereicht.
 - [ ] Fachfehler über Domain-Exceptions → globale `ProblemDetails`-Pipeline; keine
       internen Details an den Client bei 500.
-- [ ] Strukturiertes `ILogger<T>`-Logging; keine sensiblen Finanzdaten im Log.
+- [ ] Strukturiertes `ILogger<T>`-Logging; keine sensiblen Daten im Log.
 - [ ] Eingaben validiert; API-Vertrag stabil und mit dem Frontend synchron.

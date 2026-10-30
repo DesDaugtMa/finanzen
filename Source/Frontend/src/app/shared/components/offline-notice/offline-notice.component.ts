@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { ConnectivityService } from '../../../core/services/connectivity.service';
-import { MONTH_LOCALE } from '../../utils/month.util';
 
 /**
  * Hinweis, dass die gezeigten Zahlen aus dem Zwischenspeicher stammen.
@@ -77,7 +76,7 @@ export class OfflineNoticeComponent {
 
 /** Datum und Uhrzeit des Zwischenspeicher-Stands, z. B. `14.08.2026, 09:12`. */
 function formatTimestamp(value: Date): string {
-  return new Intl.DateTimeFormat(MONTH_LOCALE, {
+  return new Intl.DateTimeFormat('de-DE', {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(value);

@@ -1,7 +1,7 @@
 ---
 name: changelog-entry
 description: >-
-  Schreibt einen neuen Changelog-Eintrag für die Finanz-App und fügt ihn oben in
+  Schreibt einen neuen Changelog-Eintrag für die App und fügt ihn oben in
   die Datei ./CHANGELOG.md (Repository-Wurzel) ein. Nutze diesen Skill, wenn der
   Nutzer eine neue Version veröffentlichen, den Changelog aktualisieren, „einen
   Changelog-Eintrag schreiben", „release notes erstellen" oder Änderungen für
@@ -14,7 +14,7 @@ description: >-
 
 # Changelog-Eintrag schreiben
 
-Du schreibst Release Notes für die **Finanz-App**. Sie wird von einem kleinen,
+Du schreibst Release Notes für die **App**. Sie wird von einem kleinen,
 privaten Kreis genutzt — dem Betreiber und seinen Freunden. Die Leser sind
 **normale Benutzer**, keine Entwickler, und sie kennen die App bereits. Sie
 wollen genau eine Sache wissen: *Was ist neu, was ist anders, was funktioniert
@@ -34,19 +34,19 @@ liest sich nüchtern, neutral und knapp.
 
 **So klingt es richtig:**
 
-- „Depots wurden hinzugefügt und können nun angelegt werden."
-- „Das Erscheinungsbild von Geldkonten wurde angepasst."
-- „Ein Bug, der das Erstellen neuer Geldkonten verhinderte, wurde behoben."
+- „Einladungen wurden hinzugefügt und können nun verschickt werden."
+- „Das Erscheinungsbild der Profilseite wurde angepasst."
+- „Ein Bug, der das Zurücksetzen des Passworts verhinderte, wurde behoben."
 
 Daraus folgt:
 
-- **Neutrale Formulierung, keine Du-Ansprache.** Schreibe „Budgets können nun
-  je Kategorie festgelegt werden", nicht „Du kannst jetzt Budgets festlegen".
+- **Neutrale Formulierung, keine Du-Ansprache.** Schreibe „Sitzungen können nun
+  einzeln beendet werden", nicht „Du kannst jetzt Sitzungen beenden".
 - **Genau ein Satz pro Punkt.** Kein Nebensatz-Stapel, keine Aufzählung von
   Details innerhalb eines Punktes. Wenn zwei Dinge gemeint sind, sind es zwei
   Punkte.
 - **Kein Marketing, kein Pathos, keine Superlative.** Verboten sind Sätze wie
-  „Die erste Version von Finanzen ist da", „Ein großer Schritt nach vorne",
+  „Die erste Version ist da", „Ein großer Schritt nach vorne",
   „deutlich besser als zuvor", „ab jetzt behältst du alles im Blick". Die App
   wird nicht beworben — sie wird dokumentiert.
 - **Keine Ausrufezeichen, keine Emojis.**
@@ -62,8 +62,8 @@ Daraus folgt:
 - **Keine internen Umbauten** erwähnen, die der Nutzer nicht bemerkt. Wenn sich
   an der Bedienung nichts ändert, gehört es nicht in den Changelog.
 - Beschreibe **den sichtbaren Nutzen**, nicht die Umsetzung. Statt „Neuer
-  Endpunkt für Monatsauswertungen" → „Die Ausgaben je Kategorie werden nun pro
-  Monat ausgewiesen."
+  Endpunkt für Sitzungsdaten" → „Zu jeder Sitzung werden nun Gerät und letzter
+  Zugriff angezeigt."
 
 Faustregel: Wenn ein Freund ohne IT-Wissen den Punkt nicht versteht oder ihn
 nicht als „für mich relevant" empfindet, formuliere ihn um oder lass ihn weg.
@@ -146,19 +146,19 @@ Eintrag geschrieben. Das Datum ist standardmäßig **heute**.
 
 ## Beispiel
 
-Aus einer technischen Änderung wie *„FixedCost-Copy-Endpoint + Drag&Drop-Sortierung
-der Kategorien implementiert"* wird für den Nutzer:
+Aus einer technischen Änderung wie *„RegistrationToken-Copy-Endpoint + Sortierung
+der Sitzungsliste implementiert"* wird für den Nutzer:
 
 ```md
 # v1.2 — 15.09.2026
 
-Die monatliche Planung wurde um die Übernahme von Fixkosten und eine freie Sortierung der Kategorien erweitert.
+Die Verwaltung von Einladungen und Sitzungen wurde erweitert.
 
 **Features:**
-- Fixkosten können mit einem Klick aus dem Vormonat übernommen werden.
+- Einladungslinks können mit einem Klick kopiert werden.
 
 **Changes:**
-- Kategorien lassen sich per Ziehen und Ablegen in eine eigene Reihenfolge bringen.
+- Die Liste der Sitzungen ist nach dem letzten Zugriff sortiert.
 ```
 
 ## Wann dieser Skill zwingend läuft

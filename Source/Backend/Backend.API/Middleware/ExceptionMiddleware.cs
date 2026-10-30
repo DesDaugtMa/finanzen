@@ -69,7 +69,6 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         UnauthorizedException => (StatusCodes.Status401Unauthorized, "Nicht angemeldet", ex.Message),
         NotFoundException => (StatusCodes.Status404NotFound, "Nicht gefunden", ex.Message),
         BusinessRuleException => (StatusCodes.Status422UnprocessableEntity, "Regel verletzt", ex.Message),
-        CurrencyMismatchException => (StatusCodes.Status422UnprocessableEntity, "Währungen passen nicht zusammen", ex.Message),
         _ => (StatusCodes.Status500InternalServerError, "Interner Fehler", "Ein interner Fehler ist aufgetreten.")
     };
 }

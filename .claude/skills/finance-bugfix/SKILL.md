@@ -180,8 +180,8 @@ Abschlussbericht belegt sind. Melde niemals „gefixt", solange einer offen ist.
 Verifikation den Skill **`changelog-entry`** auf und lege den Eintrag an:
 
 - Der Fix gehört in den Abschnitt `**Bugfixes:**`, formuliert als **ein
-  neutraler Satz** aus Nutzersicht — z. B. „Ein Bug, der das Erstellen neuer
-  Geldkonten verhinderte, wurde behoben." Keine Du-Ansprache, keine technischen
+  neutraler Satz** aus Nutzersicht — z. B. „Ein Bug, der das Zurücksetzen des
+  Passworts verhinderte, wurde behoben." Keine Du-Ansprache, keine technischen
   Begriffe, keine Werbesprache.
 - **Frage vor dem Schreiben nach der Versionsnummer.** Schlage sie vor
   (wichtiger Bugfix zu einer veröffentlichten Version → Bugfix-Version wie

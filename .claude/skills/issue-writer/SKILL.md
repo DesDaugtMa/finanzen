@@ -98,7 +98,7 @@ und/oder „Technische Hinweise"), z. B.:
 - Nebenläufigkeit/Race Conditions bei parallelen Requests oder Multi-Device
 - Berechtigungen: gehört die betroffene Entität wirklich dem eingeloggten
   Nutzer (`GetCurrentUserId()`-Check), invite-only-Auswirkungen
-- Geldbeträge: Rundung, Vorzeichen, Währungs-/Dezimal-Konsistenz
+- Zahlenwerte: Rundung, Vorzeichen, Dezimal-Konsistenz
 - Migrations-/Datenkompatibilität, wenn sich ein Datenmodell ändert
 - Offline/PWA-Verhalten, wenn Frontend betroffen ist (Service Worker,
   IndexedDB-Cache, Sync bei Wiederverbindung)
@@ -120,12 +120,12 @@ zutreffend" sind und hier wirklich nicht zutreffen (z. B. UX/Design bei einem
 reinen Backend-Bugfix ohne UI-Bezug) — kürze nicht aus Bequemlichkeit.
 
 Titel: exakt im Format aus dem Template-Frontmatter (`title:`), z. B.
-`[Bug] Fehlende Validierung bei negativem Transaktionsbetrag`.
+`[Bug] Fehlende Validierung bei zu langem Passwort`.
 
 Labels: die im Template-Frontmatter vorgegebenen (`labels:`) plus, falls
 eindeutig zutreffend, passende zusätzliche Labels aus dem bestehenden
-Label-Set des Repos (`gh label list`, z. B. `Geldkonto`, `Depot`,
-`Kryptowallet`, `Benutzer`, `Database`, `Change`, `Infrastructure`). Kein
+Label-Set des Repos (`gh label list`, z. B. `Benutzer`, `Database`,
+`Change`, `Infrastructure`, `Frontend`, `Backend`). Kein
 Label erfinden, das nicht existiert.
 
 ### 6. Issue anlegen
